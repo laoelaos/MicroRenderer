@@ -7,6 +7,7 @@
 
 #include "tgaimage.h"
 #include "model.h"
+#include "geometry.h"
 
 constexpr TGAColor white   = {255, 255, 255, 255}; // attention, BGRA order
 constexpr TGAColor green   = {  0, 255,   0, 255};
@@ -101,7 +102,7 @@ int main(int argc, char** argv) {
         vec3 v0t1 = model.getVertex(i, 1) - model.getVertex(i, 0);
         vec3 v1t2 = model.getVertex(i, 2) - model.getVertex(i, 1);
         vec3 n = v0t1 ^ v1t2;
-        n.normalize();
+        n = normalize(n);
 
         if (n.z > 0) {
             TGAColor rnd{static_cast<unsigned char>(n.x * 255), static_cast<unsigned char>(n.y * 255), static_cast<unsigned char>(n.z * 255), 255};
