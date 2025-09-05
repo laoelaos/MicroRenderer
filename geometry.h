@@ -9,6 +9,7 @@
 #include <ostream>
 #include <cmath>
 
+//vector
 template<int n> struct vec {
     double data[n] = {0};
     double& operator[](int i) { assert(i>=0&&i<n); return data[i]; }
@@ -65,55 +66,167 @@ template<int n> double operator*(const vec<n>& v1, const vec<n>& v2) {
     return res;
 }
 
+template<int n> vec<n> operator*(const vec<n>& v, const double scale) {
+    vec<n> res;
+    for (int i=0; i<n; i++) res[i] = v[i] * scale;
+    return res;
+}
+
+template<int n> vec<n> operator*(const double scale, const vec<n>& v) {
+    vec<n> res;
+    for (int i=0; i<n; i++) res[i] = v[i] * scale;
+    return res;
+}
+
+template<int n> vec<n> operator/(const vec<n>& v, const double scale) {
+    vec<n> res;
+    for (int i=0; i<n; i++) res[i] = v[i] / scale;
+    return res;
+}
+
 template<int n> double norm(const vec<n>& v) { 
     return std::sqrt(v * v);
 }
 
 template<int n> vec<n> normalize(vec<n>& v) {
-    double n = norm(v);
-    for (int i=0; i<n; i++) v[i] /= n;
+    double norm = norm(v);
+    for (int i=0; i<n; i++) v[i] /= norm;
     return v;
 }
 
-template<int row, int col> struct mat {
-    vec<col> data[row] = {0};
+//store horizontal vector
+template<int n_row, int n_col> struct mat {
+    vec<n_col> data[n_row] = {0};
 
-    vec<col>& operator[](const int i)       { assert(i>=0 && i<row); return data[i]; }
-    const vec<col>& operator[](const int i) const { assert(i>=0 && i<row); return data[i]; }
+          vec<n_col>& operator[](const int i)       { assert(i>=0 && i<n_row); return data[i]; }
+    const vec<n_col>& operator[](const int i) const { assert(i>=0 && i<n_row); return data[i]; }
 
-    mat operator*(const mat& other) const {
-        static_assert(col == other.row, "Matrix multiplication dimension mismatch");
-        mat<row, other.col> res;
-        for (int i=0; i<row; i++)
-            for (int j=0; j<other.col; j++)
-                for (int k=0; k<col; k++)
-                    res[i][j] += data[i][k] * other[k][j];
+    mat transpose() const {
+        mat<n_col, n_row> res;
+        for (int i=0; i<n_row; i++) {
+            for (int j=0; j<n_col; j++) {
+                res[j][i] = data[i][j];
+            }
+        }
         return res;
     }
 
-    mat operator*(const vec<col>& v) const {
-        mat<row,1> res;
-        for (int i=0; i<row; i++)
-            for (int j=0; j<col; j++)
-                res[i][0] += data[i][j] * v[j];
+    [[nodiscard]] double cofactor(int r, int c) const {
+        mat<n_row-1, n_col-1> res;
+        for (int i=0; i<n_row; i++) {
+            if (i == r) continue;
+            for (int j=0; j<n_col; j++) {
+                if (j == c) continue;
+                res[i < r ? i : i-1][j < c ? j : j-1] = data[i][j];
+            }
+        }
+        return ((r+c)&1 ? -1 : 1) * determinant(res);
+    }
+
+    mat invert() const {
+        mat res;
+        double det = determinant(*this);
+        assert(std::abs(det) > 1e-8);
+        for (int i=0; i<n_row; i++) {
+            for (int j=0; j<n_col; j++) {
+                res[j][i] = cofactor(i, j) / det;
+            }
+        }
         return res;
     }
 };
 
-template<int row, int col> std::ostream& operator<<(std::ostream& out, const mat<row, col>& m) {
-    for (int i=0; i<row; i++) {
-        out << "| ";
-        for (int j=0; j<col; j++) out << m[i][j] << " ";
-        out << "|\n";
-    }
+template<int n_row, int n_col> std::ostream& operator<<(std::ostream& out, const mat<n_row, n_col>& m) {
+    for (int i=0; i<n_row; i++) out << m[i];
     return out;
-};
+}
 
+template<int n_row, int n_col> mat<n_row, n_col> operator+(const mat<n_row, n_col>& m1, const mat<n_row, n_col>& m2) {
+    mat<n_row, n_col> res;
+    for (int i=0; i<n_row; i++) {
+        for (int j=0; j<n_col; j++) res[i][j] = m1[i][j] + m2[i][j];
+    }
+    return res;
+}
+
+template<int n_row, int n_col> mat<n_row, n_col> operator-(const mat<n_row, n_col>& m1, const mat<n_row, n_col>& m2) {
+    mat<n_row, n_col> res;
+    for (int i=0; i<n_row; i++) {
+        for (int j=0; j<n_col; j++) res[i][j] = m1[i][j] - m2[i][j];
+    }
+    return res;
+}
+
+template<int n_row, int n_col> mat<n_row, n_col> operator*(const mat<n_row, n_col>& m, const double scale) {
+    mat<n_row, n_col> res;
+    for (int i=0; i<n_row; i++) {
+        for (int j=0; j<n_col; j++) res[i][j] = m[i][j] * scale;
+    }
+    return res;
+}
+
+template<int n_row, int n_col> vec<n_row> operator*(const mat<n_row, n_col>& m, const vec<n_col>& v) {
+    vec<n_row> res;
+    for (int i=0; i<n_row; i++) {
+        res[i] = m[i] * v;
+    }
+    return res;
+}
+
+template<int nr1, int nc1, int nc2> mat<nr1, nc2> operator*(const mat<nr1, nc1>& m1, const mat<nc1, nc2>& m2) {
+    mat<nr1, nc2> res;
+    for (int i=0; i<nr1; i++) {
+        for (int j=0; j<nc2; j++) {
+            res[i][j] = 0;
+            for (int k=0; k<nc1; k++) res[i][j] += m1[i][k] * m2[k][j];
+        }
+    }
+    return res;
+}
+
+template<int n_row, int n_col> mat<n_row, n_col> operator/(const mat<n_row, n_col>& m, const double scale) {
+    mat<n_row, n_col> res;
+    for (int i=0; i<n_row; i++) {
+        for (int j=0; j<n_col; j++) res[i][j] = m[i][j] / scale;
+    }
+    return res;
+}
+
+//not understand
+template<int n> double determinant(const mat<n,n>& m) {
+    double res = 1;
+    mat<n,n> temp = m;
+    for (int i=0; i<n; i++) {
+        int pivot = i;
+        for (int j=i+1; j<n; j++) {
+            if (std::abs(temp[j][i]) > std::abs(temp[pivot][i])) pivot = j;
+        }
+        if (std::abs(temp[pivot][i]) < 1e-8) return 0;
+        if (i != pivot) {
+            std::swap(temp[i], temp[pivot]);
+            res = -res;
+        }
+        res *= temp[i][i];
+        for (int j=i+1; j<n; j++) {
+            double factor = temp[j][i] / temp[i][i];
+            for (int k=i; k<n; k++) {
+                temp[j][k] -= factor * temp[i][k];
+            }
+        }
+    }
+    return res;
+}
+
+//2 double vector, usually be vertical vector
 typedef vec<2> vec2;
+//3 double vector, usually be vertical vector
 typedef vec<3> vec3;
+//4 double vector, usually be vertical vector
 typedef vec<4> vec4;
 
+//3x3 Matrix, 9 double, store horizontal vector
 typedef mat<3,3> mat3;
+//4x4 Matrix, 16 double, store horizontal vector
 typedef mat<4,4> mat4;
 
 #endif //GEOMETRY_H
