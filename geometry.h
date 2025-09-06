@@ -34,6 +34,14 @@ template<> struct vec<3> {
             x * other.y - y * other.x
         };
     }
+
+    [[nodiscard]] TGAColor to_color() const {
+        return {static_cast<unsigned char>(std::max(0., std::min(255., x))),
+            static_cast<unsigned char>(std::max(0., std::min(255., y))),
+            static_cast<unsigned char>(std::max(0., std::min(255., z))),
+            255};
+    }
+
     [[nodiscard]] vec<2> to_vec2() const;
     [[nodiscard]] vec<4> to_vec4(double w_=1.) const;
 };

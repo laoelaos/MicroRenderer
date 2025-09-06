@@ -101,7 +101,7 @@ void rasterize(const vec4 v4s[3], TGAImage& framebuffer, std::vector<double>& z_
 
     for (int x = x_min; x <= x_max; x++) {
         for (int y = y_min; y <= y_max; y++) {
-            auto [alpha, beta, gamma] = compute_barycentric_2D(x, y, v3s);
+            auto [alpha, beta, gamma] = compute_barycentric_2D(x + .5, y + .5, v3s);
             if (alpha<0 || beta<0 || gamma<0) 
                 continue;
 
@@ -116,12 +116,12 @@ void rasterize(const vec4 v4s[3], TGAImage& framebuffer, std::vector<double>& z_
 
 int main(int argc, char** argv) {
     constexpr double fov = 150.0;
-    constexpr double aspect = 1.0;
+    constexpr double aspect = 16.0 / 9.0;
     constexpr double near = 2;
     constexpr double far  = 3;
 
-    constexpr int width  = 1000;
-    constexpr int height = 1000;
+    constexpr int width  = 1600;
+    constexpr int height = 900;
 
     constexpr vec3 eye    = {0, 0, 1};
     constexpr vec3 center = {0, 0, 2};
@@ -130,6 +130,7 @@ int main(int argc, char** argv) {
     model = model_matrix();
     view = view_matrix(eye, center, up);
     projection = perspective_projection(fov, aspect, near, far);
+    //projection = orthographic_projection(2, 3, aspect, -aspect, 1, -1);
     viewport = viewport_matrix(width, height);
 
     TGAImage framebuffer(width, height, TGAImage::RGB);
