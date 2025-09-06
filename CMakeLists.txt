@@ -23,7 +23,8 @@ find_package(OpenMP COMPONENTS CXX)
 
 set(SOURCES main.cpp tgaimage.cpp
         model.cpp
-        rasterizer.cpp)
+        rasterizer.cpp
+        util.cpp)
 
 add_executable(${PROJECT_NAME} ${SOURCES})
 target_link_libraries(${PROJECT_NAME} PRIVATE $<$<BOOL:${OpenMP_CXX_FOUND}>:OpenMP::OpenMP_CXX>)

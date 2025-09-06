@@ -9,9 +9,9 @@
 #include "geometry.h"
 #include "tgaimage.h"
 
-class rasterizer {
+class Rasterizer {
 public:
-    rasterizer(int w, int h);
+    Rasterizer(int w, int h);
     void clear();
 
     void load_vertices(const std::vector<vec3>& vertices);
@@ -24,7 +24,7 @@ public:
     void drawonTGA(TGAImage& framebuffer);
 private:
     [[nodiscard]] int get_index(int x, int y) const { return x + y * width; }
-    void rasterize_triangle();
+    void rasterize_triangle(vec4 v4s[], vec3 color);
 private:
     mat4 model, view, projection, viewport;
     int width, height;

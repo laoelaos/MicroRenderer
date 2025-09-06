@@ -9,6 +9,8 @@
 #include <ostream>
 #include <cmath>
 
+#include "tgaimage.h"
+
 //vector
 template<int n> struct vec {
     double data[n] = {0};

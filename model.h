@@ -8,9 +8,10 @@
 #include "geometry.h"
 
 class Model {
+public:
     std::vector<vec3> vertices;
     std::vector<int> faces;
-public:
+
     explicit Model(std::string filename);
     int getNumberVertex() const;
     int getNumberFace() const;
