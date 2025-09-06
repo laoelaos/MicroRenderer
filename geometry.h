@@ -89,8 +89,8 @@ template<int n> double norm(const vec<n>& v) {
 }
 
 template<int n> vec<n> normalize(vec<n>& v) {
-    double norm = norm(v);
-    for (int i=0; i<n; i++) v[i] /= norm;
+    double c = norm(v);
+    for (int i=0; i<n; i++) v[i] /= c;
     return v;
 }
 
