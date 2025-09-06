@@ -20,6 +20,7 @@ template<> struct vec<2> {
     double x = 0, y = 0;
     double& operator[](const int i)       { assert(i>=0 && i<2); return i ? y : x; }
     double  operator[](const int i) const { assert(i>=0 && i<2); return i ? y : x; }
+    [[nodiscard]] vec<3> to_vec3() const;
 };
 
 template<> struct vec<3> {
@@ -33,13 +34,22 @@ template<> struct vec<3> {
             x * other.y - y * other.x
         };
     }
+    [[nodiscard]] vec<2> to_vec2() const;
+    [[nodiscard]] vec<4> to_vec4(double w_=1.) const;
 };
 
 template<> struct vec<4> {
     double x = 0, y = 0, z = 0, w = 0;
     double& operator[](const int i)       { assert(i>=0 && i<4); return i ? (1==i ? y : (2==i ? z : w)) : x; }
     double  operator[](const int i) const { assert(i>=0 && i<4); return i ? (1==i ? y : (2==i ? z : w)) : x; }
+    [[nodiscard]] vec<3> to_vec3() const;
 };
+
+inline vec<3> vec<2>::to_vec3() const { return {x, y, 0}; }
+inline vec<2> vec<3>::to_vec2() const { return {x, y}; }
+inline vec<4> vec<3>::to_vec4(double w_) const { return {x, y, z, w_}; }
+inline vec<3> vec<4>::to_vec3() const { assert(w != 0); return {x/w, y/w, z/w}; }
+
 
 template<int n> std::ostream& operator<<(std::ostream& out, const vec<n>& v) {
     out << "(";
@@ -84,14 +94,19 @@ template<int n> vec<n> operator/(const vec<n>& v, const double scale) {
     return res;
 }
 
-template<int n> double norm(const vec<n>& v) { 
+template<int n> double norm(const vec<n>& v) {
     return std::sqrt(v * v);
 }
 
-template<int n> vec<n> normalize(vec<n>& v) {
+template<int n> vec<n> normalize_self(vec<n>& v) {
     double c = norm(v);
-    for (int i=0; i<n; i++) v[i] /= c;
+    v = v / c;
     return v;
+}
+
+template<int n> vec<n> normalize(const vec<n> v) {
+    double c = norm(v);;
+    return v / c;
 }
 
 //store horizontal vector
@@ -214,6 +229,12 @@ template<int n> double determinant(const mat<n,n>& m) {
             }
         }
     }
+    return res;
+}
+
+template<int n> mat<n, n> identity_matrix() {
+    mat<n,n> res;
+    for (int i=0; i<n; i++) res[i][i] = 1;
     return res;
 }
 

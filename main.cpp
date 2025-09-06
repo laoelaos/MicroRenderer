@@ -1,3 +1,4 @@
+#include <algorithm>
 #include <atomic>
 #include <cmath>
 #include <iostream>
@@ -15,97 +16,137 @@ constexpr TGAColor red     = {  0,   0, 255, 255};
 constexpr TGAColor blue    = {255, 128,  64, 255};
 constexpr TGAColor yellow  = {  0, 200, 255, 255};
 
-// void draw_line(int x0, int y0, int x1, int y1, TGAColor color) {
-//     if (x0 < 0 || x0 >= width || x1 < 0 || x1 >= width ||
-//         y0 < 0 || y0 >= height || y1 < 0 || y1 >= height) {
-//         return;
-//     }
 
-//     bool steep = false;
-//     if (std::abs(x0 - x1) < std::abs(y0 - y1)) {
-//         std::swap(x0, y0);
-//         std::swap(x1, y1);
-//         steep = true;
-//     }
-//     if (x0 > x1) {
-//         std::swap(x0, x1);
-//         std::swap(y0, y1);
-//     }
+mat4 model, view, projection, viewport;
 
-//     float y = y0;
-//     for (int x = x0; x < x1; x++) {
-//         if (steep) {
-//             framebuffer.set(y, x, color);
-//         } else {
-//             framebuffer.set(x, y, color);
-//         }
-//         y += (y1 - y0) / static_cast<float>(x1 - x0);
-//     }
-// }
-
-std::tuple<int, int, int> vec3_to_tuple_extend(vec3 vertex, int height, int width) {
-    return {(vertex.x + 1.) * width / 2, (vertex.y + 1.) * height / 2, (vertex.z + 1.) * 255 / 2};
+mat4 model_matrix() {
+    return identity_matrix<4>();
 }
 
-void draw_triangle(vec3 p0, vec3 p1, vec3 p2, 
-    TGAImage& framebuffer, TGAImage& z_buffer, TGAColor color) {
+mat4 view_matrix(const vec3 &eye, const vec3 &center, const vec3 &up) {
+    vec3 z = normalize(eye - center);
+    vec3 x = normalize(up ^ z);
+    vec3 y = normalize(z ^ x);
+    mat4 rotate {{{x.x, x.y, x.z, 0},
+                        {y.x, y.y, y.z, 0},
+                        {z.x, z.y, z.z, 0},
+                        {0,   0,   0,   1}}};
+    mat4 translate {{{1, 0, 0, -center.x},
+                        {0, 1, 0, -center.y},
+                        {0, 0, 1, -center.z},
+                        {0, 0, 0, 1}}};
+    return rotate * translate;
+}
 
-    auto [x0, y0, z0] = vec3_to_tuple_extend(p0, framebuffer.height(), framebuffer.width());
-    auto [x1, y1, z1] = vec3_to_tuple_extend(p1, framebuffer.height(), framebuffer.width());
-    auto [x2, y2, z2] = vec3_to_tuple_extend(p2, framebuffer.height(), framebuffer.width());
+mat4 orthographic_projection(const double near, const double far, const double right, const double left, const double top, const double bottom) {
+    mat4 translate {{{1, 0, 0, -(left + right) / 2},
+                        {0, 1, 0, -(top + bottom) / 2},
+                        {0, 0, 1, -(near + far) / 2},
+                        {0, 0, 0, 1}}};
+    mat4 scale {{{2 / (right - left), 0, 0, 0},
+                        {0, 2 / (top - bottom), 0, 0},
+                        {0, 0, 2 / (near - far), 0},
+                        {0, 0, 0, 1}}};
+    return scale * translate;
+}
 
-    int x_min = std::min(x0, std::min(x1, x2));
-    int x_max = std::max(x0, std::max(x1, x2));
-    int y_min = std::min(y0, std::min(y1, y2));
-    int y_max = std::max(y0, std::max(y1, y2));
-//#pragma omp parallel for
+mat4 perspective_projection(const double fov, const double aspect, const double near, const double far) {
+    double top = near * std::tan(fov / 2 * M_PI / 360.0);
+    double bottom = -top;
+    double right = top * aspect;
+    double left = -right;
+    mat4 orth = orthographic_projection(near, far, right, left, top, bottom);
+    mat4 pers {{{far, 0, 0, 0},
+                        {0, far, 0, 0},
+                        {0, 0, near +far, -near*far},
+                        {0, 0, 1, 0}}};
+    return orth * pers;
+}
+
+
+mat4 viewport_matrix(int w, int h) {
+    return {{{w/2., 0, 0, w/2.},
+                        {0, h/2., 0, h/2.},
+                        {0, 0, 1, 0},
+                        {0, 0, 0, 1}}};
+}
+
+std::tuple<double, double, double> compute_barycentric_2D(double x, double y, const vec3 v3s[3]) {
+    double alpha_denominator = - (v3s[0].x - v3s[1].x) * (v3s[2].y - v3s[1].y) + (v3s[0].y - v3s[1].y) * (v3s[2].x - v3s[1].x);
+    double beta_denominator = - (v3s[1].x - v3s[2].x) * (v3s[0].y - v3s[2].y) + (v3s[1].y - v3s[2].y) * (v3s[0].x - v3s[2].x);
+    // check if the denominators are too small even zero
+    if (std::abs(alpha_denominator) < 1e-8 || std::abs(beta_denominator) < 1e-8)
+        return {-1, -1, -1};
+
+    double alpha = (- (x - v3s[1].x) * (v3s[2].y - v3s[1].y) + (y - v3s[1].y) * (v3s[2].x - v3s[1].x)) / alpha_denominator;
+    double beta = (- (x - v3s[2].x) * (v3s[0].y - v3s[2].y) + (y - v3s[2].y) * (v3s[0].x - v3s[2].x)) / beta_denominator;
+    double gamma = 1. - alpha - beta;
+
+    return {alpha, beta, gamma};
+}
+
+void rasterize(const vec4 v4s[3], TGAImage& framebuffer, std::vector<double>& z_buffer, TGAColor color) {
+
+    vec3 v3s[3];
+    for (int i = 0; i < 3; i++) {
+        v3s[i] = (viewport * projection * view * model * v4s[i]).to_vec3();
+    }
+
+    auto [x_min, x_max] = std::minmax({v3s[0].x, v3s[1].x, v3s[2].x});
+    auto [y_min, y_max] = std::minmax({v3s[0].y, v3s[1].y, v3s[2].y});
+    x_min = std::max<int>(0, std::floor(x_min));
+    x_max = std::min<int>(framebuffer.width() - 1, std::ceil(x_max));
+    y_min = std::max<int>(0, std::floor(y_min));
+    y_max = std::min<int>(framebuffer.height() - 1, std::ceil(y_max));
+
     for (int x = x_min; x <= x_max; x++) {
         for (int y = y_min; y <= y_max; y++) {
-            double denominator1 = -(x0-x1)*(y2-y1)+(y0-y1)*(x2-x1);
-            double denominator2 = -(x1-x2)*(y0-y2)+(y1-y2)*(x0-x2);
-            
-            // check if the denominators are too small even zero
-            if (std::abs(denominator1) < 1e-8 || std::abs(denominator2) < 1e-8) 
-                continue;
-            
-            double alpha = (-(x-x1)*(y2-y1)+(y-y1)*(x2-x1)) / denominator1;
-            double beta  = (-(x-x2)*(y0-y2)+(y-y2)*(x0-x2)) / denominator2;
-            double gamma = 1.0 - alpha - beta;
-
-            // negative barycentric coordinate => the pixel is outside the triangle
+            auto [alpha, beta, gamma] = compute_barycentric_2D(x, y, v3s);
             if (alpha<0 || beta<0 || gamma<0) 
                 continue;
 
-            unsigned char z = alpha * z0 + beta * z1 + gamma * z2;
-            if (z_buffer.get(x, y)[0] < z) {
+            double z = alpha * v3s[0].z + beta * v3s[1].z + gamma * v3s[2].z;
+            if (z > z_buffer[x+y*framebuffer.width()]) {
                 framebuffer.set(x, y, color);
-                z_buffer.set(x, y, {z});
+                z_buffer[x+y*framebuffer.width()] = z;
             }
         }
     }
 }
 
 int main(int argc, char** argv) {
+    constexpr double fov = 150.0;
+    constexpr double aspect = 1.0;
+    constexpr double near = 2;
+    constexpr double far  = 3;
+
     constexpr int width  = 1000;
     constexpr int height = 1000;
+
+    constexpr vec3 eye    = {0, 0, 1};
+    constexpr vec3 center = {0, 0, 2};
+    constexpr vec3 up     = {0, 1, 0};
+
+    model = model_matrix();
+    view = view_matrix(eye, center, up);
+    projection = perspective_projection(fov, aspect, near, far);
+    viewport = viewport_matrix(width, height);
+
     TGAImage framebuffer(width, height, TGAImage::RGB);
-    TGAImage z_buffer(width, height, TGAImage::GRAYSCALE);
+    std::vector<double> z_buffer(width*height, -std::numeric_limits<double>::max());
 
     Model model(argv[1]);
 
     for (int i=0; i<model.getNumberFace(); i++) { // iterate through all triangles
         vec3 v0t1 = model.getVertex(i, 1) - model.getVertex(i, 0);
         vec3 v1t2 = model.getVertex(i, 2) - model.getVertex(i, 1);
-        vec3 n = v0t1 ^ v1t2;
-        n = normalize(n);
+        vec3 n = normalize(v0t1 ^ v1t2);
 
         TGAColor rnd{static_cast<unsigned char>(n.x * 255), static_cast<unsigned char>(n.y * 255), static_cast<unsigned char>(n.z * 255), 255};
-        draw_triangle(model.getVertex(i, 0), model.getVertex(i, 1), model.getVertex(i, 2),
-            framebuffer, z_buffer, rnd);
-        
-    }  
+        vec4 v4s[3] = {model.getVertex(i, 0).to_vec4(1.), model.getVertex(i, 1).to_vec4(1.), model.getVertex(i, 2).to_vec4(1.)};
+        rasterize(v4s, framebuffer, z_buffer, rnd);
+    }
 
-    z_buffer.write_tga_file("z_buffer.tga");
     framebuffer.write_tga_file("framebuffer.tga");
     return 0;
 }

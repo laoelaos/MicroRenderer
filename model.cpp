@@ -10,19 +10,18 @@ Model::Model(std::string filename) {
     std::ifstream file(filename);
 
     std::string line;
-    char flag;
+    std::string flag;
     while (std::getline(file, line)) {
         std::istringstream iss(line);
         iss >> flag;
 
-        if (flag == 'v') {
+        if (flag == "v") {
             double x, y, z;
             iss >> x >> y >> z;
             vertices.push_back({x, y, z});
-        } else if (flag == 'f') {
+        } else if (flag == "f") {
             int idx0, idx1, idx2;
-            std::string ign; // to ignore useless information in the face definition
-            iss >> idx0 >> ign >> idx1 >> ign >> idx2 >> ign;
+            iss >> idx0 >> flag >> idx1 >> flag >> idx2;
             faces.push_back(--idx0);
             faces.push_back(--idx1);
             faces.push_back(--idx2);
