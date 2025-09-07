@@ -23,11 +23,11 @@ mat4 model_matrix() {
 
 mat4 view_matrix(const vec3 &eye, const vec3 &center, const vec3 &up) {
     vec3 z = normalize(eye - center);
-    vec3 x = normalize(up ^ z);
-    vec3 y = normalize(z ^ x);
+    vec3 x = normalize(z ^ up);
+    vec3 y = normalize(x ^ z);
     mat4 rotate {{{x.x, x.y, x.z, 0},
                         {y.x, y.y, y.z, 0},
-                        {z.x, z.y, z.z, 0},
+                        {-z.x, -z.y, -z.z, 0},
                         {0,   0,   0,   1}}};
     mat4 translate {{{1, 0, 0, -center.x},
                         {0, 1, 0, -center.y},
@@ -48,15 +48,17 @@ mat4 orthographic_projection(const double near, const double far, const double r
     return scale * translate;
 }
 
-mat4 perspective_projection(const double fov, const double aspect, const double near, const double far) {
-    double top = near * std::tan(fov / 2 * M_PI / 360.0);
+mat4 perspective_projection(const double fov, const double aspect, double near, double far) {
+    double top = near * std::tan(fov * M_PI / 360.0);
     double bottom = -top;
     double right = top * aspect;
     double left = -right;
+    near = -near;
+    far  = -far;
     mat4 orth = orthographic_projection(near, far, right, left, top, bottom);
-    mat4 pers {{{far, 0, 0, 0},
-                        {0, far, 0, 0},
-                        {0, 0, near +far, -near*far},
+    mat4 pers {{{near, 0, 0, 0},
+                        {0, near, 0, 0},
+                        {0, 0, near + far, -near*far},
                         {0, 0, 1, 0}}};
     return orth * pers;
 }
@@ -69,7 +71,7 @@ mat4 viewport_matrix(int w, int h) {
 }
 
 int main(int argc, char** argv) {
-    constexpr double fov = 150.0;
+    constexpr double fov = 55.0;
     constexpr double aspect = 16.0 / 9.0;
     constexpr double near = 2;
     constexpr double far  = 3;
@@ -82,6 +84,7 @@ int main(int argc, char** argv) {
     constexpr vec3 up     = {0, 1, 0};
 
     //projection = orthographic_projection(2, 3, aspect, -aspect, 1, -1);
+    //perspective_projection(fov, aspect, near, far)
 
     Rasterizer rasterizer(width, height);
 

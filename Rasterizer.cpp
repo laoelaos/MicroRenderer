@@ -23,8 +23,8 @@ void Rasterizer::clear() {
                         {0,   0,   0,   1}}};
     vertices = {};
     indices = {};
-    std::fill(framebuffer.begin(), framebuffer.end(), vec3());
-    std::fill(z_buffer.begin(), z_buffer.end(), -std::numeric_limits<double>::infinity());
+    std::ranges::fill(framebuffer, vec3());
+    std::ranges::fill(z_buffer, -std::numeric_limits<double>::infinity());
 }
 
 void Rasterizer::load_vertices(const std::vector<vec3>& vertices_) {
@@ -36,13 +36,14 @@ void Rasterizer::load_indices(const std::vector<int>& indices_) {
 }
 
 void Rasterizer::rasterize() {
+    mvpv = viewport * projection * view * model;
     int nface = static_cast<int>(indices.size()) / 3;
     for (int i=0; i < nface; i++) { // iterate through all triangles
         vec3 v0t1 = vertices[indices[i*3+1]] - vertices[indices[i*3+0]];
         vec3 v1t2 = vertices[indices[i*3+2]] - vertices[indices[i*3+1]];
         vec3 n = normalize(v0t1 ^ v1t2);
 
-        vec3 normal_color {n.x * 255, n.y * 255, n.z * 255};
+        vec3 normal_color {(n.x + 1.) * 255 / 2, (n.y + 1.) * 255 / 2, (n.z + 1.) * 255 / 2};
         vec4 v4s[3] = {vertices[indices[i*3+0]].to_vec4(1.), vertices[indices[i*3+1]].to_vec4(1.), vertices[indices[i*3+2]].to_vec4(1.)};
         rasterize_triangle(v4s, normal_color);
     }
@@ -59,7 +60,7 @@ void Rasterizer::drawonTGA(TGAImage& framebuffer_) {
 void Rasterizer::rasterize_triangle(vec4 v4s[3], vec3 color) {
     vec3 v3s[3];
     for (int i = 0; i < 3; i++) {
-        v3s[i] = (viewport * projection * view * model * v4s[i]).to_vec3();
+        v3s[i] = (mvpv * v4s[i]).to_vec3();
     }
 
     auto [x_min, x_max] = std::minmax({v3s[0].x, v3s[1].x, v3s[2].x});

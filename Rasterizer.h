@@ -26,7 +26,7 @@ private:
     [[nodiscard]] int get_index(int x, int y) const { return x + y * width; }
     void rasterize_triangle(vec4 v4s[], vec3 color);
 private:
-    mat4 model, view, projection, viewport;
+    mat4 model, view, projection, viewport, mvpv;
     int width, height;
     std::vector<vec3> vertices;
     std::vector<int> indices; // each 3 int is a triangle
