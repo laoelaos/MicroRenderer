@@ -27,6 +27,11 @@ template<> struct vec<2> {
 
 template<> struct vec<3> {
     double x = 0, y = 0, z = 0;
+
+    vec();
+    explicit vec(const TGAColor& color) : x(color.bgra[0]), y(color.bgra[1]), z(color.bgra[2]) {}
+    vec(double x_, double y_, double z_) : x(x_), y(y_), z(z_) {}
+
     double& operator[](const int i)       { assert(i>=0 && i<3); return i ? (1==i ? y : z) : x; }
     double  operator[](const int i) const { assert(i>=0 && i<3); return i ? (1==i ? y : z) : x; }
     vec     operator^(const vec& other) const {
@@ -104,6 +109,14 @@ template<int n> vec<n> operator/(const vec<n>& v, const double scale) {
     return res;
 }
 
+template<int n> void operator+=(vec<n>& v1, const vec<n>& v2) {
+    for (int i=0; i<n; i++) v1[i] += v2[i];
+}
+
+template<int n> void operator-=(vec<n>& v1, const vec<n>& v2) {
+    for (int i=0; i<n; i++) v1[i] -= v2[i];
+}
+
 template<int n> double norm(const vec<n>& v) {
     return std::sqrt(v * v);
 }
@@ -117,6 +130,12 @@ template<int n> vec<n> normalize_self(vec<n>& v) {
 template<int n> vec<n> normalize(const vec<n> v) {
     double c = norm(v);;
     return v / c;
+}
+
+template<int n> vec<n> cwise_multiply(const vec<n>& v1, const vec<n>& v2) {
+    vec<n> res;
+    for (int i=0; i<n; i++) res[i] = v1[i] * v2[i];
+    return res;
 }
 
 //store horizontal vector

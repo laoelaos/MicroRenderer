@@ -76,7 +76,9 @@ void Rasterizer::rasterize_triangle(vec4 v4s[3], vec3 color) {
             if (alpha<0 || beta<0 || gamma<0)
                 continue;
 
+            double w_reciprocal = 1.0 / (alpha / v4s[0].w + beta / v4s[1].w + gamma / v4s[2].w);
             double z = alpha * v3s[0].z + beta * v3s[1].z + gamma * v3s[2].z;
+            z *= w_reciprocal;
             if (z > z_buffer[get_index(x, y)]) {
                 framebuffer[get_index(x, y)] = color;
                 z_buffer[get_index(x, y)] = z;
