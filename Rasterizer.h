@@ -14,13 +14,16 @@
 class Rasterizer {
 public:
     Rasterizer(int w, int h);
-    void clear();
+    void clear_all();
+    void clear_triangles() { triangles = {}; }
 
     void load_triangles(const std::vector<triangle>& triangles_);
     void load_lights(const std::vector<light>& lights_);
     void load_fragment_shader(std::shared_ptr<Shader> shader) { fragment_shader = shader; }
 
     void set_texture(const TGAImage& tex) { texture = tex; }
+
+    void set_options(bool smooth_shading) {this->smooth_shading = smooth_shading; }
 
     void set_model_matrix(const mat4& m) { model = m; }
     void set_view_matrix(const mat4& m) { view = m; }
@@ -43,6 +46,8 @@ private:
     int width, height;
     std::vector<double> z_buffer;
     std::vector<vec3> framebuffer;
+
+    bool smooth_shading = true;
 };
 
 #endif //RASTERIZER_H

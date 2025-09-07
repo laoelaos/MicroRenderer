@@ -10,10 +10,10 @@
 Rasterizer::Rasterizer(int w, int h) : width(w), height(h) {
     z_buffer.resize(w * h);
     framebuffer.resize(w * h);
-    clear();
+    clear_all();
 }
 
-void Rasterizer::clear() {
+void Rasterizer::clear_all() {
     model = identity_matrix<4>();
     view = identity_matrix<4>();
     projection = identity_matrix<4>();
@@ -65,6 +65,7 @@ void Rasterizer::rasterize_triangle(triangle triangle_, vec3 world_pos[3]) {
 
     shader_payload payload;
     payload.light_info = {{{20, 20, 20}, {2000, 2000, 2000}}};
+    payload.texture = texture;
     for (int x = x_min; x <= x_max; x++) {
         for (int y = y_min; y <= y_max; y++) {
             auto [alpha, beta, gamma] = compute_barycentric_2D(x + .5, y + .5, triangle_.vertices.data());
@@ -75,10 +76,25 @@ void Rasterizer::rasterize_triangle(triangle triangle_, vec3 world_pos[3]) {
             double z = alpha * triangle_.vertices[0].z + beta * triangle_.vertices[1].z + gamma * triangle_.vertices[2].z;
             z *= w_reciprocal;
 
+            double z0 = 1.0/world_pos[0].z;
+            double z1 = 1.0/world_pos[1].z;
+            double z2 = 1.0/world_pos[2].z;
+
+            double c_alpha = alpha * z0 / (alpha * z0 + beta * z1 + gamma * z2);
+            double c_beta = beta * z1 / (alpha * z0 + beta * z1 + gamma * z2);
+            double c_gamma = gamma * z2 / (alpha * z0 + beta * z1 + gamma * z2);
+
+
             if (z > z_buffer[get_index(x, y)]) {
-                payload.position = alpha * world_pos[0] + beta * world_pos[1] + gamma * world_pos[2];
-                payload.normal = normalize(alpha * triangle_.normals[0] + beta * triangle_.normals[1] + gamma * triangle_.normals[2]);
-                payload.tex_coords = alpha * triangle_.tex_coords[0] + beta * triangle_.tex_coords[1] + gamma * triangle_.tex_coords[2];
+                payload.position = c_alpha * world_pos[0] + c_beta * world_pos[1] + c_gamma * world_pos[2];
+
+                if (smooth_shading) {
+                    payload.normal = normalize(c_alpha * triangle_.normals[0] + c_beta * triangle_.normals[1] + c_gamma * triangle_.normals[2]);
+                } else {
+                    payload.normal = normalize((world_pos[1] - world_pos[0]) ^ (world_pos[2] - world_pos[1]));
+                }
+
+                payload.tex_coords = c_alpha * triangle_.tex_coords[0] + c_beta * triangle_.tex_coords[1] + c_gamma * triangle_.tex_coords[2];
 
                 framebuffer[get_index(x, y)] = fragment_shader->shade(payload);
                 z_buffer[get_index(x, y)] = z;

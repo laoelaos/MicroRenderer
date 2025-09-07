@@ -11,7 +11,8 @@ vec3 PhongShader_Texture::shade(const shader_payload &payload) {
     const vec3 k_specular {0.3, 0.3, 0.3};
     constexpr int p = 150;
 
-    vec3 color = color_to_vec3(payload.texture.get(static_cast<int>(payload.tex_coords.x), static_cast<int>(payload.tex_coords.y))) / 255.0;
+    vec3 color = color_to_vec3(payload.texture.get(static_cast<int>(payload.tex_coords.x * payload.texture.width()),
+                                                   payload.texture.height()-1-static_cast<int>(payload.tex_coords.y * payload.texture.height()))) / 255.0;
 
     vec3 result{};
     for (auto [position, intensity] : payload.light_info)
@@ -21,7 +22,7 @@ vec3 PhongShader_Texture::shade(const shader_payload &payload) {
         vec3 half_vec = normalize(light_dir + view_dir);
 
         //ambient
-        result += cwise_multiply(k_ambient, intensity);
+        result += cwise_multiply(k_ambient, {10, 10, 10});
         //diffuse
         double r2 = norm2(position - payload .position);
         double diff = std::max(0., payload.normal * light_dir);
@@ -31,7 +32,7 @@ vec3 PhongShader_Texture::shade(const shader_payload &payload) {
         result += cwise_multiply(k_specular, intensity, color) / r2 * spec;
     }
 
-    return result;
+    return result * 255.;
 }
 
 vec3 PhongShader_Color::shade(const shader_payload &payload) {

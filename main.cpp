@@ -93,14 +93,24 @@ int main(int argc, char** argv) {
     rasterizer.set_view_matrix(view_matrix(eye, center, up));
     rasterizer.set_projection_matrix(perspective_projection(fov, aspect, near, far));
 
+    rasterizer.load_fragment_shader(std::make_shared<PhongShader_Texture>());
+    rasterizer.set_options(true);
+
     for (int i = 1; i < argc; i++)
     {
         Model model(argv[i]);
         rasterizer.load_triangles(model.triangles);
-        rasterizer.load_fragment_shader(std::make_shared<PhongShader_Color>());
+        TGAImage texture;
+        std::string base = argv[i];
+        base.resize(base.size()-4);
+        texture.read_tga_file(base + std::string("_diffuse.tga"));
+        rasterizer.set_texture(texture);
+
+        rasterizer.rasterize();
+        rasterizer.clear_triangles();
     }
 
-    rasterizer.rasterize();
+
 
     TGAImage framebuffer(width, height, TGAImage::RGB);
     rasterizer.drawonTGA(framebuffer);
