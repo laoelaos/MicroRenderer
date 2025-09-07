@@ -17,3 +17,7 @@ std::tuple<double, double, double> compute_barycentric_2D(double x, double y, co
 
     return {alpha, beta, gamma};
 }
+
+vec3 color_to_vec3(const TGAColor& color) {
+    return {static_cast<double>(color.bgra[0]), static_cast<double>(color.bgra[1]), static_cast<double>(color.bgra[2])};
+}
