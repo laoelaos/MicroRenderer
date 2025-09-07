@@ -6,17 +6,18 @@
 #define MODEL_H
 #include <vector>
 #include "geometry.h"
+#include "Shader.h"
 
 class Model {
 public:
-    std::vector<vec3> vertices;
-    std::vector<int> faces;
+    std::vector<triangle> triangles;
+    TGAImage texture;
 
-    explicit Model(std::string filename);
-    int getNumberVertex() const;
-    int getNumberFace() const;
-    vec3 getVertex(int index) const;
-    vec3 getVertex(int face_index, int vertex_index) const;
+    explicit Model(const std::string& filename);
+    // int getNumberVertex() const;
+    // int getNumberFace() const;
+    // vec3 getVertex(int index) const;
+    // vec3 getVertex(int face_index, int vertex_index) const;
 };
 
 #endif //MODEL_H
