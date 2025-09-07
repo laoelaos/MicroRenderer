@@ -21,7 +21,9 @@ Model::Model(const std::string& filename) {
     std::vector<vec2> vertices_texture;
     std::vector<int> faces;
     while (std::getline(file, line)) {
+        if (line.empty()) continue;
         std::istringstream iss(line);
+        flag = "";
         iss >> flag;
 
         if (flag == "v") {

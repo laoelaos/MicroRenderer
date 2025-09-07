@@ -10,6 +10,7 @@
 #include "geometry.h"
 #include "tgaimage.h"
 
+//vertices, normals, colors and texture coordinates (std::array<vec3, 3>)
 struct triangle {
     std::array<vec3, 3> vertices;
     std::array<vec3, 3> normals;
@@ -23,12 +24,13 @@ struct light {
     vec3 intensity;
 };
 
-// information passed to the shader,
+// position, normal, light_info, tex_coords, texture
+//
+// position is in world space
 // normal should be normalized
 struct shader_payload {
     vec3 position;
     vec3 normal;
-    vec3 eye_pos;
 
     std::vector<light> light_info;
 
@@ -39,7 +41,17 @@ struct shader_payload {
 class Shader {
 public:
     virtual ~Shader() = default;
-    virtual vec3 shade(const shader_payload& payload);
+    virtual vec3 shade(const shader_payload& payload) = 0;
+};
+
+class PhongShader_Texture : public Shader {
+public:
+    vec3 shade(const shader_payload &payload) override;
+};
+
+class PhongShader_Color : public Shader {
+public:
+    vec3 shade(const shader_payload &payload) override;
 };
 
 #endif //SHADER_H

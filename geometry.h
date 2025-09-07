@@ -53,13 +53,15 @@ template<> struct vec<4> {
     double x = 0, y = 0, z = 0, w = 0;
     double& operator[](const int i)       { assert(i>=0 && i<4); return i ? (1==i ? y : (2==i ? z : w)) : x; }
     double  operator[](const int i) const { assert(i>=0 && i<4); return i ? (1==i ? y : (2==i ? z : w)) : x; }
-    [[nodiscard]] vec<3> to_vec3() const;
+    [[nodiscard]] vec<3> to_vec3_point() const;
+    [[nodiscard]] vec<3> to_vec3_vec() const;
 };
 
 inline vec<3> vec<2>::to_vec3() const { return {x, y, 0}; }
 inline vec<2> vec<3>::to_vec2() const { return {x, y}; }
 inline vec<4> vec<3>::to_vec4(double w_) const { return {x, y, z, w_}; }
-inline vec<3> vec<4>::to_vec3() const { assert(w != 0); return {x/w, y/w, z/w}; }
+inline vec<3> vec<4>::to_vec3_point() const { assert(w != 0); return {x/w, y/w, z/w}; }
+inline vec<3> vec<4>::to_vec3_vec() const { return {x, y, z}; }
 
 
 template<int n> std::ostream& operator<<(std::ostream& out, const vec<n>& v) {

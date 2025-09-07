@@ -10,6 +10,7 @@
 #include "model.h"
 #include "geometry.h"
 #include "Rasterizer.h"
+#include "Shader.h"
 
 constexpr TGAColor white   = {255, 255, 255, 255}; // attention, BGRA order
 constexpr TGAColor green   = {  0, 255,   0, 255};
@@ -79,9 +80,9 @@ int main(int argc, char** argv) {
     constexpr int width  = 1600;
     constexpr int height = 900;
 
-    constexpr vec3 eye    = {0, 0, 1};
-    constexpr vec3 center = {0, 0, 2};
-    constexpr vec3 up     = {0, 1, 0};
+    const vec3 eye    = {0, 0, 1};
+    const vec3 center = {0, 0, 2};
+    const vec3 up     = {0, 1, 0};
 
     //projection = orthographic_projection(2, 3, aspect, -aspect, 1, -1);
     //perspective_projection(fov, aspect, near, far)
@@ -92,9 +93,12 @@ int main(int argc, char** argv) {
     rasterizer.set_view_matrix(view_matrix(eye, center, up));
     rasterizer.set_projection_matrix(perspective_projection(fov, aspect, near, far));
 
-    Model model(argv[1]);
-    rasterizer.load_vertices(model.vertices);
-    rasterizer.load_indices(model.faces);
+    for (int i = 1; i < argc; i++)
+    {
+        Model model(argv[i]);
+        rasterizer.load_triangles(model.triangles);
+        rasterizer.load_fragment_shader(std::make_shared<PhongShader_Color>());
+    }
 
     rasterizer.rasterize();
 
