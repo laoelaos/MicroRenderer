@@ -121,6 +121,10 @@ template<int n> double norm(const vec<n>& v) {
     return std::sqrt(v * v);
 }
 
+template<int n> double norm2(const vec<n>& v) {
+    return v * v;
+}
+
 template<int n> vec<n> normalize_self(vec<n>& v) {
     double c = norm(v);
     v = v / c;

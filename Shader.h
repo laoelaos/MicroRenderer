@@ -5,25 +5,35 @@
 #ifndef SHADER_H
 #define SHADER_H
 
-#include <optional>
+#include <array>
 
 #include "geometry.h"
 #include "tgaimage.h"
+
+struct triangle {
+    std::array<vec3, 3> vertices;
+    std::array<vec3, 3> normals;
+
+    std::array<vec3, 3> colors;
+    std::array<vec2, 3> tex_coords;
+};
 
 struct light {
     vec3 position;
     vec3 intensity;
 };
 
+// information passed to the shader,
+// normal should be normalized
 struct shader_payload {
     vec3 position;
     vec3 normal;
     vec3 eye_pos;
-    vec2 tex_coords;
 
-    std::optional<light> light_info;
-    std::optional<vec3> color;
-    std::optional<TGAImage> texture;
+    std::vector<light> light_info;
+
+    vec2 tex_coords;
+    TGAImage texture;
 };
 
 class Shader {
