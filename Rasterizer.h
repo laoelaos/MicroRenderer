@@ -14,7 +14,10 @@
 class Rasterizer {
 public:
     Rasterizer(int w, int h);
+
+    // Clear all settings, including transformation matrices, loaded triangles, lights, shaders, textures, and framebuffer, z-buffer
     void clear_all();
+    // Clear only the triangles
     void clear_triangles() { triangles = {}; }
 
     void load_triangles(const std::vector<triangle>& triangles_);
@@ -24,6 +27,7 @@ public:
     void set_texture(const TGAImage& tex) { texture = tex; }
     void set_normal_map(const TGAImage& norm) { normal_map = norm; }
 
+    // set options for shading
     void set_options(bool smooth_shading, bool normal_mapping) {
         this->smooth_shading = smooth_shading;
         this->normal_mapping = normal_mapping;
@@ -33,7 +37,9 @@ public:
     void set_view_matrix(const mat4& m) { view = m; }
     void set_projection_matrix(const mat4& m) { projection = m;}
 
+    // Perform the rasterization process on the loaded triangles
     void rasterize();
+    // Output the framebuffer to a TGAImage
     void drawonTGA(TGAImage& framebuffer);
 private:
     [[nodiscard]] int get_index(int x, int y) const { return x + y * width; }

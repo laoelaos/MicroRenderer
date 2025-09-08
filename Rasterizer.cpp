@@ -22,6 +22,10 @@ void Rasterizer::clear_all() {
                         {0,   0,   1,   0},
                         {0,   0,   0,   1}}};
     triangles = {};
+    lights = {};
+    texture = {};
+    normal_map = {};
+    fragment_shader = nullptr;
     std::ranges::fill(framebuffer, vec3());
     std::ranges::fill(z_buffer, -std::numeric_limits<double>::infinity());
 }

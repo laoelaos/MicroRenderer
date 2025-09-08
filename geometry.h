@@ -145,6 +145,9 @@ template<int n_row, int n_col> struct mat {
           vec<n_col>& operator[](const int i)       { assert(i>=0 && i<n_row); return data[i]; }
     const vec<n_col>& operator[](const int i) const { assert(i>=0 && i<n_row); return data[i]; }
 
+    /**
+    * @return 转置矩阵 (M^T)
+    */
     mat transpose() const {
         mat<n_col, n_row> res;
         for (int i=0; i<n_row; i++) {
@@ -155,6 +158,9 @@ template<int n_row, int n_col> struct mat {
         return res;
     }
 
+    /**
+     * @return (r, c)的代数余子式
+     */
     [[nodiscard]] double cofactor(int r, int c) const {
         mat<n_row-1, n_col-1> res;
         for (int i=0; i<n_row; i++) {
@@ -167,6 +173,9 @@ template<int n_row, int n_col> struct mat {
         return ((r+c)&1 ? -1 : 1) * determinant(res);
     }
 
+    /**
+    * @return 逆矩阵 (M^-1)
+    */
     mat invert() const {
         mat res;
         double det = determinant(*this);
@@ -236,7 +245,7 @@ template<int n_row, int n_col> mat<n_row, n_col> operator/(const mat<n_row, n_co
     return res;
 }
 
-//not understand
+//计算行列式
 template<int n> double determinant(const mat<n,n>& m) {
     double res = 1;
     mat<n,n> temp = m;
