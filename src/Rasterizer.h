@@ -8,6 +8,8 @@
 #include <vector>
 
 #include "Geometry.h"
+#include "Material.h"
+#include "Model.h"
 #include "Shader.h"
 #include "TGAImage.h"
 
@@ -19,6 +21,8 @@ public:
     void clear_all();
     // Clear only the triangles
     void clear_triangles() { triangles = {}; }
+
+    void load_model(const Model& model) { models.push_back(model); }
 
     void load_triangles(const std::vector<triangle>& triangles_);
     void load_lights(const std::vector<light>& lights_);
@@ -43,7 +47,10 @@ public:
     void drawonTGA(TGAImage& framebuffer);
 private:
     [[nodiscard]] int get_index(int x, int y) const { return x + y * width; }
-    void rasterize_triangle(triangle triangle_, vec3 world_pos[]);
+
+    void rasterize_model(const Model& model);
+
+    std::vector<Model> models;
 
     std::vector<triangle> triangles;
 
@@ -51,7 +58,9 @@ private:
     TGAImage texture, normal_map;
 
     std::shared_ptr<Shader> fragment_shader;
-    mat4 model, view, projection, viewport, mvpv, mv;
+    mat4 model, view, projection, viewport;
+
+    mat4 mvpv, mv, mvit, mvpvi;
 
     int width, height;
     std::vector<double> z_buffer;
