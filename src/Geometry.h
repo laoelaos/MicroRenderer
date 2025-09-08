@@ -9,7 +9,7 @@
 #include <ostream>
 #include <cmath>
 
-#include "tgaimage.h"
+#include "TGAImage.h"
 
 //vector
 template<int n> struct vec {

@@ -6,7 +6,7 @@
 #define UTIL_H
 
 #include <tuple>
-#include "geometry.h"
+#include "Geometry.h"
 
 /**
  * @brief 计算一点在三角形中的重心坐标

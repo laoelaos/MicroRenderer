@@ -5,7 +5,7 @@
 #include <algorithm>
 
 #include "Rasterizer.h"
-#include "util.h"
+#include "Util.h"
 
 Rasterizer::Rasterizer(int w, int h) : width(w), height(h) {
     z_buffer.resize(w * h);

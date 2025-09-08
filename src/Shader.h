@@ -7,8 +7,8 @@
 
 #include <array>
 
-#include "geometry.h"
-#include "tgaimage.h"
+#include "Geometry.h"
+#include "TGAImage.h"
 
 //vertices, normals, colors and texture coordinates (std::array<vec3, 3>)
 struct triangle {

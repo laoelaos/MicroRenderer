@@ -2,7 +2,7 @@
 // Created by laoe on 25-9-7.
 //
 
-#include "util.h"
+#include "Util.h"
 
 std::tuple<double, double, double> compute_barycentric_2D(double x, double y, const vec3 v3s[3]) {
     double alpha_denominator = - (v3s[0].x - v3s[1].x) * (v3s[2].y - v3s[1].y) + (v3s[0].y - v3s[1].y) * (v3s[2].x - v3s[1].x);

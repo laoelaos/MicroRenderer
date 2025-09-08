@@ -5,7 +5,6 @@
 #ifndef MODEL_H
 #define MODEL_H
 #include <vector>
-#include "geometry.h"
 #include "Shader.h"
 
 class Model {

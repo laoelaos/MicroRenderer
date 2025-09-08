@@ -3,7 +3,7 @@
 //
 
 #include "Shader.h"
-#include "util.h"
+#include "Util.h"
 
 vec3 PhongShader_Texture::shade(const shader_payload &payload) {
     const vec3 k_ambient  {0.005, 0.005, 0.005};

@@ -1,14 +1,9 @@
 #include <algorithm>
-#include <atomic>
 #include <cmath>
-#include <iostream>
-#include <cstdlib>
-#include <ctime>
-#include <sstream>
 
-#include "tgaimage.h"
-#include "model.h"
-#include "geometry.h"
+#include "TGAImage.h"
+#include "Model.h"
+#include "Geometry.h"
 #include "Rasterizer.h"
 #include "Shader.h"
 

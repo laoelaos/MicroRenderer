@@ -7,9 +7,9 @@
 #include <memory>
 #include <vector>
 
-#include "geometry.h"
+#include "Geometry.h"
 #include "Shader.h"
-#include "tgaimage.h"
+#include "TGAImage.h"
 
 class Rasterizer {
 public:
