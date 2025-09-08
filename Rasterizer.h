@@ -22,8 +22,12 @@ public:
     void load_fragment_shader(std::shared_ptr<Shader> shader) { fragment_shader = shader; }
 
     void set_texture(const TGAImage& tex) { texture = tex; }
+    void set_normal_map(const TGAImage& norm) { normal_map = norm; }
 
-    void set_options(bool smooth_shading) {this->smooth_shading = smooth_shading; }
+    void set_options(bool smooth_shading, bool normal_mapping) {
+        this->smooth_shading = smooth_shading;
+        this->normal_mapping = normal_mapping;
+    }
 
     void set_model_matrix(const mat4& m) { model = m; }
     void set_view_matrix(const mat4& m) { view = m; }
@@ -38,7 +42,7 @@ private:
     std::vector<triangle> triangles;
 
     std::vector<light> lights;
-    TGAImage texture;
+    TGAImage texture, normal_map;
 
     std::shared_ptr<Shader> fragment_shader;
     mat4 model, view, projection, viewport, mvpv, mv;
@@ -48,6 +52,7 @@ private:
     std::vector<vec3> framebuffer;
 
     bool smooth_shading = true;
+    bool normal_mapping = false;
 };
 
 #endif //RASTERIZER_H

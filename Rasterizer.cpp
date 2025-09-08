@@ -88,13 +88,18 @@ void Rasterizer::rasterize_triangle(triangle triangle_, vec3 world_pos[3]) {
             if (z > z_buffer[get_index(x, y)]) {
                 payload.position = c_alpha * world_pos[0] + c_beta * world_pos[1] + c_gamma * world_pos[2];
 
-                if (smooth_shading) {
+                payload.tex_coords = c_alpha * triangle_.tex_coords[0] + c_beta * triangle_.tex_coords[1] + c_gamma * triangle_.tex_coords[2];
+
+                if (normal_mapping) {
+                    payload.normal =
+                    normalize(nor_color_to_vec3(normal_map.get(static_cast<int>(payload.tex_coords.x * normal_map.width()),
+                    normal_map.height()-1-static_cast<int>(payload.tex_coords.y * normal_map.height()))) / 255.0 - vec3{.5, .5, .5}) ;
+                } else if (smooth_shading) {
                     payload.normal = normalize(c_alpha * triangle_.normals[0] + c_beta * triangle_.normals[1] + c_gamma * triangle_.normals[2]);
                 } else {
                     payload.normal = normalize((world_pos[1] - world_pos[0]) ^ (world_pos[2] - world_pos[1]));
                 }
 
-                payload.tex_coords = c_alpha * triangle_.tex_coords[0] + c_beta * triangle_.tex_coords[1] + c_gamma * triangle_.tex_coords[2];
 
                 framebuffer[get_index(x, y)] = fragment_shader->shade(payload);
                 z_buffer[get_index(x, y)] = z;

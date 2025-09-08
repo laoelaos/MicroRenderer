@@ -73,12 +73,12 @@ mat4 viewport_matrix(int w, int h) {
 
 int main(int argc, char** argv) {
     constexpr double fov = 55.0;
-    constexpr double aspect = 16.0 / 9.0;
+    constexpr double aspect = 1.;
     constexpr double near = 2;
     constexpr double far  = 3;
 
-    constexpr int width  = 1600;
-    constexpr int height = 900;
+    constexpr int width  = 2000;
+    constexpr int height = 2000;
 
     const vec3 eye    = {0, 0, 1};
     const vec3 center = {0, 0, 2};
@@ -94,17 +94,19 @@ int main(int argc, char** argv) {
     rasterizer.set_projection_matrix(perspective_projection(fov, aspect, near, far));
 
     rasterizer.load_fragment_shader(std::make_shared<PhongShader_Texture>());
-    rasterizer.set_options(true);
+    rasterizer.set_options(true, true);
 
     for (int i = 1; i < argc; i++)
     {
         Model model(argv[i]);
         rasterizer.load_triangles(model.triangles);
-        TGAImage texture;
+        TGAImage texture, normal_map;
         std::string base = argv[i];
         base.resize(base.size()-4);
         texture.read_tga_file(base + std::string("_diffuse.tga"));
         rasterizer.set_texture(texture);
+        normal_map.read_tga_file(base + std::string("_nm.tga"));
+        rasterizer.set_normal_map(normal_map);
 
         rasterizer.rasterize();
         rasterizer.clear_triangles();
