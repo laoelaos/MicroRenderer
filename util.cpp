@@ -18,6 +18,20 @@ std::tuple<double, double, double> compute_barycentric_2D(double x, double y, co
     return {alpha, beta, gamma};
 }
 
+// clamp the value to [0, 255] and convert to unsigned char
+TGAColor vec3_to_color(const vec3& color) {
+    return {static_cast<unsigned char>(std::max(0., std::min(255., color.x * 255.))),
+            static_cast<unsigned char>(std::max(0., std::min(255., color.y * 255.))),
+            static_cast<unsigned char>(std::max(0., std::min(255., color.z * 255.))),
+            255};
+}
+
+// convert TGAColor to vec3 [b, g, r]
 vec3 color_to_vec3(const TGAColor& color) {
-    return {static_cast<double>(color.bgra[0]), static_cast<double>(color.bgra[1]), static_cast<double>(color.bgra[2])};
+    return vec3{static_cast<double>(color.bgra[0]), static_cast<double>(color.bgra[1]), static_cast<double>(color.bgra[2])} / 255.0;
+}
+
+// convert normal map color to vec3 [r, g, b]
+vec3 nor_color_to_vec3(const TGAColor& color) {
+    return vec3{static_cast<double>(color.bgra[2]), static_cast<double>(color.bgra[1]), static_cast<double>(color.bgra[0])} / (255.0 / 2) - vec3{1, 1, 1};
 }

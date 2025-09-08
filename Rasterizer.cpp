@@ -93,7 +93,7 @@ void Rasterizer::rasterize_triangle(triangle triangle_, vec3 world_pos[3]) {
                 if (normal_mapping) {
                     payload.normal =
                     normalize(nor_color_to_vec3(normal_map.get(static_cast<int>(payload.tex_coords.x * normal_map.width()),
-                    normal_map.height()-1-static_cast<int>(payload.tex_coords.y * normal_map.height()))) / 255.0 - vec3{.5, .5, .5}) ;
+                    normal_map.height()-1-static_cast<int>(payload.tex_coords.y * normal_map.height())))) ;
                 } else if (smooth_shading) {
                     payload.normal = normalize(c_alpha * triangle_.normals[0] + c_beta * triangle_.normals[1] + c_gamma * triangle_.normals[2]);
                 } else {
@@ -111,7 +111,7 @@ void Rasterizer::rasterize_triangle(triangle triangle_, vec3 world_pos[3]) {
 void Rasterizer::drawonTGA(TGAImage& framebuffer_) {
     for (int y = 0; y < height; y++) {
         for (int x = 0; x < width; x++) {
-            framebuffer_.set(x, y, framebuffer[get_index(x, y)].to_color());
+            framebuffer_.set(x, y, vec3_to_color(framebuffer[get_index(x, y)]));
         }
     }
 }
