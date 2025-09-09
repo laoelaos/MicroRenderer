@@ -80,6 +80,8 @@ int main(int argc, char** argv) {
     const vec3 center = {0, 0, 2};
     const vec3 up     = {0, 1, 0};
 
+    std::cout << "Rasterizing..." << std::endl;
+
     Rasterizer rasterizer(width, height);
 
     rasterizer.set_model_matrix(model_matrix());
@@ -103,7 +105,8 @@ int main(int argc, char** argv) {
     clock_t start = clock();
     rasterizer.rasterize();
     clock_t end = clock();
-    std::cout << "Rasterization took " << double(end - start) / CLOCKS_PER_SEC << " seconds." << std::endl;
+    std::cout << "Rasterization done. Took " << double(end - start) / CLOCKS_PER_SEC << " seconds." << std::endl;
+    std::cout << "Output written to output.tga" << std::endl;
 
     return 0;
 }

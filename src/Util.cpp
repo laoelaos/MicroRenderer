@@ -40,8 +40,30 @@ vec3 get_nor_vec3_from_tga(const TGAImage& image, const vec2 &uv) {
     return nor_color_to_vec3(image.get(static_cast<int>(uv.x * image.width()), static_cast<int>(uv.y * image.height())));
 }
 
+vec3 get_nor_vec3_from_tga_bilinear(const TGAImage& image, const vec2 &uv) {
+    vec3 c = get_color_vec3_from_tga_bilinear(image, uv);
+    return normalize(c * 2 - vec3{1, 1, 1});
+}
+
 vec3 get_color_vec3_from_tga(const TGAImage& image, const vec2 &uv) {
     return color_to_vec3(image.get(static_cast<int>(uv.x * image.width()), static_cast<int>(uv.y * image.height())));
+}
+
+vec3 get_color_vec3_from_tga_bilinear(const TGAImage& image, const vec2 &uv) {
+    int x = static_cast<int>(uv.x * image.width());
+    int y = static_cast<int>(uv.y * image.height());
+    int xp = std::min(x + 1, image.width() - 1);
+    int yp = std::min(y + 1, image.height() - 1);
+    double u = uv.x * image.width() - x;
+    double v = uv.y * image.height() - y;
+    vec3 c00 = color_to_vec3(image.get(x, y));
+    vec3 c10 = color_to_vec3(image.get(xp, y));
+    vec3 c01 = color_to_vec3(image.get(x, yp));
+    vec3 c11 = color_to_vec3(image.get(xp, yp));
+    return (1 - u) * (1 - v) * c00 +
+           u * (1 - v) * c10 +
+           (1 - u) * v * c01 +
+           u * v * c11;
 }
 
 std::tuple<int, int, int, int> find_bounding_box_int(const std::array<vec3, 3> v3s, int width, int height) {

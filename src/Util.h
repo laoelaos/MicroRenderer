@@ -54,10 +54,27 @@ vec3 nor_color_to_vec3(const TGAColor& color);
 vec3 get_nor_vec3_from_tga(const TGAImage& image, const vec2 &uv);
 
 /**
- * @brief 从纹理贴图中获取颜色向量
+ * @brief 双线性插值从法线贴图中获取法线向量
+ * @param image 法线贴图
+ * @param uv 纹理坐标
+ * @return normalized vec3 [x(r), y(g), z(b)] 范围：[-1, 1]
+ */
+vec3 get_nor_vec3_from_tga_bilinear(const TGAImage& image, const vec2 &uv);
+
+/**
+ * @brief 直接从纹理贴图中获取颜色向量
  * @param image 纹理贴图
  * @param uv 纹理坐标
  * @return vec3 [r, g, b] 范围：[0, 1]
  */
 vec3 get_color_vec3_from_tga(const TGAImage& image, const vec2 &uv);
+
+/**
+ * @brief 双线性插值从纹理贴图中获取颜色向量
+ * @param image 纹理贴图
+ * @param uv 纹理坐标
+ * @return vec3 [r, g, b] 范围：[0, 1]
+ */
+vec3 get_color_vec3_from_tga_bilinear(const TGAImage& image, const vec2 &uv);
+
 #endif //UTIL_H
