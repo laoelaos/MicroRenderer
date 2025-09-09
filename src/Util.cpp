@@ -42,7 +42,7 @@ vec3 get_nor_vec3_from_tga(const TGAImage& image, const vec2 &uv) {
 
 vec3 get_nor_vec3_from_tga_bilinear(const TGAImage& image, const vec2 &uv) {
     vec3 c = get_color_vec3_from_tga_bilinear(image, uv);
-    return normalize(c * 2 - vec3{1, 1, 1});
+    return normalize(vec3{c[2], c[1], c[0]} * 2 - vec3{1, 1, 1});
 }
 
 vec3 get_color_vec3_from_tga(const TGAImage& image, const vec2 &uv) {

@@ -62,8 +62,9 @@ void Rasterizer::rasterize() {
 void Rasterizer::rasterize_model(const Model& obj_model) {
     texture = obj_model.material.texture;
     normal_map = obj_model.material.normal_map;
-    bool smooth_shading = obj_model.material.smooth_shading;
-    bool normal_mapping = obj_model.material.normal_mapping;
+    bool diffuse_mapping = obj_model.material.diffuse_mapping;
+    NormalType normal_type = obj_model.material.normal_type;
+    ShadeFrequency shade_frequency = obj_model.material.shade_frequency;
 
     shader_payload payload;
     payload.light_info = lights;
@@ -98,13 +99,36 @@ void Rasterizer::rasterize_model(const Model& obj_model) {
                 if (z > z_buffer[get_index(x, y)]) {
                     payload.position = c_alpha * vertices_world_pos[0] + c_beta * vertices_world_pos[1] + c_gamma * vertices_world_pos[2];
                     payload.tex_coords = c_alpha * tex_coords[0] + c_beta * tex_coords[1] + c_gamma * tex_coords[2];
-                    payload.color = get_color_vec3_from_tga_bilinear(texture, payload.tex_coords);
-                    if (normal_mapping) {
+
+                    if (diffuse_mapping) {
+                        payload.color = get_color_vec3_from_tga_bilinear(texture, payload.tex_coords);
+                    } else {
+                        payload.color = c_alpha * vec3{1, 1, 1} + c_beta * vec3{1, 1, 1} + c_gamma * vec3{1, 1, 1};
+                    }
+
+                    if (normal_type == GLOBAL) {
                         payload.normal = get_nor_vec3_from_tga_bilinear(normal_map, payload.tex_coords);
-                    } else if (smooth_shading) {
+                    } else if (shade_frequency == PER_FRAGMENT) {
                         payload.normal = normalize(c_alpha * normals[0] + c_beta * normals[1] + c_gamma * normals[2]);
                     } else {
                         payload.normal = normalize((vertices_world_pos[1] - vertices_world_pos[0]) ^ (vertices_world_pos[2] - vertices_world_pos[1]));
+                    }
+
+                    if (normal_type == TANGENT) {
+                        vec3 e1 = vertices_world_pos[1] - vertices_world_pos[0];
+                        vec3 e2 = vertices_world_pos[2] - vertices_world_pos[0];
+                        vec2 delta_uv1 = tex_coords[1] - tex_coords[0];
+                        vec2 delta_uv2 = tex_coords[2] - tex_coords[0];
+                        mat<2,2> uv_matrix {{{delta_uv1.x, delta_uv2.x}, {delta_uv1.y, delta_uv2.y}}};
+                        mat<3,2> edge_matrix {{{e1.x, e2.x}, {e1.y, e2.y}, {e1.z, e2.z}}};
+                        if (std::abs(determinant(uv_matrix)) > 1e-8) {
+                            mat<3,2> tnb = edge_matrix * uv_matrix.invert();
+                            vec3 t = normalize(tnb.get_col(0));
+                            vec3 b = normalize(tnb.get_col(1));
+                            vec3 n = payload.normal;
+                            mat<3,3> TBN {{{t.x, b.x, n.x}, {t.y, b.y, n.y}, {t.z, b.z, n.z}}};
+                            payload.normal = normalize(TBN * get_nor_vec3_from_tga_bilinear(normal_map, payload.tex_coords));
+                        }
                     }
 
                     framebuffer[get_index(x, y)] = fragment_shader->shade(payload);

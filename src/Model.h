@@ -7,15 +7,18 @@
 #include <vector>
 #include "Shader.h"
 
+enum NormalType {GLOBAL, TANGENT, NONE};
+enum ShadeFrequency {FLAT, PER_VERTEX, PER_FRAGMENT};
+
 struct Material {
     explicit Material(const std::string& texture_path = "",
              const std::string& normal_map_path = "",
              const phong_properties &properties = {},
-             bool texture_mapping = false,
-             bool smooth_shading = false,
-             bool normal_mapping = false)
-                    : properties(properties), texture_mapping(texture_mapping),
-                      smooth_shading(smooth_shading), normal_mapping(normal_mapping) {
+             bool diffuse_mapping = false,
+             NormalType normal_type = NONE,
+             ShadeFrequency shade_frequency = FLAT)
+                    : properties(properties), diffuse_mapping(diffuse_mapping),
+                      normal_type(normal_type), shade_frequency(shade_frequency) {
 
         if (!texture_path.empty()) {
             if (!texture.read_tga_file(texture_path)) {
@@ -36,9 +39,9 @@ struct Material {
 
     phong_properties properties;
 
-    bool texture_mapping;
-    bool smooth_shading;
-    bool normal_mapping;
+    bool diffuse_mapping;
+    NormalType normal_type;
+    ShadeFrequency shade_frequency;
 };
 
 class Model {

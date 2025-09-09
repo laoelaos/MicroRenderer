@@ -53,9 +53,6 @@ private:
     int width, height;
     std::vector<double> z_buffer;
     std::vector<vec3> framebuffer;
-
-    bool smooth_shading;
-    bool normal_mapping;
 };
 
 #endif //RASTERIZER_H

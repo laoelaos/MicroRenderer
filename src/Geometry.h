@@ -145,6 +145,13 @@ template<int n_row, int n_col> struct mat {
           vec<n_col>& operator[](const int i)       { assert(i>=0 && i<n_row); return data[i]; }
     const vec<n_col>& operator[](const int i) const { assert(i>=0 && i<n_row); return data[i]; }
 
+    vec<n_row> get_col(int c) const {
+        assert(c>=0 && c<n_col);
+        vec<n_row> res;
+        for (int i=0; i<n_row; i++) res[i] = data[i][c];
+        return res;
+    }
+
     /**
     * @return 转置矩阵 (M^T)
     */

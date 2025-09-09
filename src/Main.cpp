@@ -96,8 +96,8 @@ int main(int argc, char** argv) {
         Model model(argv[i] + std::string(".obj"));
         model.material =
             Material(argv[i] + std::string("_diffuse.tga"),
-                 argv[i] + std::string("_nm.tga"),
-                 properties_1, true, true, true);
+                 argv[i] + std::string("_nm_tangent.tga"),
+                 properties_1, true, TANGENT, PER_FRAGMENT);
 
         rasterizer.load_model(model);
     }
