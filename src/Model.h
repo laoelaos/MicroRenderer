@@ -10,7 +10,12 @@
 struct Material {
     explicit Material(const std::string& texture_path = "",
              const std::string& normal_map_path = "",
-             const phong_properties &properties = {}) : properties(properties) {
+             const phong_properties &properties = {},
+             bool texture_mapping = false,
+             bool smooth_shading = false,
+             bool normal_mapping = false)
+                    : properties(properties), texture_mapping(texture_mapping),
+                      smooth_shading(smooth_shading), normal_mapping(normal_mapping) {
 
         if (!texture_path.empty()) {
             if (!texture.read_tga_file(texture_path)) {
@@ -24,15 +29,16 @@ struct Material {
             }
             normal_map.flip_vertically();
         }
-
     }
+
     TGAImage texture;
     TGAImage normal_map;
 
     phong_properties properties;
 
-    bool smooth_shading = true;
-    bool normal_mapping = true;
+    bool texture_mapping;
+    bool smooth_shading;
+    bool normal_mapping;
 };
 
 class Model {

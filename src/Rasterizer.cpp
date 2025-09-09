@@ -67,7 +67,6 @@ void Rasterizer::rasterize_model(const Model& obj_model) {
 
     shader_payload payload;
     payload.light_info = lights;
-    payload.texture = texture;
     payload.properties = obj_model.material.properties;
     for (triangle now_triangle: obj_model.triangles) {
         std::array<vec3, 3> normals = {};
@@ -99,7 +98,7 @@ void Rasterizer::rasterize_model(const Model& obj_model) {
                 if (z > z_buffer[get_index(x, y)]) {
                     payload.position = c_alpha * vertices_world_pos[0] + c_beta * vertices_world_pos[1] + c_gamma * vertices_world_pos[2];
                     payload.tex_coords = c_alpha * tex_coords[0] + c_beta * tex_coords[1] + c_gamma * tex_coords[2];
-
+                    payload.color = get_color_vec3_from_tga(texture, payload.tex_coords);
                     if (normal_mapping) {
                         payload.normal = get_nor_vec3_from_tga(normal_map, payload.tex_coords);
                     } else if (smooth_shading) {

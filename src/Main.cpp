@@ -86,16 +86,16 @@ int main(int argc, char** argv) {
     rasterizer.set_view_matrix(view_matrix(eye, center, up));
     rasterizer.set_projection_matrix(perspective_projection(fov, aspect, near, far));
 
-    rasterizer.load_fragment_shader(std::make_shared<PhongShader_Texture>());
+    rasterizer.load_fragment_shader(std::make_shared<PhongShader>());
     rasterizer.load_lights({{{20, 20, 20}, {2000, 2000, 2000}}});
 
-    phong_properties properties_1 {0.9, 0.6, 0.1, 150};
+    phong_properties properties_1 {0.9, 0.6, 0.005, 150};
     for (int i = 1; i < argc; i++) {
         Model model(argv[i] + std::string(".obj"));
         model.material =
             Material(argv[i] + std::string("_diffuse.tga"),
                  argv[i] + std::string("_nm.tga"),
-                 properties_1);
+                 properties_1, true, true, true);
 
         rasterizer.load_model(model);
     }

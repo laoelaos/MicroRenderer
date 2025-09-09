@@ -38,11 +38,11 @@ struct phong_properties {
 struct shader_payload {
     vec3 position;
     vec3 normal;
+    vec3 color;
     vec2 tex_coords;
 
     phong_properties properties;
     std::vector<light> light_info;
-    TGAImage texture;
 };
 
 class Shader {
@@ -51,12 +51,7 @@ public:
     virtual vec3 shade(const shader_payload& payload) = 0;
 };
 
-class PhongShader_Texture : public Shader {
-public:
-    vec3 shade(const shader_payload &payload) override;
-};
-
-class PhongShader_Color : public Shader {
+class PhongShader : public Shader {
 public:
     vec3 shade(const shader_payload &payload) override;
 };
