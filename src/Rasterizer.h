@@ -5,6 +5,7 @@
 #ifndef RASTERIZER_H
 #define RASTERIZER_H
 #include <memory>
+#include <utility>
 #include <vector>
 
 #include "Geometry.h"
@@ -18,26 +19,21 @@ public:
 
     // Clear all settings, including transformation matrices, loaded triangles, lights, shaders, textures, and framebuffer, z-buffer
     void clear_all();
-    // Clear only the triangles
     void clear_models() { models = {}; }
     void clear_buffer();
 
     void load_model(const Model& model) { models.push_back(model); }
-
     void load_lights(const std::vector<light>& lights_);
-    void load_fragment_shader(std::shared_ptr<Shader> shader) { fragment_shader = shader; }
-
+    void load_fragment_shader(std::shared_ptr<Shader> shader) { fragment_shader = std::move(shader); }
     void set_model_matrix(const mat4& m) { model = m; }
     void set_view_matrix(const mat4& m) { view = m; }
     void set_projection_matrix(const mat4& m) { projection = m;}
+    void set_options(int MSAA);
 
-    // Perform the rasterization process on the loaded triangles
     void rasterize();
-    // Output the framebuffer to a TGAImage
     void drawonTGA(TGAImage& framebuffer);
 private:
     [[nodiscard]] int get_index(int x, int y) const { return x + y * width; }
-
     void rasterize_model(const Model& model);
 
     std::vector<Model> models;
@@ -53,6 +49,8 @@ private:
     int width, height;
     std::vector<double> z_buffer;
     std::vector<vec3> framebuffer;
+
+    int MSAA = 1;
 };
 
 #endif //RASTERIZER_H

@@ -88,6 +88,8 @@ int main(int argc, char** argv) {
     rasterizer.set_view_matrix(view_matrix(eye, center, up));
     rasterizer.set_projection_matrix(perspective_projection(fov, aspect, near, far));
 
+    rasterizer.set_options(1);
+
     rasterizer.load_fragment_shader(std::make_shared<PhongShader>());
     rasterizer.load_lights({{{20, 20, 20}, {2000, 2000, 2000}}});
 
@@ -96,8 +98,8 @@ int main(int argc, char** argv) {
         Model model(argv[i] + std::string(".obj"));
         model.material =
             Material(argv[i] + std::string("_diffuse.tga"),
-                 argv[i] + std::string("_nm_tangent.tga"),
-                 properties_1, true, TANGENT, PER_FRAGMENT);
+                 argv[i] + std::string("_nm.tga"),
+                 properties_1, true, GLOBAL, PER_FRAGMENT);
 
         rasterizer.load_model(model);
     }

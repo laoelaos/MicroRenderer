@@ -43,6 +43,36 @@ void Rasterizer::load_lights(const std::vector<light> &lights_) {
     lights.insert(lights.end(), lights_.begin(), lights_.end());
 }
 
+void Rasterizer::set_options(int MSAA) {
+    this->MSAA = MSAA;
+    height *= MSAA;
+    width  *= MSAA;
+    viewport = {{{width/2., 0,   0, width/2.},
+                        {0,   height/2., 0, height/2.},
+                        {0,   0,   1,   0},
+                        {0,   0,   0,   1}}};
+    z_buffer.resize(width * height * MSAA * MSAA);
+    framebuffer.resize(width * height * MSAA * MSAA);
+    clear_buffer();
+}
+
+void Rasterizer::drawonTGA(TGAImage& framebuffer_) {
+    int h = height / MSAA;
+    int w = width  / MSAA;
+    for (int y = 0; y < h; y++) {
+        for (int x = 0; x < w; x++) {
+            vec3 color_sum = {};
+            for (int dy = 0; dy < MSAA; dy++) {
+                for (int dx = 0; dx < MSAA; dx++) {
+                    color_sum += framebuffer[get_index(x * MSAA + dx,
+                                                     y * MSAA + dy)];
+                }
+            }
+            vec3 color = color_sum / MSAA / MSAA;
+            framebuffer_.set(x, y, vec3_to_color(color));
+        }
+    }
+}
 
 void Rasterizer::rasterize() {
     mvpv = viewport * projection * view * model;
@@ -52,7 +82,7 @@ void Rasterizer::rasterize() {
         rasterize_model(obj_model);
     }
 
-    TGAImage output(width, height, TGAImage::RGB);
+    TGAImage output(width / MSAA, height / MSAA, TGAImage::RGB);
     drawonTGA(output);
     if (!output.write_tga_file("output.tga")) {
         throw std::runtime_error("Failed to write output.tga");
@@ -81,6 +111,9 @@ void Rasterizer::rasterize_model(const Model& obj_model) {
             vertices_world_pos[i] = (mv * now_triangle.vertices[i].to_vec4(1.0)).to_vec3_point();
         }
 
+        if (((vertices_world_pos[1] - vertices_world_pos[0]) ^ (vertices_world_pos[2] - vertices_world_pos[1])).z < 0)
+            continue;
+
         auto [x_min, x_max, y_min, y_max] = find_bounding_box_int(vertices_screen_pos, width, height);
 
         for (int x = x_min; x <= x_max; x++) {
@@ -96,7 +129,7 @@ void Rasterizer::rasterize_model(const Model& obj_model) {
                 double c_beta = beta * z1 / (alpha * z0 + beta * z1 + gamma * z2);
                 double c_gamma = gamma * z2 / (alpha * z0 + beta * z1 + gamma * z2);
 
-                if (z > z_buffer[get_index(x, y)]) {
+                if (z > z_buffer[get_index(x, y)] - 1e-4) {
                     payload.position = c_alpha * vertices_world_pos[0] + c_beta * vertices_world_pos[1] + c_gamma * vertices_world_pos[2];
                     payload.tex_coords = c_alpha * tex_coords[0] + c_beta * tex_coords[1] + c_gamma * tex_coords[2];
 
@@ -135,14 +168,6 @@ void Rasterizer::rasterize_model(const Model& obj_model) {
                     z_buffer[get_index(x, y)] = z;
                 }
             }
-        }
-    }
-}
-
-void Rasterizer::drawonTGA(TGAImage& framebuffer_) {
-    for (int y = 0; y < height; y++) {
-        for (int x = 0; x < width; x++) {
-            framebuffer_.set(x, y, vec3_to_color(framebuffer[get_index(x, y)]));
         }
     }
 }

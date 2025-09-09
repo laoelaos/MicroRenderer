@@ -6,7 +6,7 @@ d1:
 
 d2:
 	cmake --build build -j
-	build/tinyrenderer obj/african_head/african_head obj/african_head/african_head_eye_inner obj/african_head/african_head_eye_outer
+	build/tinyrenderer obj/african_head/african_head obj/african_head/african_head_eye_inner
 
 d3:
 	cmake --build build -j
