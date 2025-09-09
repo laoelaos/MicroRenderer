@@ -68,10 +68,7 @@ void Rasterizer::rasterize_model(const Model& obj_model) {
     shader_payload payload;
     payload.light_info = lights;
     payload.texture = texture;
-    payload.k_ambient = obj_model.material.k_ambient;
-    payload.k_diffuse = obj_model.material.k_diffuse;
-    payload.k_specular = obj_model.material.k_specular;
-    payload.p = obj_model.material.p;
+    payload.properties = obj_model.material.properties;
     for (triangle now_triangle: obj_model.triangles) {
         std::array<vec3, 3> normals = {};
         std::array<vec3, 3> vertices_screen_pos = {};
@@ -80,7 +77,7 @@ void Rasterizer::rasterize_model(const Model& obj_model) {
 
         for (int i = 0; i < 3; i++) {
             normals[i] = normalize((mvit * now_triangle.normals[i].to_vec4(0.0)).to_vec3_vec());
-            vertices_screen_pos[i] = (mvpv * (now_triangle.vertices[i].to_vec4(1.0))).to_vec3_point();
+            vertices_screen_pos[i] = (mvpv * now_triangle.vertices[i].to_vec4(1.0)).to_vec3_point();
             vertices_world_pos[i] = (mv * now_triangle.vertices[i].to_vec4(1.0)).to_vec3_point();
         }
 
@@ -104,7 +101,7 @@ void Rasterizer::rasterize_model(const Model& obj_model) {
                     payload.tex_coords = c_alpha * tex_coords[0] + c_beta * tex_coords[1] + c_gamma * tex_coords[2];
 
                     if (normal_mapping) {
-                        payload.normal = get_vec3_nor_from_tga_uv(normal_map, payload.tex_coords);
+                        payload.normal = get_nor_vec3_from_tga(normal_map, payload.tex_coords);
                     } else if (smooth_shading) {
                         payload.normal = normalize(c_alpha * normals[0] + c_beta * normals[1] + c_gamma * normals[2]);
                     } else {

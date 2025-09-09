@@ -8,12 +8,9 @@
 #include "Shader.h"
 
 struct Material {
-    Material(const std::string& texture_path = "",
+    explicit Material(const std::string& texture_path = "",
              const std::string& normal_map_path = "",
-             double k_diffuse_ = 0,
-             double k_specular_ = 0,
-             double k_ambient_ = 0,
-             int p = 0) : k_diffuse(k_diffuse_), k_specular(k_specular_), k_ambient(k_ambient_), p(p) {
+             const phong_properties &properties = {}) : properties(properties) {
 
         if (!texture_path.empty()) {
             if (!texture.read_tga_file(texture_path)) {
@@ -32,8 +29,7 @@ struct Material {
     TGAImage texture;
     TGAImage normal_map;
 
-    double k_diffuse, k_specular, k_ambient;
-    int p;
+    phong_properties properties;
 
     bool smooth_shading = true;
     bool normal_mapping = true;

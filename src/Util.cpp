@@ -36,11 +36,11 @@ vec3 nor_color_to_vec3(const TGAColor& color) {
     return normalize(vec3{static_cast<double>(color.bgra[2]), static_cast<double>(color.bgra[1]), static_cast<double>(color.bgra[0])} / (255.0 / 2) - vec3{1, 1, 1});
 }
 
-vec3 get_vec3_nor_from_tga_uv(const TGAImage& image, const vec2 &uv) {
+vec3 get_nor_vec3_from_tga(const TGAImage& image, const vec2 &uv) {
     return nor_color_to_vec3(image.get(static_cast<int>(uv.x * image.width()), static_cast<int>(uv.y * image.height())));
 }
 
-vec3 get_vec3_col_from_tga_uv(const TGAImage& image, const vec2 &uv) {
+vec3 get_color_vec3_from_tga(const TGAImage& image, const vec2 &uv) {
     return color_to_vec3(image.get(static_cast<int>(uv.x * image.width()), static_cast<int>(uv.y * image.height())));
 }
 

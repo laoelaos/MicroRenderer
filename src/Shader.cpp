@@ -6,12 +6,12 @@
 #include "Util.h"
 
 vec3 PhongShader_Texture::shade(const shader_payload &payload) {
-    const double k_ambient  = payload.k_ambient;
-    const double k_diffuse  = payload.k_diffuse;
-    const double k_specular = payload.k_specular;
-    const int p = payload.p;
+    const double k_ambient  = payload.properties.k_ambient;
+    const double k_diffuse  = payload.properties.k_diffuse;
+    const double k_specular = payload.properties.k_specular;
+    const int p = payload.properties.p;
 
-    vec3 color = get_vec3_col_from_tga_uv(payload.texture, payload.tex_coords);
+    vec3 color = get_color_vec3_from_tga(payload.texture, payload.tex_coords);
 
     vec3 result{};
     for (auto [position, intensity] : payload.light_info)

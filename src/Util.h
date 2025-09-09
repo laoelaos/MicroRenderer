@@ -19,6 +19,15 @@
 std::tuple<double, double, double> compute_barycentric_2D(double x, double y, std::array<vec3, 3> v3s);
 
 /**
+ * @brief 计算三角形的包围盒, 并将其限制在屏幕范围内
+ * @param v3s 三角形顶点坐标
+ * @param width 屏幕宽度
+ * @param height 屏幕高度
+ * @return x_min, x_max, y_min, y_max
+ */
+std::tuple<int, int, int, int> find_bounding_box_int(std::array<vec3, 3> v3s, int width, int height);
+
+/**
  * @param color vec3 [r, g, b] 范围：[0, 1]
  * @return TGAColor [b, g, r, a] 范围：[0, 255]
  */
@@ -31,11 +40,24 @@ TGAColor vec3_to_color(const vec3& color);
 vec3 color_to_vec3(const TGAColor& color);
 
 /**
- * @param color TGAColor [b, g, r, a] 范围：[0, 255]
- * @return vec3 [x(r), y(g), z(b)] 范围：[-1, 1]
+ * @param color 代表法线的TGAColor [b, g, r, a] 范围：[0, 255]
+ * @return normalized vec3 [x(r), y(g), z(b)] 范围：[-1, 1]
  */
 vec3 nor_color_to_vec3(const TGAColor& color);
-std::tuple<int, int, int, int> find_bounding_box_int(std::array<vec3, 3> v3s, int width, int height);
-vec3 get_vec3_nor_from_tga_uv(const TGAImage& image, const vec2 &uv);
-vec3 get_vec3_col_from_tga_uv(const TGAImage& image, const vec2 &uv);
+
+/**
+ * @brief 从法线贴图中获取法线向量
+ * @param image 法线贴图
+ * @param uv 纹理坐标
+ * @return normalized vec3 [x(r), y(g), z(b)] 范围：[-1, 1]
+ */
+vec3 get_nor_vec3_from_tga(const TGAImage& image, const vec2 &uv);
+
+/**
+ * @brief 从纹理贴图中获取颜色向量
+ * @param image 纹理贴图
+ * @param uv 纹理坐标
+ * @return vec3 [r, g, b] 范围：[0, 1]
+ */
+vec3 get_color_vec3_from_tga(const TGAImage& image, const vec2 &uv);
 #endif //UTIL_H

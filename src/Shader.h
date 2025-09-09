@@ -24,6 +24,13 @@ struct light {
     vec3 intensity;
 };
 
+struct phong_properties {
+    double k_diffuse;
+    double k_specular;
+    double k_ambient;
+    int p;
+};
+
 // position, normal, light_info, tex_coords, texture
 //
 // position is in world space
@@ -33,8 +40,7 @@ struct shader_payload {
     vec3 normal;
     vec2 tex_coords;
 
-    double k_diffuse, k_specular, k_ambient;
-    int p;
+    phong_properties properties;
     std::vector<light> light_info;
     TGAImage texture;
 };
