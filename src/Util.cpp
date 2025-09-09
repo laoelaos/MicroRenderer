@@ -4,7 +4,10 @@
 
 #include "Util.h"
 
-std::tuple<double, double, double> compute_barycentric_2D(double x, double y, const vec3 v3s[3]) {
+#include <algorithm>
+#include <array>
+
+std::tuple<double, double, double> compute_barycentric_2D(double x, double y, std::array<vec3, 3> v3s) {
     double alpha_denominator = - (v3s[0].x - v3s[1].x) * (v3s[2].y - v3s[1].y) + (v3s[0].y - v3s[1].y) * (v3s[2].x - v3s[1].x);
     double beta_denominator = - (v3s[1].x - v3s[2].x) * (v3s[0].y - v3s[2].y) + (v3s[1].y - v3s[2].y) * (v3s[0].x - v3s[2].x);
     // check if the denominators are too small even zero
@@ -30,5 +33,23 @@ vec3 color_to_vec3(const TGAColor& color) {
 }
 
 vec3 nor_color_to_vec3(const TGAColor& color) {
-    return vec3{static_cast<double>(color.bgra[2]), static_cast<double>(color.bgra[1]), static_cast<double>(color.bgra[0])} / (255.0 / 2) - vec3{1, 1, 1};
+    return normalize(vec3{static_cast<double>(color.bgra[2]), static_cast<double>(color.bgra[1]), static_cast<double>(color.bgra[0])} / (255.0 / 2) - vec3{1, 1, 1});
+}
+
+vec3 get_vec3_nor_from_tga_uv(const TGAImage& image, const vec2 &uv) {
+    return nor_color_to_vec3(image.get(static_cast<int>(uv.x * image.width()), static_cast<int>(uv.y * image.height())));
+}
+
+vec3 get_vec3_col_from_tga_uv(const TGAImage& image, const vec2 &uv) {
+    return color_to_vec3(image.get(static_cast<int>(uv.x * image.width()), static_cast<int>(uv.y * image.height())));
+}
+
+std::tuple<int, int, int, int> find_bounding_box_int(const std::array<vec3, 3> v3s, int width, int height) {
+    auto [x_min, x_max] = std::minmax({v3s[0].x, v3s[1].x, v3s[2].x});
+    auto [y_min, y_max] = std::minmax({v3s[0].y, v3s[1].y, v3s[2].y});
+    x_min = std::max(0, static_cast<int>(std::floor(x_min)));
+    x_max = std::min(width - 1, static_cast<int>(std::ceil(x_max)));
+    y_min = std::max(0, static_cast<int>(std::floor(y_min)));
+    y_max = std::min(height - 1, static_cast<int>(std::ceil(y_max)));
+    return {x_min, x_max, y_min, y_max};
 }

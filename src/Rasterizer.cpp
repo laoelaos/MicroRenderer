@@ -5,7 +5,10 @@
 #include <algorithm>
 
 #include "Rasterizer.h"
-#include "Material.h"
+
+#include <iostream>
+#include <thread>
+
 #include "Model.h"
 #include "Util.h"
 
@@ -23,17 +26,17 @@ void Rasterizer::clear_all() {
                         {0,   height/2., 0, height/2.},
                         {0,   0,   1,   0},
                         {0,   0,   0,   1}}};
-    triangles = {};
+    models = {};
     lights = {};
     texture = {};
     normal_map = {};
     fragment_shader = nullptr;
-    std::ranges::fill(framebuffer, vec3());
-    std::ranges::fill(z_buffer, -std::numeric_limits<double>::infinity());
+    clear_buffer();
 }
 
-void Rasterizer::load_triangles(const std::vector<triangle>& triangles_) {
-    triangles.insert(triangles.end(), triangles_.begin(), triangles_.end());
+void Rasterizer::clear_buffer() {
+    std::ranges::fill(framebuffer, vec3());
+    std::ranges::fill(z_buffer, -std::numeric_limits<double>::infinity());
 }
 
 void Rasterizer::load_lights(const std::vector<light> &lights_) {
@@ -57,11 +60,19 @@ void Rasterizer::rasterize() {
 }
 
 void Rasterizer::rasterize_model(const Model& obj_model) {
-    for (triangle now_triangle: obj_model.triangles) {
-        Material material = obj_model.material;
-        bool smooth_shading = material.smooth_shading;
-        bool normal_mapping = material.normal_mapping;
+    texture = obj_model.material.texture;
+    normal_map = obj_model.material.normal_map;
+    bool smooth_shading = obj_model.material.smooth_shading;
+    bool normal_mapping = obj_model.material.normal_mapping;
 
+    shader_payload payload;
+    payload.light_info = lights;
+    payload.texture = texture;
+    payload.k_ambient = obj_model.material.k_ambient;
+    payload.k_diffuse = obj_model.material.k_diffuse;
+    payload.k_specular = obj_model.material.k_specular;
+    payload.p = obj_model.material.p;
+    for (triangle now_triangle: obj_model.triangles) {
         std::array<vec3, 3> normals = {};
         std::array<vec3, 3> vertices_screen_pos = {};
         std::array<vec3, 3> vertices_world_pos = {};
@@ -73,19 +84,14 @@ void Rasterizer::rasterize_model(const Model& obj_model) {
             vertices_world_pos[i] = (mv * now_triangle.vertices[i].to_vec4(1.0)).to_vec3_point();
         }
 
-        auto [x_min, x_max, y_min, y_max] = find_box_int(vertices_screen_pos, width, height);
+        auto [x_min, x_max, y_min, y_max] = find_bounding_box_int(vertices_screen_pos, width, height);
 
-        shader_payload payload;
-        payload.light_info = lights;
         for (int x = x_min; x <= x_max; x++) {
             for (int y = y_min; y <= y_max; y++) {
                 auto [alpha, beta, gamma] = compute_barycentric_2D(x + .5, y + .5, vertices_screen_pos);
                 if (alpha<0 || beta<0 || gamma<0)
-                    continue;
-
-                double w_reciprocal = 1.0 / (alpha + beta + gamma);
+                     continue;
                 double z = alpha * vertices_screen_pos[0].z + beta * vertices_screen_pos[1].z + gamma * vertices_screen_pos[2].z;
-                z *= w_reciprocal;
                 double z0 = 1.0/vertices_world_pos[0].z;
                 double z1 = 1.0/vertices_world_pos[1].z;
                 double z2 = 1.0/vertices_world_pos[2].z;
@@ -93,13 +99,12 @@ void Rasterizer::rasterize_model(const Model& obj_model) {
                 double c_beta = beta * z1 / (alpha * z0 + beta * z1 + gamma * z2);
                 double c_gamma = gamma * z2 / (alpha * z0 + beta * z1 + gamma * z2);
 
-
                 if (z > z_buffer[get_index(x, y)]) {
                     payload.position = c_alpha * vertices_world_pos[0] + c_beta * vertices_world_pos[1] + c_gamma * vertices_world_pos[2];
                     payload.tex_coords = c_alpha * tex_coords[0] + c_beta * tex_coords[1] + c_gamma * tex_coords[2];
 
                     if (normal_mapping) {
-                        payload.normal = normalize(nor_color_to_vec3(get_color_from_tga_uv(material.normal_map, payload.tex_coords)));
+                        payload.normal = get_vec3_nor_from_tga_uv(normal_map, payload.tex_coords);
                     } else if (smooth_shading) {
                         payload.normal = normalize(c_alpha * normals[0] + c_beta * normals[1] + c_gamma * normals[2]);
                     } else {

@@ -1,5 +1,6 @@
 #include <algorithm>
 #include <cmath>
+#include <iostream>
 
 #include "TGAImage.h"
 #include "Model.h"
@@ -79,9 +80,6 @@ int main(int argc, char** argv) {
     const vec3 center = {0, 0, 2};
     const vec3 up     = {0, 1, 0};
 
-    //projection = orthographic_projection(2, 3, aspect, -aspect, 1, -1);
-    //perspective_projection(fov, aspect, near, far)
-
     Rasterizer rasterizer(width, height);
 
     rasterizer.set_model_matrix(model_matrix());
@@ -89,29 +87,23 @@ int main(int argc, char** argv) {
     rasterizer.set_projection_matrix(perspective_projection(fov, aspect, near, far));
 
     rasterizer.load_fragment_shader(std::make_shared<PhongShader_Texture>());
-    rasterizer.set_options(true, true);
+    rasterizer.load_lights({{{20, 20, 20}, {2000, 2000, 2000}}});
 
-    for (int i = 1; i < argc; i++)
-    {
-        Model model(argv[i]);
-        rasterizer.load_triangles(model.triangles);
-        TGAImage texture, normal_map;
-        std::string base = argv[i];
-        base.resize(base.size()-4);
-        texture.read_tga_file(base + std::string("_diffuse.tga"));
-        rasterizer.set_texture(texture);
-        normal_map.read_tga_file(base + std::string("_nm.tga"));
-        rasterizer.set_normal_map(normal_map);
+    for (int i = 1; i < argc; i++) {
+        Model model(argv[i] + std::string(".obj"));
+        model.material =
+            Material(argv[i] + std::string("_diffuse.tga"),
+                 argv[i] + std::string("_nm.tga"),
+                 0.9, 0.6, 0.1, 150);
 
-        rasterizer.rasterize();
-        rasterizer.clear_triangles();
+        rasterizer.load_model(model);
     }
 
+    clock_t start = clock();
+    rasterizer.rasterize();
+    clock_t end = clock();
+    std::cout << "Rasterization took " << double(end - start) / CLOCKS_PER_SEC << " seconds." << std::endl;
 
-
-    TGAImage framebuffer(width, height, TGAImage::RGB);
-    rasterizer.drawonTGA(framebuffer);
-    framebuffer.write_tga_file("framebuffer.tga");
     return 0;
 }
 

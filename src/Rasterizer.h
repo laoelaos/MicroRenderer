@@ -8,7 +8,6 @@
 #include <vector>
 
 #include "Geometry.h"
-#include "Material.h"
 #include "Model.h"
 #include "Shader.h"
 #include "TGAImage.h"
@@ -20,22 +19,16 @@ public:
     // Clear all settings, including transformation matrices, loaded triangles, lights, shaders, textures, and framebuffer, z-buffer
     void clear_all();
     // Clear only the triangles
-    void clear_triangles() { triangles = {}; }
+    void clear_models() { models = {}; }
+    void clear_buffer();
 
     void load_model(const Model& model) { models.push_back(model); }
 
-    void load_triangles(const std::vector<triangle>& triangles_);
     void load_lights(const std::vector<light>& lights_);
     void load_fragment_shader(std::shared_ptr<Shader> shader) { fragment_shader = shader; }
 
     void set_texture(const TGAImage& tex) { texture = tex; }
     void set_normal_map(const TGAImage& norm) { normal_map = norm; }
-
-    // set options for shading
-    void set_options(bool smooth_shading, bool normal_mapping) {
-        this->smooth_shading = smooth_shading;
-        this->normal_mapping = normal_mapping;
-    }
 
     void set_model_matrix(const mat4& m) { model = m; }
     void set_view_matrix(const mat4& m) { view = m; }
@@ -51,8 +44,6 @@ private:
     void rasterize_model(const Model& model);
 
     std::vector<Model> models;
-
-    std::vector<triangle> triangles;
 
     std::vector<light> lights;
     TGAImage texture, normal_map;

@@ -16,7 +16,7 @@
  * @return 3个 double, alpha, beta, gamma， 分别为第0, 1, 2个顶点的系数\n
  * 如果计算点过远, 返回{-1, -1, -1}
  */
-std::tuple<double, double, double> compute_barycentric_2D(double x, double y, const vec3 v3s[3]);
+std::tuple<double, double, double> compute_barycentric_2D(double x, double y, std::array<vec3, 3> v3s);
 
 /**
  * @param color vec3 [r, g, b] 范围：[0, 1]
@@ -35,5 +35,7 @@ vec3 color_to_vec3(const TGAColor& color);
  * @return vec3 [x(r), y(g), z(b)] 范围：[-1, 1]
  */
 vec3 nor_color_to_vec3(const TGAColor& color);
-
+std::tuple<int, int, int, int> find_bounding_box_int(std::array<vec3, 3> v3s, int width, int height);
+vec3 get_vec3_nor_from_tga_uv(const TGAImage& image, const vec2 &uv);
+vec3 get_vec3_col_from_tga_uv(const TGAImage& image, const vec2 &uv);
 #endif //UTIL_H

@@ -31,10 +31,11 @@ struct light {
 struct shader_payload {
     vec3 position;
     vec3 normal;
-
-    std::vector<light> light_info;
-
     vec2 tex_coords;
+
+    double k_diffuse, k_specular, k_ambient;
+    int p;
+    std::vector<light> light_info;
     TGAImage texture;
 };
 
