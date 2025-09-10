@@ -77,4 +77,10 @@ vec3 get_color_vec3_from_tga(const TGAImage& image, const vec2 &uv);
  */
 vec3 get_color_vec3_from_tga_bilinear(const TGAImage& image, const vec2 &uv);
 
+mat4 model_matrix();
+mat4 view_matrix(const vec3 &eye, const vec3 &center, const vec3 &up);
+mat4 orthographic_projection(const double near_, const double far_, const double right, const double left, const double top, const double bottom);
+mat4 perspective_projection(const double fov, const double aspect, double near_, double far_);
+mat4 viewport_matrix(int w, int h);
+
 #endif //UTIL_H

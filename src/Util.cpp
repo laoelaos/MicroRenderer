@@ -75,3 +75,56 @@ std::tuple<int, int, int, int> find_bounding_box_int(const std::array<vec3, 3> v
     y_max = std::min(height - 1, static_cast<int>(std::ceil(y_max)));
     return {x_min, x_max, y_min, y_max};
 }
+
+mat4 model_matrix() {
+    return identity_matrix<4>();
+}
+
+mat4 view_matrix(const vec3 &eye, const vec3 &center, const vec3 &up) {
+    vec3 z = normalize(eye - center);
+    vec3 x = normalize(z ^ up);
+    vec3 y = normalize(x ^ z);
+    mat4 rotate {{{x.x, x.y, x.z, 0},
+                        {y.x, y.y, y.z, 0},
+                        {-z.x, -z.y, -z.z, 0},
+                        {0,   0,   0,   1}}};
+    mat4 translate {{{1, 0, 0, -center.x},
+                        {0, 1, 0, -center.y},
+                        {0, 0, 1, -center.z},
+                        {0, 0, 0, 1}}};
+    return rotate * translate;
+}
+
+mat4 orthographic_projection(const double near_, const double far_, const double right, const double left, const double top, const double bottom) {
+    mat4 translate {{{1, 0, 0, -(left + right) / 2},
+                        {0, 1, 0, -(top + bottom) / 2},
+                        {0, 0, 1, -(near_ + far_) / 2},
+                        {0, 0, 0, 1}}};
+    mat4 scale {{{2 / (right - left), 0, 0, 0},
+                        {0, 2 / (top - bottom), 0, 0},
+                        {0, 0, 2 / (near_ - far_), 0},
+                        {0, 0, 0, 1}}};
+    return scale * translate;
+}
+
+mat4 perspective_projection(const double fov, const double aspect, double near_, double far_) {
+    double top = near_ * std::tan(fov * M_PI / 360.0);
+    double bottom = -top;
+    double right = top * aspect;
+    double left = -right;
+    near_ = -near_;
+    far_  = -far_;
+    mat4 orth = orthographic_projection(near_, far_, right, left, top, bottom);
+    mat4 pers {{{near_, 0, 0, 0},
+                        {0, near_, 0, 0},
+                        {0, 0, near_ + far_, -near_*far_},
+                        {0, 0, 1, 0}}};
+    return orth * pers;
+}
+
+mat4 viewport_matrix(int w, int h) {
+    return {{{w/2., 0, 0, w/2.},
+                        {0, h/2., 0, h/2.},
+                        {0, 0, 1, 0},
+                        {0, 0, 0, 1}}};
+}

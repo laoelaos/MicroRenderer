@@ -5,7 +5,7 @@ if(NOT is_multi_config AND NOT (CMAKE_BUILD_TYPE OR DEFINED ENV{CMAKE_BUILD_TYPE
   set(CMAKE_BUILD_TYPE Release CACHE STRING "Release default")
 endif()
 
-project(tinyrenderer LANGUAGES CXX)
+project(MicroRenderer LANGUAGES CXX)
 
 set(CMAKE_CXX_STANDARD 20)
 
@@ -20,14 +20,34 @@ if(CMAKE_CXX_COMPILER_ID MATCHES "Clang|GNU|Intel")
 endif()
 
 find_package(OpenMP COMPONENTS CXX)
+find_package(glfw3 CONFIG REQUIRED)
+find_package(OpenGL REQUIRED)
+
+set(IMGUI_SOURCES
+        src/ImGui/imgui.cpp
+        src/ImGui/imgui_stdlib.cpp
+        src/ImGui/imgui_demo.cpp
+        src/ImGui/imgui_draw.cpp
+        src/ImGui/imgui_tables.cpp
+        src/ImGui/imgui_widgets.cpp
+        src/ImGui/imgui_impl_glfw.cpp
+        src/ImGui/imgui_impl_opengl3.cpp
+)
 
 set(SOURCES src/main.cpp src/tgaimage.cpp
         src/model.cpp
         src/Rasterizer.cpp
         src/util.cpp
-        src/Shader.cpp)
+        src/Shader.cpp
+        ${IMGUI_SOURCES})
 
 add_executable(${PROJECT_NAME} ${SOURCES})
-target_link_libraries(${PROJECT_NAME} PRIVATE $<$<BOOL:${OpenMP_CXX_FOUND}>:OpenMP::OpenMP_CXX>)
+
+target_include_directories(${PROJECT_NAME} PRIVATE src/ImGui)
+
+target_link_libraries(${PROJECT_NAME} PRIVATE
+        glfw
+        OpenGL::GL
+        $<$<BOOL:${OpenMP_CXX_FOUND}>:OpenMP::OpenMP_CXX>)
 
 file(GENERATE OUTPUT .gitignore CONTENT "*")

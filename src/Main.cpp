@@ -1,115 +1,444 @@
-#include <algorithm>
-#include <cmath>
-#include <iostream>
+#include "imgui.h"
+#include "imgui_impl_glfw.h"
+#include "imgui_impl_opengl3.h"
+#include <cstdio>
+#define GL_SILENCE_DEPRECATION
+#if defined(IMGUI_IMPL_OPENGL_ES2)
+#include <GLES2/gl2.h>
+#endif
+#include <vector>
+#include <GLFW/glfw3.h> // Will drag system OpenGL headers
 
-#include "TGAImage.h"
-#include "Model.h"
-#include "Geometry.h"
 #include "Rasterizer.h"
-#include "Shader.h"
+#include "TGAImage.h"
+#include "Util.h"
+#include <memory>
+#include <chrono>
 
-constexpr TGAColor white   = {255, 255, 255, 255}; // attention, BGRA order
-constexpr TGAColor green   = {  0, 255,   0, 255};
-constexpr TGAColor red     = {  0,   0, 255, 255};
-constexpr TGAColor blue    = {255, 128,  64, 255};
-constexpr TGAColor yellow  = {  0, 200, 255, 255};
+// 新增：跨平台控制台 UTF-8 初始化
+#include <clocale>
+#ifdef _WIN32
+#ifndef NOMINMAX
+#define NOMINMAX
+#endif
+#include <windows.h>
+#endif
 
-mat4 model_matrix() {
-    return identity_matrix<4>();
+static void glfw_error_callback(int error, const char* description)
+{
+    fprintf(stderr, "GLFW Error %d: %s\n", error, description);
 }
 
-mat4 view_matrix(const vec3 &eye, const vec3 &center, const vec3 &up) {
-    vec3 z = normalize(eye - center);
-    vec3 x = normalize(z ^ up);
-    vec3 y = normalize(x ^ z);
-    mat4 rotate {{{x.x, x.y, x.z, 0},
-                        {y.x, y.y, y.z, 0},
-                        {-z.x, -z.y, -z.z, 0},
-                        {0,   0,   0,   1}}};
-    mat4 translate {{{1, 0, 0, -center.x},
-                        {0, 1, 0, -center.y},
-                        {0, 0, 1, -center.z},
-                        {0, 0, 0, 1}}};
-    return rotate * translate;
+// 新增：将 Windows 控制台切换到 UTF-8，并设置 C locale
+static void init_console_utf8() {
+#ifdef _WIN32
+    // 设置控制台输入/输出为 UTF-8
+    SetConsoleOutputCP(CP_UTF8);
+    SetConsoleCP(CP_UTF8);
+#endif
+    // 使用用户环境 locale（在多数平台下能正确处理 UTF-8）
+    std::setlocale(LC_ALL, "");
 }
 
-mat4 orthographic_projection(const double near, const double far, const double right, const double left, const double top, const double bottom) {
-    mat4 translate {{{1, 0, 0, -(left + right) / 2},
-                        {0, 1, 0, -(top + bottom) / 2},
-                        {0, 0, 1, -(near + far) / 2},
-                        {0, 0, 0, 1}}};
-    mat4 scale {{{2 / (right - left), 0, 0, 0},
-                        {0, 2 / (top - bottom), 0, 0},
-                        {0, 0, 2 / (near - far), 0},
-                        {0, 0, 0, 1}}};
-    return scale * translate;
-}
+// 渲染上下文结构，用于存储和控制渲染参数
+struct RenderContext {
+    // 相机参数
+    vec3 eye = {0, 0, 1};
+    vec3 center = {0, 0, 2};
+    vec3 up = {0, 1, 0};
+    double fov = 55.0;
+    double aspect = 1.0;
+    double near_ = 2.0;
+    double far_ = 3.0;
 
-mat4 perspective_projection(const double fov, const double aspect, double near, double far) {
-    double top = near * std::tan(fov * M_PI / 360.0);
-    double bottom = -top;
-    double right = top * aspect;
-    double left = -right;
-    near = -near;
-    far  = -far;
-    mat4 orth = orthographic_projection(near, far, right, left, top, bottom);
-    mat4 pers {{{near, 0, 0, 0},
-                        {0, near, 0, 0},
-                        {0, 0, near + far, -near*far},
-                        {0, 0, 1, 0}}};
-    return orth * pers;
-}
+    // 渲染参数
+    int width = 600;
+    int height = 600;
+    int msaa_level = 1;
 
-mat4 viewport_matrix(int w, int h) {
-    return {{{w/2., 0, 0, w/2.},
-                        {0, h/2., 0, h/2.},
-                        {0, 0, 1, 0},
-                        {0, 0, 0, 1}}};
-}
+    // 光照参数
+    vec3 light_pos = {20, 20, 20};
+    vec3 light_intensity = {2000, 2000, 2000};
 
-int main(int argc, char** argv) {
-    constexpr double fov = 55.0;
-    constexpr double aspect = 1.;
-    constexpr double near = 2;
-    constexpr double far  = 3;
+    // 材质参数
+    phong_properties material_props = {0.9, 0.6, 0.005, 150};
 
-    constexpr int width  = 2000;
-    constexpr int height = 2000;
+    // 模型��径
+    std::string model_path = R"(D:\CS_learning\Project\MicroRenderer\obj\african_head\african_head.obj)";
+    std::string diffuse_path = R"(D:\CS_learning\Project\MicroRenderer\obj\african_head\african_head_diffuse.tga)";
+    std::string normal_path = R"(D:\CS_learning\Project\MicroRenderer\obj\african_head\african_head_nm.tga)";
 
-    const vec3 eye    = {0, 0, 1};
-    const vec3 center = {0, 0, 2};
-    const vec3 up     = {0, 1, 0};
+    // 渲染选项
+    bool diffuse_mapping = true;
+    NormalType normal_type = GLOBAL;
+    ShadeFrequency shade_frequency = PER_FRAGMENT;
 
-    std::cout << "Rasterizing..." << std::endl;
+    // 控制标志
+    bool should_render = true;
+};
+static GLuint renderedTexture = 0;
+static std::vector<unsigned char> imageData;
 
-    Rasterizer rasterizer(width, height);
-
-    rasterizer.set_model_matrix(model_matrix());
-    rasterizer.set_view_matrix(view_matrix(eye, center, up));
-    rasterizer.set_projection_matrix(perspective_projection(fov, aspect, near, far));
-
-    rasterizer.set_options(1);
-
-    rasterizer.load_fragment_shader(std::make_shared<PhongShader>());
-    rasterizer.load_lights({{{20, 20, 20}, {2000, 2000, 2000}}});
-
-    phong_properties properties_1 {0.9, 0.6, 0.005, 150};
-    for (int i = 1; i < argc; i++) {
-        Model model(argv[i] + std::string(".obj"));
-        model.material =
-            Material(argv[i] + std::string("_diffuse.tga"),
-                 argv[i] + std::string("_nm.tga"),
-                 properties_1, true, GLOBAL, PER_FRAGMENT);
-
-        rasterizer.load_model(model);
+void initTexture(int width, int height) {
+    if (renderedTexture != 0) {
+        glDeleteTextures(1, &renderedTexture);
     }
 
-    clock_t start = clock();
+    glGenTextures(1, &renderedTexture);
+    glBindTexture(GL_TEXTURE_2D, renderedTexture);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, 0x812F);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, 0x812F);
+
+    // 初始化一个空白纹理
+    imageData.resize(width * height * 4, 255); // 全白RGBA格式
+}
+
+void updateTexture(const TGAImage& tgaImage) {
+    int width = tgaImage.width();
+    int height = tgaImage.height();
+
+    if (static_cast<int>(imageData.size()) != width * height * 4) {
+        imageData.resize(width * height * 4);
+    }
+
+    // 从TGA转换到RGBA格式
+    for (int y = 0; y < height; y++) {
+        for (int x = 0; x < width; x++) {
+            TGAColor color = tgaImage.get(x, y);
+            int index = ((height - y - 1) * width + x) * 4;
+            imageData[index] = color.bgra[2];     // R
+            imageData[index + 1] = color.bgra[1]; // G
+            imageData[index + 2] = color.bgra[0]; // B
+            imageData[index + 3] = 255;           // A (强制设为不透明)
+        }
+    }
+
+    glBindTexture(GL_TEXTURE_2D, renderedTexture);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, imageData.data());
+}
+
+// 执行渲染并更新纹理
+void performRendering(const RenderContext& ctx, TGAImage& tgaImage) {
+    auto start_time = std::chrono::high_resolution_clock::now();
+
+    // 确保图像尺寸正确
+    if (tgaImage.width() != ctx.width || tgaImage.height() != ctx.height) {
+        printf("重置TGA图像尺寸: %dx%d\n", ctx.width, ctx.height);
+        tgaImage = TGAImage(ctx.width, ctx.height, TGAImage::RGB);
+    }
+
+    Rasterizer rasterizer(ctx.width, ctx.height);
+
+    rasterizer.set_model_matrix(model_matrix());
+    rasterizer.set_view_matrix(view_matrix(ctx.eye, ctx.center, ctx.up));
+    rasterizer.set_projection_matrix(perspective_projection(ctx.fov, ctx.aspect, ctx.near_, ctx.far_));
+
+    rasterizer.set_options(ctx.msaa_level);
+
+    rasterizer.load_fragment_shader(std::make_shared<PhongShader>());
+    rasterizer.load_lights({{{ctx.light_pos}, {ctx.light_intensity}}});
+
+    Model model(ctx.model_path);
+    model.material = Material(ctx.diffuse_path, ctx.normal_path,
+                          ctx.material_props, ctx.diffuse_mapping,
+                          ctx.normal_type, ctx.shade_frequency);
+
+    rasterizer.load_model(model);
+
     rasterizer.rasterize();
-    clock_t end = clock();
-    std::cout << "Rasterization done. Took " << double(end - start) / CLOCKS_PER_SEC << " seconds." << std::endl;
-    std::cout << "Output written to output.tga" << std::endl;
+    rasterizer.drawonTGA(tgaImage);
+    tgaImage.write_tga_file("debug_output.tga");
+
+    auto end_time = std::chrono::high_resolution_clock::now();
+    auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end_time - start_time).count();
+    printf("渲染完成，耗时: %lld ms\n", duration);
+}
+
+int main(int, char**)
+{
+    // 在尽早的位置初始化控制台编码，保证后续 printf 的中文能正常显示
+    init_console_utf8();
+
+    glfwSetErrorCallback(glfw_error_callback);
+    if (!glfwInit())
+        return 1;
+
+#if defined(IMGUI_IMPL_OPENGL_ES2)  // Decide GL+GLSL versions
+    // GL ES 2.0 + GLSL 100 (WebGL 1.0)
+    const char* glsl_version = "#version 100";
+    glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 2);
+    glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 0);
+    glfwWindowHint(GLFW_CLIENT_API, GLFW_OPENGL_ES_API);
+#elif defined(IMGUI_IMPL_OPENGL_ES3)
+    // GL ES 3.0 + GLSL 300 es (WebGL 2.0)
+    const char* glsl_version = "#version 300 es";
+    glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
+    glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 0);
+    glfwWindowHint(GLFW_CLIENT_API, GLFW_OPENGL_ES_API);
+#elif defined(__APPLE__)
+    // GL 3.2 + GLSL 150
+    const char* glsl_version = "#version 150";
+    glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
+    glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 2);
+    glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);  // 3.2+ only
+    glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);            // Required on Mac
+#else
+    // GL 3.0 + GLSL 130
+    const char* glsl_version = "#version 130";
+    glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
+    glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 0);
+    //glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);  // 3.2+ only
+    //glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);            // 3.0+ only
+#endif
+
+    // Create window with graphics context
+    float main_scale = ImGui_ImplGlfw_GetContentScaleForMonitor(glfwGetPrimaryMonitor()); // Valid on GLFW 3.3+ only
+    GLFWwindow *window = glfwCreateWindow((int) (1280 * main_scale), (int) (800 * main_scale),
+                                          "MicroRenderer", nullptr, nullptr);
+    if (window == nullptr)
+        return 1;
+    glfwMakeContextCurrent(window);
+    glfwSwapInterval(1); // Enable vsync
+
+    IMGUI_CHECKVERSION(); // Setup Dear ImGui context
+    ImGui::CreateContext();
+    ImGuiIO &io = ImGui::GetIO();
+    (void) io;
+    io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard; // Enable Keyboard Controls
+    io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad; // Enable Gamepad Controls
+
+    ImGui::StyleColorsDark(); // Setup Dear ImGui styl     //ImGui::StyleColorsLight();
+
+    ImGuiStyle &style = ImGui::GetStyle(); // Setup scaling
+    style.ScaleAllSizes(main_scale);
+    // Bake a fixed style scale. (until we have a solution for dynamic style scaling, changing this requires resetting Style + calling this again)
+    style.FontScaleDpi = main_scale;
+    // Set initial font scale. (using io.ConfigDpiScaleFonts=true makes this unnecessary. We leave both here for documentation purpose)
+
+    ImGui_ImplGlfw_InitForOpenGL(window, true); // Setup Platform/Renderer backends
+    ImGui_ImplOpenGL3_Init(glsl_version);
+
+    ImFont *font = io.Fonts->AddFontFromFileTTF(R"(C:\Windows\Fonts\msyh.ttc)", 18.0f);
+    IM_ASSERT(font != nullptr);
+
+    ImVec4 clear_color = ImVec4(0.15f, 0.15f, 0.15f, 1.00f);
+
+    // 初始化渲染上下文
+    RenderContext renderContext;
+    renderContext.aspect = static_cast<double>(renderContext.width) / renderContext.height;
+    // 初始化渲染纹理
+    initTexture(renderContext.width, renderContext.height);
+    // 初始化TGA图像
+    TGAImage tgaImage(renderContext.width, renderContext.height, TGAImage::RGB);
+    // 初次渲染
+    performRendering(renderContext, tgaImage);
+    updateTexture(tgaImage);
+
+    while (!glfwWindowShouldClose(window))
+    {
+        glfwPollEvents();
+        if (glfwGetWindowAttrib(window, GLFW_ICONIFIED) != 0)
+        {
+            ImGui_ImplGlfw_Sleep(10);
+            continue;
+        }
+
+        ImGui_ImplOpenGL3_NewFrame();   // Start the Dear ImGui frame
+        ImGui_ImplGlfw_NewFrame();
+        ImGui::NewFrame();
+
+        // 控制面板窗口
+        ImGui::Begin("渲染控制面板");
+
+        if (ImGui::CollapsingHeader("基本设置", ImGuiTreeNodeFlags_DefaultOpen)) {
+            if (ImGui::InputInt("MSAA级别", &renderContext.msaa_level, 1, 1)) {
+                renderContext.msaa_level = std::max(1, std::min(4, renderContext.msaa_level)); // 限制范围1-4
+            }
+        }
+
+        if (ImGui::CollapsingHeader("相机设置", ImGuiTreeNodeFlags_DefaultOpen)) {
+            // 临时float变量用于ImGui控件
+            float eye_pos[3] = {(float)renderContext.eye.x, (float)renderContext.eye.y, (float)renderContext.eye.z};
+            float center_pos[3] = {(float)renderContext.center.x, (float)renderContext.center.y, (float)renderContext.center.z};
+            float up_dir[3] = {(float)renderContext.up.x, (float)renderContext.up.y, (float)renderContext.up.z};
+            float fov = (float)renderContext.fov;
+            float near_plane = (float)renderContext.near_;
+            float far_plane = (float)renderContext.far_;
+
+            bool eye_changed = ImGui::InputFloat3("相机位置", eye_pos, "%.2f");
+            bool center_changed = ImGui::InputFloat3("观察点", center_pos, "%.2f");
+            bool up_changed = ImGui::InputFloat3("上方向", up_dir, "%.2f");
+            bool fov_changed = ImGui::InputFloat("视场角FOV", &fov, 1.0f, 5.0f, "%.1f");
+            bool near_changed = ImGui::InputFloat("近平面", &near_plane, 0.1f, 0.5f, "%.2f");
+            bool far_changed = ImGui::InputFloat("远平面", &far_plane, 0.1f, 0.5f, "%.2f");
+
+            // 添加一些提示信息
+            if (ImGui::IsItemHovered())
+                ImGui::SetTooltip("远平面应大于近平面");
+
+            if (eye_changed) {
+                renderContext.eye.x = eye_pos[0];
+                renderContext.eye.y = eye_pos[1];
+                renderContext.eye.z = eye_pos[2];
+            }
+
+            if (center_changed) {
+                renderContext.center.x = center_pos[0];
+                renderContext.center.y = center_pos[1];
+                renderContext.center.z = center_pos[2];
+            }
+
+            if (up_changed) {
+                renderContext.up.x = up_dir[0];
+                renderContext.up.y = up_dir[1];
+                renderContext.up.z = up_dir[2];
+            }
+
+            if (fov_changed) {
+                renderContext.fov = std::max(10.0, std::min(120.0, (double)fov));
+            }
+
+            if (near_changed) {
+                renderContext.near_ = std::max(0.1, (double)near_plane);
+            }
+
+            if (far_changed) {
+                renderContext.far_ = std::max(renderContext.near_ + 0.1, (double)far_plane);
+            }
+        }
+
+        if (ImGui::CollapsingHeader("光照设置", ImGuiTreeNodeFlags_DefaultOpen)) {
+            float light_position[3] = {(float)renderContext.light_pos.x, (float)renderContext.light_pos.y, (float)renderContext.light_pos.z};
+            float light_intens[3] = {(float)renderContext.light_intensity.x, (float)renderContext.light_intensity.y, (float)renderContext.light_intensity.z};
+
+            bool light_pos_changed = ImGui::InputFloat3("光源位置", light_position, "%.1f");
+            bool light_intens_changed = ImGui::InputFloat3("光源强度", light_intens, "%.0f");
+
+            if (light_pos_changed) {
+                renderContext.light_pos.x = light_position[0];
+                renderContext.light_pos.y = light_position[1];
+                renderContext.light_pos.z = light_position[2];
+            }
+
+            if (light_intens_changed) {
+                renderContext.light_intensity.x = light_intens[0];
+                renderContext.light_intensity.y = light_intens[1];
+                renderContext.light_intensity.z = light_intens[2];
+            }
+        }
+
+        if (ImGui::CollapsingHeader("材质设置", ImGuiTreeNodeFlags_DefaultOpen)) {
+            float k_ambient = (float)renderContext.material_props.k_ambient;
+            float k_diffuse = (float)renderContext.material_props.k_diffuse;
+            float k_specular = (float)renderContext.material_props.k_specular;
+            int p = renderContext.material_props.p;
+
+            bool ambient_changed = ImGui::InputFloat("环境光系数", &k_ambient, 0.05f, 0.1f, "%.2f");
+            bool diffuse_changed = ImGui::InputFloat("漫反射系数", &k_diffuse, 0.05f, 0.1f, "%.2f");
+            bool specular_changed = ImGui::InputFloat("镜面反射系数", &k_specular, 0.005f, 0.01f, "%.3f");
+            bool p_changed = ImGui::InputInt("光泽度", &p, 10, 50);
+
+            if (ambient_changed) {
+                renderContext.material_props.k_ambient = std::max(0.0, std::min(1.0, (double)k_ambient));
+            }
+
+            if (diffuse_changed) {
+                renderContext.material_props.k_diffuse = std::max(0.0, std::min(1.0, (double)k_diffuse));
+            }
+
+            if (specular_changed) {
+                renderContext.material_props.k_specular = std::max(0.0, std::min(1.0, (double)k_specular));
+            }
+
+            if (p_changed) {
+                renderContext.material_props.p = std::max(1, std::min(500, p));
+            }
+
+            const char* normal_types[] = { "全局法线", "切线空间法线" };
+            static int normal_type_idx = 0;
+            if (ImGui::Combo("法线类型", &normal_type_idx, normal_types, IM_ARRAYSIZE(normal_types))) {
+                renderContext.normal_type = normal_type_idx == 0 ? GLOBAL : TANGENT;
+            }
+
+            const char* shade_frequencies[] = { "每顶点着色", "每片段着色" };
+            static int shade_freq_idx = 1;
+            if (ImGui::Combo("着色频率", &shade_freq_idx, shade_frequencies, IM_ARRAYSIZE(shade_frequencies))) {
+                renderContext.shade_frequency = shade_freq_idx == 0 ? PER_VERTEX : PER_FRAGMENT;
+            }
+
+            ImGui::Checkbox("使用贴图", &renderContext.diffuse_mapping);
+        }
+
+        if (ImGui::Button("重新渲染")) {
+            renderContext.should_render = true;
+        }
+
+        ImGui::End();
+
+        // 渲染结果窗口
+        ImGui::Begin("渲染结果");
+
+        // 如果需要重新渲染
+        if (renderContext.should_render) {
+            printf("进行重新渲染...\n");
+            performRendering(renderContext, tgaImage);
+            updateTexture(tgaImage);
+            renderContext.should_render = false;
+        }
+
+        // 获取窗口内容区域大小以调整图像大小
+        ImVec2 windowSize = ImGui::GetContentRegionAvail();
+
+        // 计算正确的宽高比
+        float aspectRatio = static_cast<float>(renderContext.width) / renderContext.height;
+
+        // 显示纹理，保持纵横比
+        ImVec2 imageSize;
+        if (windowSize.x / aspectRatio <= windowSize.y) {
+            imageSize = ImVec2(windowSize.x, windowSize.x / aspectRatio);
+        } else {
+            imageSize = ImVec2(windowSize.y * aspectRatio, windowSize.y);
+        }
+
+        // 居中显示图像
+        float offsetX = (windowSize.x - imageSize.x) * 0.5f;
+        float offsetY = (windowSize.y - imageSize.y) * 0.5f;
+        if (offsetX > 0 || offsetY > 0) {
+            ImGui::SetCursorPos(ImVec2(ImGui::GetCursorPosX() + offsetX, ImGui::GetCursorPosY() + offsetY));
+        }
+
+        // 显示纹理信息和预览
+        ImGui::Text("渲染纹理: ID=%u, 尺寸=%dx%d", renderedTexture,
+                    tgaImage.width(), tgaImage.height());
+
+        ImGui::Image((void*)(intptr_t)renderedTexture, imageSize);
+        ImGui::End();
+
+        // Rendering
+        ImGui::Render();
+        int display_w, display_h;
+        glfwGetFramebufferSize(window, &display_w, &display_h);
+        glViewport(0, 0, display_w, display_h);
+        glClearColor(clear_color.x * clear_color.w, clear_color.y * clear_color.w, clear_color.z * clear_color.w, clear_color.w);
+        glClear(GL_COLOR_BUFFER_BIT);
+        ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
+
+        glfwSwapBuffers(window);
+    }
+
+    // 清理资源
+    if (renderedTexture != 0) {
+        glDeleteTextures(1, &renderedTexture);
+    }
+
+    ImGui_ImplOpenGL3_Shutdown();   // Cleanup
+    ImGui_ImplGlfw_Shutdown();
+    ImGui::DestroyContext();
+
+    glfwDestroyWindow(window);
+    glfwTerminate();
 
     return 0;
 }
-
