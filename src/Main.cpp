@@ -15,30 +15,14 @@
 #include <memory>
 #include <chrono>
 
-// 新增：跨平台控制台 UTF-8 初始化
-#include <clocale>
 #ifdef _WIN32
 #ifndef NOMINMAX
 #define NOMINMAX
 #endif
 #include <windows.h>
 #endif
-
-static void glfw_error_callback(int error, const char* description)
-{
-    fprintf(stderr, "GLFW Error %d: %s\n", error, description);
-}
-
-// 新增：将 Windows 控制台切换到 UTF-8，并设置 C locale
-static void init_console_utf8() {
-#ifdef _WIN32
-    // 设置控制台输入/输出为 UTF-8
-    SetConsoleOutputCP(CP_UTF8);
-    SetConsoleCP(CP_UTF8);
-#endif
-    // 使用用户环境 locale（在多数平台下能正确处理 UTF-8）
-    std::setlocale(LC_ALL, "");
-}
+#include <cstdarg>
+#include <string>
 
 // 渲染上下文结构，用于存储和控制渲染参数
 struct RenderContext {
@@ -63,7 +47,7 @@ struct RenderContext {
     // 材质参数
     phong_properties material_props = {0.9, 0.6, 0.005, 150};
 
-    // 模型��径
+    // 模型路径
     std::string model_path = R"(D:\CS_learning\Project\MicroRenderer\obj\african_head\african_head.obj)";
     std::string diffuse_path = R"(D:\CS_learning\Project\MicroRenderer\obj\african_head\african_head_diffuse.tga)";
     std::string normal_path = R"(D:\CS_learning\Project\MicroRenderer\obj\african_head\african_head_nm.tga)";
@@ -76,8 +60,70 @@ struct RenderContext {
     // 控制标志
     bool should_render = true;
 };
+
 static GLuint renderedTexture = 0;
 static std::vector<unsigned char> imageData;
+static RenderContext renderContext;
+static TGAImage tgaImage(renderContext.width, renderContext.height, TGAImage::RGB);
+
+static void glfw_error_callback(int error, const char* description)
+{
+    fprintf(stderr, "GLFW Error %d: %s\n", error, description);
+}
+
+// 跨平台安全打印 UTF-8 到控制台（Windows 使用 WriteConsoleW）
+static void print_utf8_stdout(const char* fmt, ...) {
+    va_list ap;
+    va_start(ap, fmt);
+    // 格式化为 UTF-8 字节串
+    char buffer[4096];
+    int n = vsnprintf(buffer, sizeof(buffer), fmt, ap);
+    va_end(ap);
+    if (n < 0) return;
+#ifdef _WIN32
+    // 将 UTF-8 转为 UTF-16 并写入控制台（避免控制台按 OEM/ANSI 错误解码）
+    int wlen = MultiByteToWideChar(CP_UTF8, 0, buffer, -1, NULL, 0);
+    if (wlen > 0) {
+        std::wstring wbuf;
+        wbuf.resize(wlen);
+        MultiByteToWideChar(CP_UTF8, 0, buffer, -1, &wbuf[0], wlen);
+        HANDLE h = GetStdHandle(STD_OUTPUT_HANDLE);
+        if (h != INVALID_HANDLE_VALUE) {
+            DWORD written = 0;
+            // 写入时去掉末尾的 NUL
+            WriteConsoleW(h, wbuf.c_str(), static_cast<DWORD>(wbuf.size() - 1), &written, NULL);
+        }
+    }
+#else
+    // 非 Windows，标准终端一般能正确显示 UTF-8
+    fputs(buffer, stdout);
+#endif
+}
+
+// 打印 UTF-8 到 stderr 输出
+static void print_utf8_stderr(const char* fmt, ...) {
+    va_list ap;
+    va_start(ap, fmt);
+    char buffer[4096];
+    int n = vsnprintf(buffer, sizeof(buffer), fmt, ap);
+    va_end(ap);
+    if (n < 0) return;
+#ifdef _WIN32
+    int wlen = MultiByteToWideChar(CP_UTF8, 0, buffer, -1, NULL, 0);
+    if (wlen > 0) {
+        std::wstring wbuf;
+        wbuf.resize(wlen);
+        MultiByteToWideChar(CP_UTF8, 0, buffer, -1, &wbuf[0], wlen);
+        HANDLE h = GetStdHandle(STD_ERROR_HANDLE);
+        if (h != INVALID_HANDLE_VALUE) {
+            DWORD written = 0;
+            WriteConsoleW(h, wbuf.c_str(), static_cast<DWORD>(wbuf.size() - 1), &written, NULL);
+        }
+    }
+#else
+    fputs(buffer, stderr);
+#endif
+}
 
 void initTexture(int width, int height) {
     if (renderedTexture != 0) {
@@ -119,13 +165,13 @@ void updateTexture(const TGAImage& tgaImage) {
     glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, imageData.data());
 }
 
-// 执行渲染并更新纹理
 void performRendering(const RenderContext& ctx, TGAImage& tgaImage) {
     auto start_time = std::chrono::high_resolution_clock::now();
 
     // 确保图像尺寸正确
     if (tgaImage.width() != ctx.width || tgaImage.height() != ctx.height) {
-        printf("重置TGA图像尺寸: %dx%d\n", ctx.width, ctx.height);
+        // 使用跨平台 UTF-8 打印
+        print_utf8_stdout("重置TGA图像尺寸: %dx%d\n", ctx.width, ctx.height);
         tgaImage = TGAImage(ctx.width, ctx.height, TGAImage::RGB);
     }
 
@@ -153,14 +199,12 @@ void performRendering(const RenderContext& ctx, TGAImage& tgaImage) {
 
     auto end_time = std::chrono::high_resolution_clock::now();
     auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end_time - start_time).count();
-    printf("渲染完成，耗时: %lld ms\n", duration);
+    // 使用跨平台 UTF-8 打印（注意 duration 是整数）
+    print_utf8_stdout("渲染完成，耗时: %lld ms\n", static_cast<long long>(duration));
 }
 
 int main(int, char**)
 {
-    // 在尽早的位置初始化控制台编码，保证后续 printf 的中文能正常显示
-    init_console_utf8();
-
     glfwSetErrorCallback(glfw_error_callback);
     if (!glfwInit())
         return 1;
@@ -225,17 +269,8 @@ int main(int, char**)
 
     ImVec4 clear_color = ImVec4(0.15f, 0.15f, 0.15f, 1.00f);
 
-    // 初始化渲染上下文
-    RenderContext renderContext;
-    renderContext.aspect = static_cast<double>(renderContext.width) / renderContext.height;
-    // 初始化渲染纹理
-    initTexture(renderContext.width, renderContext.height);
-    // 初始化TGA图像
-    TGAImage tgaImage(renderContext.width, renderContext.height, TGAImage::RGB);
-    // 初次渲染
-    performRendering(renderContext, tgaImage);
-    updateTexture(tgaImage);
 
+    initTexture(renderContext.width, renderContext.height);
     while (!glfwWindowShouldClose(window))
     {
         glfwPollEvents();
@@ -382,7 +417,8 @@ int main(int, char**)
 
         // 如果需要重新渲染
         if (renderContext.should_render) {
-            printf("进行重新渲染...\n");
+            // 替换为 UTF-8 安全打印
+            print_utf8_stdout("进行重新渲染...\n");
             performRendering(renderContext, tgaImage);
             updateTexture(tgaImage);
             renderContext.should_render = false;
