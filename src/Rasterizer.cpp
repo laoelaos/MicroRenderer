@@ -44,15 +44,16 @@ void Rasterizer::load_lights(const std::vector<light> &lights_) {
 }
 
 void Rasterizer::set_options(int MSAA) {
+    double change_msaa = static_cast<double>(MSAA) / this->MSAA;
     this->MSAA = MSAA;
-    height *= MSAA;
-    width  *= MSAA;
+    height *= change_msaa;
+    width  *= change_msaa;
     viewport = {{{width/2., 0,   0, width/2.},
                         {0,   height/2., 0, height/2.},
                         {0,   0,   1,   0},
                         {0,   0,   0,   1}}};
-    z_buffer.resize(width * height * MSAA * MSAA);
-    framebuffer.resize(width * height * MSAA * MSAA);
+    z_buffer.resize(width * height);
+    framebuffer.resize(width * height);
     clear_buffer();
 }
 
@@ -81,12 +82,6 @@ void Rasterizer::rasterize() {
     for (const Model& obj_model: models) {
         rasterize_model(obj_model);
     }
-
-    TGAImage output(width / MSAA, height / MSAA, TGAImage::RGB);
-    drawonTGA(output);
-    if (!output.write_tga_file("output.tga")) {
-        throw std::runtime_error("Failed to write output.tga");
-    }
 }
 
 void Rasterizer::rasterize_model(const Model& obj_model) {
@@ -96,10 +91,15 @@ void Rasterizer::rasterize_model(const Model& obj_model) {
     NormalType normal_type = obj_model.material.normal_type;
     ShadeFrequency shade_frequency = obj_model.material.shade_frequency;
 
-    shader_payload payload;
-    payload.light_info = lights;
-    payload.properties = obj_model.material.properties;
-    for (triangle now_triangle: obj_model.triangles) {
+    size_t tri_count = obj_model.triangles.size();
+#pragma omp parallel for default(none) shared(obj_model, tri_count, diffuse_mapping, normal_type, shade_frequency, mvit, mvpv, mv, width, height, framebuffer, z_buffer, lights, texture, normal_map, fragment_shader)
+    for (size_t idx = 0; idx < tri_count; ++idx) {
+        const triangle now_triangle = obj_model.triangles[idx];
+
+        shader_payload payload;
+        payload.light_info = lights;
+        payload.properties = obj_model.material.properties;
+
         std::array<vec3, 3> normals = {};
         std::array<vec3, 3> vertices_screen_pos = {};
         std::array<vec3, 3> vertices_world_pos = {};
