@@ -21,6 +21,7 @@ public:
     void clear_all();
     void clear_models() { models = {}; }
     void clear_buffer();
+    void clear_lights() { lights = {}; }
 
     void load_model(const Model& model) { models.push_back(model); }
     void load_lights(const std::vector<light>& lights_);
