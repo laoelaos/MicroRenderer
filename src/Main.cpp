@@ -23,6 +23,7 @@
 #endif
 #include <cstdarg>
 #include <string>
+#include <thread>
 
 void glfw_error_callback(int error, const char* description);
 void print_utf8_stdout(const char* fmt, ...);
@@ -81,6 +82,7 @@ struct RenderContext {
     float target_fps = 60.0f;           // 目标帧率
     float current_fps = 0.0f;           // 当前帧率
     long long last_render_time = 0;     // 上次渲染耗时(ms)
+    long long refresh_interval = 500;  // 刷新间隔(ms)
 
     // 控制标志
     bool force_render = true;
@@ -97,78 +99,63 @@ void control_gui() {
 
         if (ImGui::CollapsingHeader("基本设置", ImGuiTreeNodeFlags_DefaultOpen)) {
             if (ImGui::InputInt("MSAA级别", &renderContext.msaa_level, 1, 1)) {
-                rasterizer.set_options(std::max(1, std::min(4, renderContext.msaa_level)));
+                rasterizer.set_options(std::clamp(renderContext.msaa_level, 1, 10));
             }
         }
 
         if (ImGui::CollapsingHeader("相机设置", ImGuiTreeNodeFlags_DefaultOpen)) {
-            // 临时float变量用于ImGui控件
-            float eye_pos[3] = {(float)renderContext.eye.x, (float)renderContext.eye.y, (float)renderContext.eye.z};
-            float center_pos[3] = {(float)renderContext.center.x, (float)renderContext.center.y, (float)renderContext.center.z};
-            float up_dir[3] = {(float)renderContext.up.x, (float)renderContext.up.y, (float)renderContext.up.z};
-            float fov = (float)renderContext.fov;
-            float near_plane = (float)renderContext.near_;
-            float far_plane = (float)renderContext.far_;
+            float eye_pos[3] = {static_cast<float>(renderContext.eye.x), static_cast<float>(renderContext.eye.y), static_cast<float>(renderContext.eye.z)};
+            float center_pos[3] = {static_cast<float>(renderContext.center.x), static_cast<float>(renderContext.center.y), static_cast<float>(renderContext.center.z)};
+            float up_dir[3] = {static_cast<float>(renderContext.up.x), static_cast<float>(renderContext.up.y), static_cast<float>(renderContext.up.z)};
+            auto fov = static_cast<float>(renderContext.fov);
+            auto near_plane = static_cast<float>(renderContext.near_);
+            auto far_plane = static_cast<float>(renderContext.far_);
 
-            bool eye_changed = ImGui::InputFloat3("相机位置", eye_pos, "%.2f");
-            bool center_changed = ImGui::InputFloat3("观察点", center_pos, "%.2f");
-            bool up_changed = ImGui::InputFloat3("上方向", up_dir, "%.2f");
-            bool fov_changed = ImGui::InputFloat("视场角FOV", &fov, 1.0f, 5.0f, "%.1f");
-            bool near_changed = ImGui::InputFloat("近平面", &near_plane, 0.1f, 0.5f, "%.2f");
-            bool far_changed = ImGui::InputFloat("远平面", &far_plane, 0.1f, 0.5f, "%.2f");
-
-            // 添加一些提示信息
             if (ImGui::IsItemHovered())
                 ImGui::SetTooltip("远平面应大于近平面");
 
-            if (eye_changed) {
+            if (ImGui::InputFloat3("相机位置", eye_pos, "%.2f")) {
                 renderContext.eye.x = eye_pos[0];
                 renderContext.eye.y = eye_pos[1];
                 renderContext.eye.z = eye_pos[2];
                 renderContext.view_change = true;
             }
-
-            if (center_changed) {
+            if (ImGui::InputFloat3("观察点", center_pos, "%.2f")) {
                 renderContext.center.x = center_pos[0];
                 renderContext.center.y = center_pos[1];
                 renderContext.center.z = center_pos[2];
                 renderContext.view_change = true;
             }
-
-            if (up_changed) {
+            if (ImGui::InputFloat3("上方向", up_dir, "%.2f")) {
                 renderContext.up.x = up_dir[0];
                 renderContext.up.y = up_dir[1];
                 renderContext.up.z = up_dir[2];
                 renderContext.view_change = true;
             }
-
-            if (fov_changed) {
-                renderContext.fov = std::max(10.0, std::min(120.0, (double)fov));
+            if (ImGui::InputFloat("视场角FOV", &fov, 1.0f, 5.0f, "%.1f")) {
+                renderContext.fov = std::clamp(static_cast<double>(fov), 10.0, 120.0);
                 renderContext.proj_change = true;
             }
-
-            if (near_changed) {
-                renderContext.near_ = std::max(0.1, (double)near_plane);
+            if (ImGui::InputFloat("近平面", &near_plane, 0.1f, 0.5f, "%.2f")) {
+                renderContext.near_ = std::max(0.1, static_cast<double>(near_plane));
                 renderContext.proj_change = true;
             }
-
-            if (far_changed) {
-                renderContext.far_ = std::max(renderContext.near_ + 0.1, (double)far_plane);
+            if (ImGui::InputFloat("远平面", &far_plane, 0.1f, 0.5f, "%.2f")) {
+                renderContext.far_ = std::max(renderContext.near_ + 0.1, static_cast<double>(far_plane));
                 renderContext.proj_change = true;
             }
         }
 
         if (ImGui::CollapsingHeader("光照设置", ImGuiTreeNodeFlags_DefaultOpen)) {
             ImGui::Text("光源数量: %zu", renderContext.light_sources.size());
-            
-            // 添加新光源按钮
+
             if (ImGui::Button("添加光源")) {
                 renderContext.light_sources.push_back({{20, 20, 20}, {2000, 2000, 2000}});
                 renderContext.lights_changed = true;
             }
             
             ImGui::Separator();
-            
+
             // 显示每个光源的设置
             for (size_t i = 0; i < renderContext.light_sources.size(); i++) {
                 ImGui::PushID(static_cast<int>(i));
@@ -176,25 +163,22 @@ void control_gui() {
                 std::string header = "光源 " + std::to_string(i + 1);
                 if (ImGui::CollapsingHeader(header.c_str(), ImGuiTreeNodeFlags_DefaultOpen)) {
                     float light_position[3] = {
-                        (float)renderContext.light_sources[i].position.x,
-                        (float)renderContext.light_sources[i].position.y,
-                        (float)renderContext.light_sources[i].position.z
+                        static_cast<float>(renderContext.light_sources[i].position.x),
+                        static_cast<float>(renderContext.light_sources[i].position.y),
+                        static_cast<float>(renderContext.light_sources[i].position.z)
                     };
                     float light_intensity[3] = {
-                        (float)renderContext.light_sources[i].intensity.x,
-                        (float)renderContext.light_sources[i].intensity.y,
-                        (float)renderContext.light_sources[i].intensity.z
+                        static_cast<float>(renderContext.light_sources[i].intensity.x),
+                        static_cast<float>(renderContext.light_sources[i].intensity.y),
+                        static_cast<float>(renderContext.light_sources[i].intensity.z)
                     };
-                    
-                    bool pos_changed = ImGui::InputFloat3("位置", light_position, "%.1f");
-                    bool intensity_changed = ImGui::InputFloat3("强度", light_intensity, "%.0f");
-                    
-                    if (pos_changed) {
+
+                    if (ImGui::InputFloat3("位置", light_position, "%.1f")) {
                         renderContext.light_sources[i].position = {light_position[0], light_position[1], light_position[2]};
                         renderContext.lights_changed = true;
                     }
                     
-                    if (intensity_changed) {
+                    if (ImGui::InputFloat3("强度", light_intensity, "%.0f")) {
                         renderContext.light_sources[i].intensity = {light_intensity[0], light_intensity[1], light_intensity[2]};
                         renderContext.lights_changed = true;
                     }
@@ -203,46 +187,37 @@ void control_gui() {
                     if (renderContext.light_sources.size() > 1) {  // 至少保留一个光源
                         ImGui::SameLine();
                         if (ImGui::Button("删除")) {
-                            renderContext.light_sources.erase(renderContext.light_sources.begin() + i);
+                            renderContext.light_sources.erase(renderContext.light_sources.begin() + static_cast<int64_t>(i));
                             renderContext.lights_changed = true;
                             ImGui::PopID();
                             break;  // 退出循环，因为vector已经改变
                         }
                     }
                 }
-                
                 ImGui::PopID();
             }
         }
 
         if (ImGui::CollapsingHeader("材质设置", ImGuiTreeNodeFlags_DefaultOpen)) {
-            float k_ambient = (float)renderContext.material_props.k_ambient;
-            float k_diffuse = (float)renderContext.material_props.k_diffuse;
-            float k_specular = (float)renderContext.material_props.k_specular;
+            auto k_ambient = static_cast<float>(renderContext.material_props.k_ambient);
+            auto k_diffuse = static_cast<float>(renderContext.material_props.k_diffuse);
+            auto k_specular = static_cast<float>(renderContext.material_props.k_specular);
             int p = renderContext.material_props.p;
 
-            bool ambient_changed = ImGui::InputFloat("环境光系数", &k_ambient, 0.05f, 0.1f, "%.2f");
-            bool diffuse_changed = ImGui::InputFloat("漫反射系数", &k_diffuse, 0.05f, 0.1f, "%.2f");
-            bool specular_changed = ImGui::InputFloat("镜面反射系数", &k_specular, 0.005f, 0.01f, "%.3f");
-            bool p_changed = ImGui::InputInt("光泽度", &p, 10, 50);
-
-            if (ambient_changed) {
-                renderContext.material_props.k_ambient = std::max(0.0, std::min(1.0, (double)k_ambient));
+            if (ImGui::InputFloat("环境光系数", &k_ambient, 0.05f, 0.1f, "%.2f")) {
+                renderContext.material_props.k_ambient = std::clamp(static_cast<double>(k_ambient), 0.0, 1.0);
+            }
+            if (ImGui::InputFloat("漫反射系数", &k_diffuse, 0.05f, 0.1f, "%.2f")) {
+                renderContext.material_props.k_diffuse = std::clamp(static_cast<double>(k_diffuse), 0.0, 1.0);
+            }
+            if (ImGui::InputFloat("镜面反射系数", &k_specular, 0.005f, 0.01f, "%.3f")) {
+                renderContext.material_props.k_specular = std::clamp(static_cast<double>(k_specular), 0.0, 1.0);
+            }
+            if (ImGui::InputInt("光泽度", &p, 10, 50)) {
+                renderContext.material_props.p = std::clamp(p, 1, 1000);
             }
 
-            if (diffuse_changed) {
-                renderContext.material_props.k_diffuse = std::max(0.0, std::min(1.0, (double)k_diffuse));
-            }
-
-            if (specular_changed) {
-                renderContext.material_props.k_specular = std::max(0.0, std::min(1.0, (double)k_specular));
-            }
-
-            if (p_changed) {
-                renderContext.material_props.p = std::max(1, std::min(500, p));
-            }
-
-            const char* normal_types[] = { "全局法线", "切线空间法线" };
+            const char* normal_types[] = { "全局法线贴图", "切线空间法线贴图" };
             static int normal_type_idx = 0;
             if (ImGui::Combo("法线类型", &normal_type_idx, normal_types, IM_ARRAYSIZE(normal_types))) {
                 renderContext.normal_type = normal_type_idx == 0 ? GLOBAL : TANGENT;
@@ -265,10 +240,12 @@ void control_gui() {
                 ImGui::SliderFloat("旋转速度", &renderContext.rotation_speed, 0.1f, 5.0f, "%.1f");
             }
 
-            // 显示当前帧率
-            ImGui::Text("当前帧率: %.1f FPS", renderContext.current_fps);
             // 目标帧率设置
             ImGui::SliderFloat("目标帧率", &renderContext.target_fps, 10.0f, 120.0f, "%.1f");
+
+            int refresh_interval = static_cast<int>(renderContext.refresh_interval);
+            ImGui::InputInt("信息刷新间隔(ms)", &refresh_interval);
+            renderContext.refresh_interval = std::max(100, refresh_interval);
         }
 
         if (ImGui::Button("强制重新渲染")) {
@@ -281,38 +258,43 @@ void control_gui() {
 void output_gui() {
     ImGui::Begin("渲染结果");
 
-    // 实时渲染逻辑
+    // 计算渲染所需时间，不包括跳过渲染只进行imgui的时间
     static auto last_frame_time = std::chrono::high_resolution_clock::now();
     auto current_time = std::chrono::high_resolution_clock::now();
-    auto frame_duration = std::chrono::duration_cast<std::chrono::microseconds>(current_time - last_frame_time).count() / 1000.0; // 转换为毫秒
+    auto frame_duration = std::chrono::duration_cast<std::chrono::milliseconds>(current_time - last_frame_time).count();
 
-    // 计算当前帧率
-    if (frame_duration > 0) {
-        renderContext.current_fps = 1000.0f / frame_duration;
-    }
-
-    // 检查是否需要渲染
-    bool should_render_now = false;
-
-    if (renderContext.real_time_rendering ||
-        renderContext.force_render ||
-        renderContext.auto_rotate) {
-        should_render_now = true;
-    }
-
-    if (should_render_now) {
+    if (renderContext.force_render) {
         performRendering();
         loadTextureToGl();
         renderContext.force_render = false;
+        renderContext.current_fps = 0.0f;
     }
 
-    last_frame_time = current_time;
+    static int frame_count = 0;
+    static long long frame_time_accumulator = 0;
+    if (renderContext.real_time_rendering ||
+        renderContext.auto_rotate) {
+        frame_count++;
+
+        if (frame_count % 5 == 0) {
+            frame_time_accumulator += frame_duration;
+            performRendering();
+            loadTextureToGl();
+            renderContext.force_render = false;
+
+            last_frame_time = current_time;
+            if (frame_duration > 0 && frame_time_accumulator > renderContext.refresh_interval) {
+                frame_time_accumulator = 0;
+                renderContext.current_fps = 1000.0f / static_cast<float>(frame_duration);
+            }
+        }
+    }
 
     // 获取窗口内容区域大小以调整图像大小
     ImVec2 windowSize = ImGui::GetContentRegionAvail();
 
     // 计算正确的宽高比
-    float aspectRatio = static_cast<float>(renderContext.width) / renderContext.height;
+    float aspectRatio = static_cast<float>(renderContext.width) / static_cast<float>(renderContext.height);
 
     // 显示纹理，保持纵横比
     ImVec2 imageSize;
@@ -381,7 +363,7 @@ int main(int, char**)
 
     // Create window with graphics context
     float main_scale = ImGui_ImplGlfw_GetContentScaleForMonitor(glfwGetPrimaryMonitor()); // Valid on GLFW 3.3+ only
-    GLFWwindow *window = glfwCreateWindow((int) (1280 * main_scale), (int) (800 * main_scale),
+    GLFWwindow *window = glfwCreateWindow(static_cast<int>(1280 * main_scale), static_cast<int>(800 * main_scale),
                                           "MicroRenderer", nullptr, nullptr);
     if (window == nullptr)
         return 1;
@@ -472,7 +454,7 @@ void print_utf8_stdout(const char* fmt, ...) {
     if (n < 0) return;
 #ifdef _WIN32
     // 将 UTF-8 转为 UTF-16 并写入控制台（避免控制台按 OEM/ANSI 错误解码）
-    int wlen = MultiByteToWideChar(CP_UTF8, 0, buffer, -1, NULL, 0);
+    int wlen = MultiByteToWideChar(CP_UTF8, 0, buffer, -1, nullptr, 0);
     if (wlen > 0) {
         std::wstring wbuf;
         wbuf.resize(wlen);
@@ -481,7 +463,7 @@ void print_utf8_stdout(const char* fmt, ...) {
         if (h != INVALID_HANDLE_VALUE) {
             DWORD written = 0;
             // 写入时去掉末尾的 NUL
-            WriteConsoleW(h, wbuf.c_str(), static_cast<DWORD>(wbuf.size() - 1), &written, NULL);
+            WriteConsoleW(h, wbuf.c_str(), static_cast<DWORD>(wbuf.size() - 1), &written, nullptr);
         }
     }
 #else
@@ -572,12 +554,12 @@ void performRendering() {
 
     auto end_time = std::chrono::high_resolution_clock::now();
     auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end_time - start_time).count();
-    renderContext.last_render_time = duration;
 
-    static int frame_count = 0;
-    frame_count++;
-    if (frame_count % 60 == 0) { // 每60帧打印一次
-        print_utf8_stdout("渲染耗时: %lld ms (平均FPS: %.1f)\n", duration, renderContext.current_fps);
+    static long long frame_count = 0;
+    frame_count += duration;
+    if (frame_count >= renderContext.refresh_interval) {
+        renderContext.last_render_time = duration;
+        frame_count = 0;
     }
 }
 

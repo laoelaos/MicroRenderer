@@ -77,10 +77,48 @@ vec3 get_color_vec3_from_tga(const TGAImage& image, const vec2 &uv);
  */
 vec3 get_color_vec3_from_tga_bilinear(const TGAImage& image, const vec2 &uv);
 
+/**
+ * @return 单位矩阵
+ */
 mat4 model_matrix();
+
+/**
+ * @brief 计算视图矩阵
+ * @param eye 观察点位置
+ * @param center 相机所在位置
+ * @param up 相机上方向
+ * @return 视图矩阵
+ */
 mat4 view_matrix(const vec3 &eye, const vec3 &center, const vec3 &up);
-mat4 orthographic_projection(const double near_, const double far_, const double right, const double left, const double top, const double bottom);
-mat4 perspective_projection(const double fov, const double aspect, double near_, double far_);
+
+/**
+ * @brief 计算正交投影矩阵
+ * @param near_ 近平面（正数）
+ * @param far_ 远平面（正数）
+ * @param right 右边界
+ * @param left 左边界
+ * @param top 上边界
+ * @param bottom 下边界
+ * @return 正交投影矩阵
+ */
+mat4 orthographic_projection(double near_, double far_, double right, double left, double top, double bottom);
+
+/**
+ * @brief 计算透视投影矩阵
+ * @param fov 视场角（角度制）
+ * @param aspect 宽高比
+ * @param near_ 近平面（正数）
+ * @param far_ 远平面（正数）
+ * @return 透视投影矩阵
+ */
+mat4 perspective_projection(double fov, double aspect, double near_, double far_);
+
+/**
+ * @brief 计算视口变换矩阵
+ * @param w 视口宽度
+ * @param h 视口高度
+ * @return 视口变换矩阵
+ */
 mat4 viewport_matrix(int w, int h);
 
 #endif //UTIL_H

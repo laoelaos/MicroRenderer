@@ -22,10 +22,7 @@ void Rasterizer::clear_all() {
     model = identity_matrix<4>();
     view = identity_matrix<4>();
     projection = identity_matrix<4>();
-    viewport = {{{width/2., 0,   0, width/2.},
-                        {0,   height/2., 0, height/2.},
-                        {0,   0,   1,   0},
-                        {0,   0,   0,   1}}};
+    viewport = viewport_matrix(width, height);
     models = {};
     lights = {};
     texture = {};
@@ -48,10 +45,7 @@ void Rasterizer::set_options(int MSAA) {
     this->MSAA = MSAA;
     height *= change_msaa;
     width  *= change_msaa;
-    viewport = {{{width/2., 0,   0, width/2.},
-                        {0,   height/2., 0, height/2.},
-                        {0,   0,   1,   0},
-                        {0,   0,   0,   1}}};
+    viewport = viewport_matrix(width, height);;
     z_buffer.resize(width * height);
     framebuffer.resize(width * height);
     clear_buffer();
