@@ -7,6 +7,7 @@
 #include <memory>
 #include <utility>
 #include <vector>
+#include <mutex>
 
 #include "Geometry.h"
 #include "Model.h"
@@ -34,7 +35,13 @@ public:
     void rasterize();
     void drawonTGA(TGAImage& framebuffer);
 private:
-    [[nodiscard]] int get_index(int x, int y) const { return x + y * width; }
+    int get_index(int x, int y) const { return x + y * width; }
+    int get_tile_lock(int x, int y) const {
+        int tile_x = x / (width / tile_cols);
+        int tile_y = y / (height / tile_rows);
+        return tile_x + tile_y * tile_cols;
+    }
+    void pre_z();
     void rasterize_model(const Model& model);
 
     std::vector<Model> models;
@@ -50,8 +57,11 @@ private:
     int width, height;
     std::vector<double> z_buffer;
     std::vector<vec3> framebuffer;
-
     int MSAA = 1;
+
+    int tile_rows = 20;
+    int tile_cols = 20;
+    std::vector<std::mutex> tile_locks = std::vector<std::mutex>(tile_rows * tile_cols);
 };
 
 #endif //RASTERIZER_H

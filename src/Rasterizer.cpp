@@ -78,6 +78,31 @@ void Rasterizer::rasterize() {
     }
 }
 
+void Rasterizer::pre_z() {
+    for (const Model& obj_model: models) {
+        for (size_t idx = 0; idx < obj_model.triangles.size(); ++idx) {
+            std::array<vec3, 3> vertices_screen_pos = {};
+            for (int i = 0; i < 3; i++) {
+                vertices_screen_pos[i] = (mvpv * obj_model.triangles[idx].vertices[i].to_vec4(1.0)).to_vec3_point();
+            }
+            auto [x_min, x_max, y_min, y_max] = find_bounding_box_int(vertices_screen_pos, width, height);
+
+            for (int x = x_min; x <= x_max; x++) {
+                for (int y = y_min; y <= y_max; y++) {
+                    auto [alpha, beta, gamma] = compute_barycentric_2D(x + .5, y + .5, vertices_screen_pos);
+                    if (alpha<0 || beta<0 || gamma<0)
+                        continue;
+                    double z = alpha * vertices_screen_pos[0].z + beta * vertices_screen_pos[1].z + gamma * vertices_screen_pos[2].z;
+
+                    if (z > z_buffer[get_index(x, y)] - 1e-4) {
+                        z_buffer[get_index(x, y)] = z;
+                    }
+                }
+            }
+        }
+    }
+}
+
 void Rasterizer::rasterize_model(const Model& obj_model) {
     texture = obj_model.material.texture;
     normal_map = obj_model.material.normal_map;
@@ -105,7 +130,7 @@ void Rasterizer::rasterize_model(const Model& obj_model) {
             vertices_world_pos[i] = (mv * now_triangle.vertices[i].to_vec4(1.0)).to_vec3_point();
         }
 
-        if (((vertices_world_pos[1] - vertices_world_pos[0]) ^ (vertices_world_pos[2] - vertices_world_pos[1])).z < 0)
+        if (((vertices_screen_pos[1] - vertices_screen_pos[0]) ^ (vertices_screen_pos[2] - vertices_screen_pos[1])).z < 0)
             continue;
 
         auto [x_min, x_max, y_min, y_max] = find_bounding_box_int(vertices_screen_pos, width, height);
@@ -123,7 +148,10 @@ void Rasterizer::rasterize_model(const Model& obj_model) {
                 double c_beta = beta * z1 / (alpha * z0 + beta * z1 + gamma * z2);
                 double c_gamma = gamma * z2 / (alpha * z0 + beta * z1 + gamma * z2);
 
-                if (z > z_buffer[get_index(x, y)] - 1e-4) {
+                std::lock_guard guard(tile_locks[get_tile_lock(x, y)]);
+                if (z >= z_buffer[get_index(x, y)]) {
+                    z_buffer[get_index(x, y)] = z;
+
                     payload.position = c_alpha * vertices_world_pos[0] + c_beta * vertices_world_pos[1] + c_gamma * vertices_world_pos[2];
                     payload.tex_coords = c_alpha * tex_coords[0] + c_beta * tex_coords[1] + c_gamma * tex_coords[2];
 
@@ -159,8 +187,8 @@ void Rasterizer::rasterize_model(const Model& obj_model) {
                     }
 
                     framebuffer[get_index(x, y)] = fragment_shader->shade(payload);
-                    z_buffer[get_index(x, y)] = z;
                 }
+
             }
         }
     }

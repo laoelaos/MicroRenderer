@@ -73,7 +73,7 @@ struct RenderContext {
     ShadeFrequency shade_frequency = PER_FRAGMENT;
 
     // 实时渲染控制
-    bool real_time_rendering = true;    // 是否启用实时渲染
+    bool real_time_rendering = false;    // 是否启用实时渲染
     bool auto_rotate = false;           // 是否自动旋转模型
     float rotation_speed = 1.0f;        // 旋转速度
     double current_rotation = 0.0;      // 当前旋转角度
@@ -275,18 +275,16 @@ void output_gui() {
     if (renderContext.real_time_rendering ||
         renderContext.auto_rotate) {
         frame_count++;
+        frame_time_accumulator += frame_duration;
 
-        if (frame_count % 5 == 0) {
-            frame_time_accumulator += frame_duration;
-            performRendering();
-            loadTextureToGl();
-            renderContext.force_render = false;
-
-            last_frame_time = current_time;
-            if (frame_duration > 0 && frame_time_accumulator > renderContext.refresh_interval) {
-                frame_time_accumulator = 0;
-                renderContext.current_fps = 1000.0f / static_cast<float>(frame_duration);
-            }
+        performRendering();
+        loadTextureToGl();
+        renderContext.force_render = false;
+        last_frame_time = current_time;
+        if (frame_duration > 0 && frame_time_accumulator > renderContext.refresh_interval) {
+            renderContext.current_fps = 1000.0f / static_cast<float>(frame_time_accumulator) * frame_count;
+            frame_count = 0;
+            frame_time_accumulator = 0;
         }
     }
 

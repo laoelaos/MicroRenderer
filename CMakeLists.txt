@@ -16,7 +16,12 @@ if(iwyu)
 endif()
 
 if(CMAKE_CXX_COMPILER_ID MATCHES "Clang|GNU|Intel")
-  add_compile_options(-Wall)
+  add_compile_options(-Wall -Ofast)
+endif()
+
+if(MSVC)
+  add_compile_options(/O2 /Ot /GL)
+  add_compile_options(/arch:AVX2)
 endif()
 
 find_package(OpenMP COMPONENTS CXX)
