@@ -70,10 +70,11 @@ void Rasterizer::drawonTGA(TGAImage& framebuffer_) {
 }
 
 void Rasterizer::rasterize() {
-    mvpv = viewport * projection * view * model;
-    mv = view * model;
-    mvit = (view * model).invert().transpose();
     for (const Model& obj_model: models) {
+        model = obj_model.transform;
+        mvpv = viewport * projection * view * model;
+        mv = view * model;
+        mvit = (view * model).invert().transpose();
         rasterize_model(obj_model);
     }
 }

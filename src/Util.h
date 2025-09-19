@@ -78,6 +78,15 @@ vec3 get_color_vec3_from_tga(const TGAImage& image, const vec2 &uv);
 vec3 get_color_vec3_from_tga_bilinear(const TGAImage& image, const vec2 &uv);
 
 /**
+ * @brief 计算变换矩阵
+ * @param translation 平移向量
+ * @param rotation 旋转向量（角度制，绕X、Y、Z轴旋转）
+ * @param scale 缩放向量
+ * @return 变换矩阵
+ */
+mat4 calculate_transform_matrix(const vec3& translation, const vec3& rotation, const vec3& scale);
+
+/**
  * @return 单位矩阵
  */
 mat4 model_matrix();

@@ -76,6 +76,58 @@ std::tuple<int, int, int, int> find_bounding_box_int(const std::array<vec3, 3> v
     return {x_min, x_max, y_min, y_max};
 }
 
+mat4 calculate_transform_matrix(const vec3& translation, const vec3& rotation, const vec3& scale) {
+    // 创建旋转矩阵 (XYZ顺序的欧拉角旋转)
+    double cos_x = cos(rotation.x);
+    double sin_x = sin(rotation.x);
+    double cos_y = cos(rotation.y);
+    double sin_y = sin(rotation.y);
+    double cos_z = cos(rotation.z);
+    double sin_z = sin(rotation.z);
+
+    // X轴旋转矩阵
+    mat4 rot_x = {{
+        {1, 0, 0, 0},
+        {0, cos_x, -sin_x, 0},
+        {0, sin_x, cos_x, 0},
+        {0, 0, 0, 1}
+    }};
+
+    // Y轴旋转矩阵
+    mat4 rot_y = {{
+        {cos_y, 0, sin_y, 0},
+        {0, 1, 0, 0},
+        {-sin_y, 0, cos_y, 0},
+        {0, 0, 0, 1}
+    }};
+
+    // Z轴旋转矩阵
+    mat4 rot_z = {{
+        {cos_z, -sin_z, 0, 0},
+        {sin_z, cos_z, 0, 0},
+        {0, 0, 1, 0},
+        {0, 0, 0, 1}
+    }};
+
+    // 缩放矩阵
+    mat4 scale_mat = {{
+        {scale.x, 0, 0, 0},
+        {0, scale.y, 0, 0},
+        {0, 0, scale.z, 0},
+        {0, 0, 0, 1}
+    }};
+
+    // 平移矩阵
+    mat4 trans_mat = identity_matrix<4>();
+    trans_mat[0][3] = translation.x;
+    trans_mat[1][3] = translation.y;
+    trans_mat[2][3] = translation.z;
+
+    // 组合变换: 先缩放，再旋转，最后平移
+    mat4 rot_mat = rot_z * rot_y * rot_x;
+    return trans_mat * rot_mat * scale_mat;
+}
+
 mat4 model_matrix() {
     return identity_matrix<4>();
 }
