@@ -16,7 +16,7 @@ if(iwyu)
 endif()
 
 if(CMAKE_CXX_COMPILER_ID MATCHES "Clang|GNU|Intel")
-  add_compile_options(-Wall -Ofast)
+  add_compile_options(-Wall -O3)
 endif()
 
 if(MSVC)
@@ -44,6 +44,7 @@ set(SOURCES src/main.cpp src/tgaimage.cpp
         src/Rasterizer.cpp
         src/util.cpp
         src/Shader.cpp
+        src/Graphics.cpp
         ${IMGUI_SOURCES})
 
 add_executable(${PROJECT_NAME} ${SOURCES})

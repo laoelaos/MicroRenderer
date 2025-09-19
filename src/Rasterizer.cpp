@@ -36,7 +36,7 @@ void Rasterizer::clear_buffer() {
     std::ranges::fill(z_buffer, -std::numeric_limits<double>::infinity());
 }
 
-void Rasterizer::load_lights(const std::vector<light> &lights_) {
+void Rasterizer::load_lights(const std::vector<Light> &lights_) {
     lights.insert(lights.end(), lights_.begin(), lights_.end());
 }
 

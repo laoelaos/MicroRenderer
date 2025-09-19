@@ -14,22 +14,21 @@ vec3 PhongShader::shade(const shader_payload &payload) {
     vec3 basic_color = payload.color;
 
     vec3 result{};
-    for (auto [light_color, position, intensity] : payload.light_info)
+    for (auto light : payload.light_info)
     {
-        light_color = light_color * intensity;
-        vec3 light_dir = normalize(position - payload.position);
+        vec3 light_color = light.get_illumination_at(payload.position);
+        vec3 light_dir = normalize(light.position - payload.position);
         vec3 view_dir = normalize(vec3{0, 0, 0} - payload.position);
         vec3 half_vec = normalize(light_dir + view_dir);
 
         //ambient
         result += k_ambient * vec3{10, 10, 10};
         //diffuse
-        double r2 = norm2(position - payload .position);
         double diff = std::max(0., payload.normal * light_dir);
-        result += k_diffuse * cwise_multiply(light_color, basic_color) / r2 * diff;
+        result += k_diffuse * cwise_multiply(light_color, basic_color) * diff;
         //specular
         double spec = std::pow(std::max(0., payload.normal * half_vec), p);
-        result += k_specular * cwise_multiply(light_color, basic_color) / r2 * spec;
+        result += k_specular * cwise_multiply(light_color, basic_color) * spec;
     }
 
     return result;

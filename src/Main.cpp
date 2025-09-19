@@ -25,6 +25,8 @@
 #include <string>
 #include <thread>
 
+#include "Graphics.h"
+
 void glfw_error_callback(int error, const char* description);
 void print_utf8_stdout(const char* fmt, ...);
 
@@ -81,7 +83,7 @@ struct RenderContext {
     int height = 600;
     int msaa_level = 1;
 
-    std::vector<light> light_sources = {{{1, 1, 1}, {20, 20, 20}, 2000}};
+    std::vector<Light> light_sources = {{{1, 1, 1}, {20, 20, 20}, 2000}};
     bool lights_changed = true;
 
     // 模型列表
@@ -253,7 +255,7 @@ void control_gui() {
             ImGui::Text("光源数量: %zu", renderContext.light_sources.size());
 
             if (ImGui::Button("添加光源")) {
-                renderContext.light_sources.push_back({{20, 20, 20}, {2000, 2000, 2000}});
+                renderContext.light_sources.emplace_back();
                 renderContext.lights_changed = true;
             }
             
@@ -271,9 +273,9 @@ void control_gui() {
                         static_cast<float>(renderContext.light_sources[i].position.z)
                     };
                     float light_color[3] = {
-                        static_cast<float>(renderContext.light_sources[i].color.x),
+                        static_cast<float>(renderContext.light_sources[i].color.z),
                         static_cast<float>(renderContext.light_sources[i].color.y),
-                        static_cast<float>(renderContext.light_sources[i].color.z)
+                        static_cast<float>(renderContext.light_sources[i].color.x)
                     };
 
                     if (ImGui::InputFloat3("位置", light_position, "%.1f")) {
@@ -282,7 +284,7 @@ void control_gui() {
                     }
                     
                     if (ImGui::ColorEdit3("颜色", light_color)) {
-                        renderContext.light_sources[i].color = {light_color[0], light_color[1], light_color[2]};
+                        renderContext.light_sources[i].color = {light_color[2], light_color[1], light_color[0]};
                         renderContext.lights_changed = true;
                     }
 
@@ -605,7 +607,7 @@ void output_gui() {
     ImGui::Text("渲染时间: %lld ms | FPS: %.1f", renderContext.last_render_time, renderContext.current_fps);
 
     // 显示渲染模式状态
-    if (renderContext.real_time_rendering) {
+    if (renderContext.real_time_rendering || renderContext.auto_rotate) {
         ImGui::TextColored(ImVec4(0, 1, 0, 1), "实时渲染已启用");
     } else {
         ImGui::TextColored(ImVec4(1, 1, 0, 1), "按需渲染模式");

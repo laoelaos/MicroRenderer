@@ -4,11 +4,21 @@
 
 #ifndef MODEL_H
 #define MODEL_H
+#include <array>
 #include <vector>
-#include "Shader.h"
+
+#include "Geometry.h"
+#include "TGAImage.h"
 
 enum NormalType {GLOBAL, TANGENT, NONE};
 enum ShadeFrequency {FLAT, PER_VERTEX, PER_FRAGMENT};
+
+struct phong_properties {
+    double k_diffuse;
+    double k_specular;
+    double k_ambient;
+    int p;
+};
 
 struct Material {
     explicit Material(const std::string& texture_path = "",
@@ -42,6 +52,12 @@ struct Material {
     bool diffuse_mapping;
     NormalType normal_type;
     ShadeFrequency shade_frequency;
+};
+
+struct triangle {
+    std::array<vec3, 3> vertices;
+    std::array<vec3, 3> normals;
+    std::array<vec2, 3> tex_coords;
 };
 
 class Model {

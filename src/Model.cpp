@@ -4,7 +4,9 @@
 
 #include <fstream>
 #include <sstream>
+
 #include "Model.h"
+#include "Geometry.h"
 
 Model::Model(const std::string& filename) {
     std::ifstream file(filename);

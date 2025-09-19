@@ -10,6 +10,7 @@
 #include <mutex>
 
 #include "Geometry.h"
+#include "Graphics.h"
 #include "Model.h"
 #include "Shader.h"
 #include "TGAImage.h"
@@ -25,7 +26,7 @@ public:
     void clear_lights() { lights = {}; }
 
     void load_model(const Model& model) { models.push_back(model); }
-    void load_lights(const std::vector<light>& lights_);
+    void load_lights(const std::vector<Light>& lights_);
     void load_fragment_shader(std::shared_ptr<Shader> shader) { fragment_shader = std::move(shader); }
     void set_model_matrix(const mat4& m) { model = m; }
     void set_view_matrix(const mat4& m) { view = m; }
@@ -46,7 +47,7 @@ private:
 
     std::vector<Model> models;
 
-    std::vector<light> lights;
+    std::vector<Light> lights;
     TGAImage texture, normal_map;
 
     std::shared_ptr<Shader> fragment_shader;

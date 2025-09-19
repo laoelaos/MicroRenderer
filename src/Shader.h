@@ -5,32 +5,8 @@
 #ifndef SHADER_H
 #define SHADER_H
 
-#include <array>
-
 #include "Geometry.h"
-#include "TGAImage.h"
-
-//vertices, normals, colors and texture coordinates (std::array<vec3, 3>)
-struct triangle {
-    std::array<vec3, 3> vertices;
-    std::array<vec3, 3> normals;
-
-    std::array<vec3, 3> colors;
-    std::array<vec2, 3> tex_coords;
-};
-
-struct light {
-    vec3 color;
-    vec3 position;
-    double intensity{};
-};
-
-struct phong_properties {
-    double k_diffuse;
-    double k_specular;
-    double k_ambient;
-    int p;
-};
+#include "Graphics.h"
 
 // position, normal, light_info, tex_coords, texture
 //
@@ -43,7 +19,7 @@ struct shader_payload {
     vec2 tex_coords;
 
     phong_properties properties;
-    std::vector<light> light_info;
+    std::vector<Light> light_info;
 };
 
 class Shader {
