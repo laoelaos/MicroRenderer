@@ -78,6 +78,14 @@ vec3 get_color_vec3_from_tga(const TGAImage& image, const vec2 &uv);
 vec3 get_color_vec3_from_tga_bilinear(const TGAImage& image, const vec2 &uv);
 
 /**
+ * @brief 通过欧拉角计算方向向量
+ * @param yaw 水平旋转角（角度制，绕Y轴旋转）
+ * @param pitch 垂直旋转角（角度制，绕X轴旋转）
+ * @return 归一化的方向向量
+ */
+vec3 calculate_direction_from_euler(double yaw, double pitch);
+
+/**
  * @brief 计算变换矩阵
  * @param translation 平移向量
  * @param rotation 旋转向量（角度制，绕X、Y、Z轴旋转）

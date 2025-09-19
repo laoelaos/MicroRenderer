@@ -76,6 +76,22 @@ std::tuple<int, int, int, int> find_bounding_box_int(const std::array<vec3, 3> v
     return {x_min, x_max, y_min, y_max};
 }
 
+vec3 calculate_direction_from_euler(double yaw, double pitch) {
+    // 将角度转换为弧度
+    double yaw_rad = yaw * M_PI / 180.0;
+    double pitch_rad = pitch * M_PI / 180.0;
+
+    // 限制俯仰角范围，防止万向节锁
+    pitch_rad = std::clamp(pitch_rad, -M_PI/2.0 + 0.001, M_PI/2.0 - 0.001);
+
+    // 计算方向向量
+    double x = cos(yaw_rad) * cos(pitch_rad);
+    double y = sin(pitch_rad);
+    double z = sin(yaw_rad) * cos(pitch_rad);
+
+    return {x, y, z};
+}
+
 mat4 calculate_transform_matrix(const vec3& translation, const vec3& rotation, const vec3& scale) {
     // 创建旋转矩阵 (XYZ顺序的欧拉角旋转)
     double cos_x = cos(rotation.x);

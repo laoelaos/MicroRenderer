@@ -20,8 +20,9 @@ struct triangle {
 };
 
 struct light {
+    vec3 color;
     vec3 position;
-    vec3 intensity;
+    double intensity{};
 };
 
 struct phong_properties {
