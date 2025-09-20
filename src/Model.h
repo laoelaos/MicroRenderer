@@ -58,7 +58,7 @@ public:
     std::vector<triangle> triangles;
     Material material;
     mat4 transform = identity_matrix<4>();
-    explicit Model(const std::string& filename);
+    explicit Model(const std::string& filename );
 };
 
 #endif //MODEL_H

@@ -30,13 +30,12 @@
 void glfw_error_callback(int error, const char* description);
 void print_utf8_stdout(const char* fmt, ...);
 
+void initScene();
 void initRasterizer();
 void initTexture(int width, int height);
 
 void updateModels();
 void updateRotate();
-void updateProjection();
-void updateLights();
 
 void performRendering();
 void loadTextureToGl();
@@ -61,30 +60,12 @@ struct ModelInfo {
 };
 
 struct RenderContext {
-    // 相机参数
-    vec3 eye = {0, 0, 1};
-    vec3 center = {0, 0, 2};
-    vec3 up = {0, 1, 0};
-    double fov = 55.0;
-    double aspect = 1.0;
-    double near_ = 2.0;
-    double far_ = 3.0;
-
-    // 相机欧拉角控制
-    double camera_yaw = 0.0;   // 偏航角（左右旋转）
-    double camera_pitch = 0.0; // 俯仰角（上下旋转）
-    bool use_euler_angles = false; // 是否使用欧拉角控制相机
-
-    bool view_change = true;
-    bool proj_change = true;
+    bool use_euler_angles = false;
 
     // 渲染参数
     int width = 600;
     int height = 600;
     int msaa_level = 1;
-
-    std::vector<Light> light_sources = {{{1, 1, 1}, {20, 20, 20}, 2000}};
-    bool lights_changed = true;
 
     // 模型列表
     std::vector<ModelInfo> models = {
@@ -109,7 +90,7 @@ struct RenderContext {
     int selected_model = 0;
 
     // 渲染选项
-    bool real_time_rendering = false;    // 是否启用实时渲染
+    bool real_time_rendering = true;    // 是否启用实时渲染
     bool auto_rotate = false;           // 是否自动旋转模型
     float rotation_speed = 1.0f;        // 旋转速度
     double current_rotation = 0.0;      // 当前旋转角度
@@ -123,7 +104,7 @@ struct RenderContext {
     // 控制标志
     bool force_render = true;
 };
-
+static Scene scene = {};
 static Rasterizer rasterizer(600, 600);
 static GLuint renderedTexture = 0;
 static std::vector<unsigned char> imageData;
@@ -140,169 +121,87 @@ void control_gui() {
         }
 
         if (ImGui::CollapsingHeader("相机设置")) {
-            float eye_pos[3] = {static_cast<float>(renderContext.eye.x), static_cast<float>(renderContext.eye.y), static_cast<float>(renderContext.eye.z)};
-            float center_pos[3] = {static_cast<float>(renderContext.center.x), static_cast<float>(renderContext.center.y), static_cast<float>(renderContext.center.z)};
-            float up_dir[3] = {static_cast<float>(renderContext.up.x), static_cast<float>(renderContext.up.y), static_cast<float>(renderContext.up.z)};
-            auto fov = static_cast<float>(renderContext.fov);
-            auto near_plane = static_cast<float>(renderContext.near_);
-            auto far_plane = static_cast<float>(renderContext.far_);
+            std::array<float, 3> eye_pos = to_float_array(scene.camera.eye);
+            std::array<float, 3> center_pos = to_float_array(scene.camera.center);
+            std::array<float, 3> up_dir = to_float_array(scene.camera.up);
+            auto fov = static_cast<float>(scene.camera.fov);
+            auto near_plane = static_cast<float>(scene.camera.near_);
+            auto far_plane = static_cast<float>(scene.camera.far_);
+            auto yaw = static_cast<float>(scene.camera.yaw);
+            auto pitch = static_cast<float>(scene.camera.pitch);
+            auto roll = static_cast<float>(scene.camera.roll);
 
             if (ImGui::IsItemHovered())
                 ImGui::SetTooltip("远平面应大于近平面");
 
-            // 添加欧拉角控制切换
-            if (ImGui::Checkbox("使用滑条控制相机方向", &renderContext.use_euler_angles)) {
-                renderContext.view_change = true;
-
-                // 如果切换到欧拉角控制，计算初始欧拉角
-                if (renderContext.use_euler_angles) {
-                    vec3 direction = normalize(renderContext.center - renderContext.eye);
-                    renderContext.camera_yaw = atan2(direction.z, direction.x) * 180.0 / M_PI;
-                    renderContext.camera_pitch = asin(direction.y) * 180.0 / M_PI;
-                }
-            }
+            ImGui::Checkbox("使用滑条控制相机欧拉角", &renderContext.use_euler_angles);
 
             if (renderContext.use_euler_angles) {
-                // 使用滑条控制欧拉角
-                float yaw = static_cast<float>(renderContext.camera_yaw);
-                float pitch = static_cast<float>(renderContext.camera_pitch);
+                bool view_changed = false;
+                if (ImGui::SliderFloat("水平旋转 (Yaw)", &yaw, -180.0f, 180.0f, "%.1f°"))
+                    view_changed = true;
+                if (ImGui::SliderFloat("垂直旋转 (Pitch)", &pitch, -89.0f, 89.0f, "%.1f°"))
+                    view_changed = true;
+                if (ImGui::SliderFloat("滚转 (roll)", &roll, -180.0f, 180.0f, "%.1f°"))
+                    view_changed = true;
+                if (view_changed)
+                    scene.camera.set_toward_from_center(yaw, pitch, roll);
 
-                if (ImGui::SliderFloat("水平旋转 (Yaw)", &yaw, -180.0f, 180.0f, "%.1f°")) {
-                    renderContext.camera_yaw = static_cast<double>(yaw);
-                    vec3 direction = calculate_direction_from_euler(renderContext.camera_yaw, renderContext.camera_pitch);
-                    renderContext.center = renderContext.eye + direction;
-                    renderContext.view_change = true;
-                }
-
-                if (ImGui::SliderFloat("垂直旋转 (Pitch)", &pitch, -89.0f, 89.0f, "%.1f°")) {
-                    renderContext.camera_pitch = static_cast<double>(pitch);
-                    vec3 direction = calculate_direction_from_euler(renderContext.camera_yaw, renderContext.camera_pitch);
-                    renderContext.center = renderContext.eye + direction;
-                    renderContext.view_change = true;
-                }
-
-                // 显示计算出的朝向点
-                ImGui::Text("计算的朝向点: (%.2f, %.2f, %.2f)",
-                            static_cast<float>(renderContext.center.x),
-                            static_cast<float>(renderContext.center.y),
-                            static_cast<float>(renderContext.center.z));
-            }
-
-            // 当使用欧拉角控制时，隐藏或禁用观察点直接输入
-            if (!renderContext.use_euler_angles) {
-                if (ImGui::InputFloat3("相机位置", eye_pos, "%.2f")) {
-                    renderContext.eye.x = eye_pos[0];
-                    renderContext.eye.y = eye_pos[1];
-                    renderContext.eye.z = eye_pos[2];
-                    renderContext.view_change = true;
-                }
-                if (ImGui::InputFloat3("观察点", center_pos, "%.2f")) {
-                    renderContext.center.x = center_pos[0];
-                    renderContext.center.y = center_pos[1];
-                    renderContext.center.z = center_pos[2];
-                    renderContext.view_change = true;
-                }
-                if (ImGui::InputFloat3("上方向", up_dir, "%.2f")) {
-                    renderContext.up.x = up_dir[0];
-                    renderContext.up.y = up_dir[1];
-                    renderContext.up.z = up_dir[2];
-                    renderContext.view_change = true;
-                }
-            } else {
-                // 在欧拉角模式下，只允许修改相机位置，观察点会自动计算
-                if (ImGui::InputFloat3("相机位置", eye_pos, "%.2f")) {
-                    renderContext.eye.x = eye_pos[0];
-                    renderContext.eye.y = eye_pos[1];
-                    renderContext.eye.z = eye_pos[2];
-                    vec3 direction = calculate_direction_from_euler(renderContext.camera_yaw, renderContext.camera_pitch);
-                    renderContext.center = renderContext.eye + direction;
-                    renderContext.view_change = true;
-                }
-
-                // 显示但禁用上方向输入框
+                if (ImGui::InputFloat3("相机位置", eye_pos.data(), "%.2f"))
+                    scene.camera.eye = float_array_to_vec(eye_pos);
                 ImGui::BeginDisabled();
-                ImGui::InputFloat3("上方向", up_dir, "%.2f");
+                ImGui::InputFloat3("上方向", to_float_array(scene.camera.up).data(), "%.2f");
                 ImGui::EndDisabled();
-                ImGui::Text("在欧拉角模式下，上方向固定为(0,1,0)");
-                renderContext.up = {0, 1, 0};  // 在欧拉角控制模式下固定上方向
+            } else {
+                if (ImGui::InputFloat3("相机位置", eye_pos.data(), "%.2f"))
+                    scene.camera.eye = float_array_to_vec(eye_pos);
+                if (ImGui::InputFloat3("观察点", center_pos.data(), "%.2f"))
+                    scene.camera.center = float_array_to_vec(center_pos);
+                if (ImGui::InputFloat3("上方向", up_dir.data(), "%.2f"))
+                    scene.camera.up = float_array_to_vec(up_dir);
             }
 
-            if (ImGui::InputFloat("视场角FOV", &fov, 1.0f, 5.0f, "%.1f")) {
-                renderContext.fov = std::clamp(static_cast<double>(fov), 10.0, 120.0);
-                renderContext.proj_change = true;
-            }
-            if (ImGui::InputFloat("近平面", &near_plane, 0.1f, 0.5f, "%.2f")) {
-                renderContext.near_ = std::max(0.1, static_cast<double>(near_plane));
-                renderContext.proj_change = true;
-            }
-            if (ImGui::InputFloat("远平面", &far_plane, 0.1f, 0.5f, "%.2f")) {
-                renderContext.far_ = std::max(renderContext.near_ + 0.1, static_cast<double>(far_plane));
-                renderContext.proj_change = true;
-            }
+            if (ImGui::InputFloat("视场角FOV", &fov, 1.0f, 5.0f, "%.1f"))
+                scene.camera.fov = fov;
+            if (ImGui::InputFloat("近平面", &near_plane, 0.1f, 0.5f, "%.2f"))
+                scene.camera.near_ = near_plane;
+            if (ImGui::InputFloat("远平面", &far_plane, 0.1f, 0.5f, "%.2f"))
+                scene.camera.far_ = far_plane;
 
-            // 添加相机复位按钮
-            if (ImGui::Button("重置相机")) {
-                renderContext.eye = {0, 0, 1};
-                renderContext.center = {0, 0, 2};
-                renderContext.up = {0, 1, 0};
-                renderContext.camera_yaw = 0.0;
-                renderContext.camera_pitch = 0.0;
-                renderContext.view_change = true;
-            }
+            if (ImGui::Button("重置相机"))
+                scene.camera = {};
         }
 
         if (ImGui::CollapsingHeader("光照设置")) {
-            ImGui::Text("光源数量: %zu", renderContext.light_sources.size());
+            ImGui::Text("光源数量: %zu", scene.lights.size());
 
-            if (ImGui::Button("添加光源")) {
-                renderContext.light_sources.emplace_back();
-                renderContext.lights_changed = true;
-            }
+            if (ImGui::Button("添加光源"))
+                scene.lights.emplace_back();
             
             ImGui::Separator();
-
-            // 显示每个光源的设置
-            for (size_t i = 0; i < renderContext.light_sources.size(); i++) {
+            for (size_t i = 0; i < scene.lights.size(); i++) {
                 ImGui::PushID(static_cast<int>(i));
                 
                 std::string header = "光源 " + std::to_string(i + 1);
                 if (ImGui::TreeNode(header.c_str())) {
-                    float light_position[3] = {
-                        static_cast<float>(renderContext.light_sources[i].position.x),
-                        static_cast<float>(renderContext.light_sources[i].position.y),
-                        static_cast<float>(renderContext.light_sources[i].position.z)
-                    };
-                    float light_color[3] = {
-                        static_cast<float>(renderContext.light_sources[i].color.z),
-                        static_cast<float>(renderContext.light_sources[i].color.y),
-                        static_cast<float>(renderContext.light_sources[i].color.x)
-                    };
+                    std::array<float, 3> light_position = to_float_array(scene.lights[i].position);
+                    std::array<float, 3> light_color = to_float_array(scene.lights[i].color);
+                    auto light_intensity = static_cast<float>(scene.lights[i].intensity);
 
-                    if (ImGui::InputFloat3("位置", light_position, "%.1f")) {
-                        renderContext.light_sources[i].position = {light_position[0], light_position[1], light_position[2]};
-                        renderContext.lights_changed = true;
-                    }
-                    
-                    if (ImGui::ColorEdit3("颜色", light_color)) {
-                        renderContext.light_sources[i].color = {light_color[2], light_color[1], light_color[0]};
-                        renderContext.lights_changed = true;
-                    }
+                    if (ImGui::InputFloat3("位置", light_position.data(), "%.1f"))
+                        scene.lights[i].position = {light_position[0], light_position[1], light_position[2]};
+                    if (ImGui::ColorEdit3("颜色", light_color.data()))
+                        scene.lights[i].color = {light_color[2], light_color[1], light_color[0]};
+                    if (ImGui::InputFloat("光强", &light_intensity, 10.0f, 100.0f, "%.1f"))
+                        scene.lights[i].intensity = std::max(0.0f, light_intensity);
 
-                    auto light_intensity = static_cast<float>(renderContext.light_sources[i].intensity);
-                    if (ImGui::InputFloat("光强", &light_intensity, 10.0f, 100.0f, "%.1f")) {
-                        renderContext.light_sources[i].intensity = std::max(0.0f, light_intensity);
-                        renderContext.lights_changed = true;
-                    }
-                    
-                    // 删除光源按钮
-                    if (renderContext.light_sources.size() > 1) {  // 至少保留一个光源
+                    if (scene.lights.size() > 1) {
                         ImGui::SameLine();
                         if (ImGui::Button("删除")) {
-                            renderContext.light_sources.erase(renderContext.light_sources.begin() + static_cast<int64_t>(i));
-                            renderContext.lights_changed = true;
+                            scene.lights.erase(scene.lights.begin() + static_cast<int64_t>(i));
                             ImGui::TreePop();
                             ImGui::PopID();
-                            break;  // 退出循环，因为vector已经改变
+                            break;
                         }
                     }
                     ImGui::TreePop();
@@ -684,6 +583,7 @@ int main(int, char**)
     ImVec4 clear_color = ImVec4(0.15f, 0.15f, 0.15f, 1.00f);
 
     initTexture(renderContext.width, renderContext.height);
+    initScene();
     initRasterizer();
 
     while (!glfwWindowShouldClose(window))
@@ -778,13 +678,13 @@ void initTexture(int width, int height) {
     imageData.resize(width * height * 4, 255); // 全白RGBA格式
 }
 
-void initRasterizer() {
-    rasterizer.set_model_matrix(model_matrix());
-    rasterizer.set_view_matrix(view_matrix(renderContext.eye, renderContext.center, renderContext.up));
-    rasterizer.set_projection_matrix(perspective_projection(renderContext.fov, renderContext.aspect, renderContext.near_, renderContext.far_));
-    rasterizer.load_fragment_shader(std::make_shared<PhongShader>());
+void initScene() {
+    scene.lights.emplace_back();
     updateModels();
-    updateLights();
+}
+
+void initRasterizer() {
+    rasterizer.load_fragment_shader(std::make_shared<PhongShader>());
 }
 
 void updateModels() {
@@ -815,50 +715,17 @@ void updateRotate() {
         return;
 
     double delta_time = 1.0 / renderContext.target_fps; // 估算的时间间隔
-    renderContext.current_rotation += renderContext.rotation_speed * delta_time * 60.0; // 旋转速度调整
-    if (renderContext.current_rotation > 360.0) {
-        renderContext.current_rotation -= 360.0;
-    }
-
-    // 创建旋转矩阵并设置到光栅化器
-    mat4 rotation_matrix = {{
-        {cos(renderContext.current_rotation * M_PI / 180.0), 0, sin(renderContext.current_rotation * M_PI / 180.0), 0},
-        {0, 1, 0, 0},
-        {-sin(renderContext.current_rotation * M_PI / 180.0), 0, cos(renderContext.current_rotation * M_PI / 180.0), 0},
-        {0, 0, 0, 1}
-    }};
-    rasterizer.set_view_matrix(view_matrix(renderContext.eye, renderContext.center, renderContext.up) * rotation_matrix);
-}
-
-void updateProjection() {
-    if (renderContext.view_change) {
-        rasterizer.set_view_matrix(view_matrix(renderContext.eye, renderContext.center, renderContext.up));
-        renderContext.view_change = false;
-    }
-    if (renderContext.proj_change) {
-        rasterizer.set_projection_matrix(perspective_projection(renderContext.fov, renderContext.aspect, renderContext.near_, renderContext.far_));
-        renderContext.proj_change = false;
-    }
-}
-
-void updateLights() {
-    if (renderContext.lights_changed) {
-        rasterizer.clear_lights();
-        rasterizer.load_lights(renderContext.light_sources);
-        renderContext.lights_changed = false;
-    }
+    scene.camera.rotate_around_eye(renderContext.rotation_speed * delta_time * 60.0, 0, 0);
 }
 
 void performRendering() {
     auto start_time = std::chrono::high_resolution_clock::now();
 
     updateModels();
-    updateProjection();
     updateRotate();
-    updateLights();
 
     rasterizer.clear_buffer();
-    rasterizer.rasterize();
+    rasterizer.rasterize_scene(scene);
     rasterizer.drawonTGA(tgaImage);
 
     auto end_time = std::chrono::high_resolution_clock::now();

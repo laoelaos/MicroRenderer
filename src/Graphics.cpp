@@ -39,13 +39,13 @@ mat4 Camera::get_projection_matrix() {
     double bottom = -top;
     double right = top * aspect;
     double left = -right;
-    near_ = -near_;
-    far_ = -far_;
+    double near_cp = -near_;
+    double far_cp = -far_;
     mat4 translate{
         {
             {1, 0, 0, -(left + right) / 2},
             {0, 1, 0, -(top + bottom) / 2},
-            {0, 0, 1, -(near_ + far_) / 2},
+            {0, 0, 1, -(near_cp + far_cp) / 2},
             {0, 0, 0, 1}
         }
     };
@@ -53,15 +53,15 @@ mat4 Camera::get_projection_matrix() {
         {
             {2 / (right - left), 0, 0, 0},
             {0, 2 / (top - bottom), 0, 0},
-            {0, 0, 2 / (near_ - far_), 0},
+            {0, 0, 2 / (near_cp - far_cp), 0},
             {0, 0, 0, 1}
         }
     };
     mat4 pers{
         {
-            {near_, 0, 0, 0},
-            {0, near_, 0, 0},
-            {0, 0, near_ + far_, -near_ * far_},
+            {near_cp, 0, 0, 0},
+            {0, near_cp, 0, 0},
+            {0, 0, near_cp + far_cp, -near_cp * far_cp},
             {0, 0, 1, 0}
         }
     };

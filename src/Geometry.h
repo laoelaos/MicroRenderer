@@ -5,6 +5,7 @@
 #ifndef GEOMETRY_H
 #define GEOMETRY_H
 
+#include <array>
 #include <cassert>
 #include <ostream>
 #include <cmath>
@@ -135,6 +136,18 @@ template<int n> vec<n> cwise_multiply(const vec<n>& v1, const vec<n>& v2) {
 template<int n> vec<n> cwise_multiply(const vec<n>& v1, const vec<n>& v2, const vec<n>& v3) {
     vec<n> res;
     for (int i=0; i<n; i++) res[i] = v1[i] * v2[i] * v3[i];
+    return res;
+}
+
+template<int n> std::array<float, n> to_float_array(const vec<n>& v) {
+    std::array<float, n> res;
+    for (int i=0; i<n; i++) res[i] = static_cast<float>(v[i]);
+    return res;
+}
+
+template<size_t n> vec<n> float_array_to_vec(const std::array<float, n>& arr) {
+    vec<static_cast<int>(n)> res;
+    for (int i=0; i<static_cast<int>(n); i++) res[i] = static_cast<double>(arr[i]);
     return res;
 }
 

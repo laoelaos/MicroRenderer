@@ -13,7 +13,7 @@ class Camera {
 private:
     void update();
 public:
-    vec3 eye = {0, 0, 1};
+    vec3 eye = {0, 0, 0};
     vec3 center = {0, 0, 2};
     vec3 up = {0, 1, 0};
     int width = 600;
@@ -70,8 +70,8 @@ public:
 class Light {
 public:
     vec3 color = {1.0, 1.0, 1.0};
-    vec3 position = {0.0, 0.0, 0.0};
-    double intensity = 1000.0;
+    vec3 position = {20.0, 20.0, 20.0};
+    double intensity = 2000.0;
 
     Light() = default;
     Light(const vec3& color_, const vec3& position_, double intensity_);

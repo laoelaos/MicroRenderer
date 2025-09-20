@@ -52,9 +52,10 @@ void Rasterizer::set_options(int MSAA) {
 }
 
 void Rasterizer::rasterize_scene(Scene &scene) {
-    clear_all();
     set_view_matrix(scene.camera.get_view_matrix());
     set_projection_matrix(scene.camera.get_projection_matrix());
+    viewport = viewport_matrix(width, height);
+    lights = {};
     load_lights(scene.lights);
     for (const Model& obj_model: models) {
         model = obj_model.transform;
