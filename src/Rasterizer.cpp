@@ -51,6 +51,20 @@ void Rasterizer::set_options(int MSAA) {
     clear_buffer();
 }
 
+void Rasterizer::rasterize_scene(Scene &scene) {
+    clear_all();
+    set_view_matrix(scene.camera.get_view_matrix());
+    set_projection_matrix(scene.camera.get_projection_matrix());
+    load_lights(scene.lights);
+    for (const Model& obj_model: models) {
+        model = obj_model.transform;
+        mvpv = viewport * projection * view * model;
+        mv = view * model;
+        mvit = (view * model).invert().transpose();
+        rasterize_model(obj_model);
+    }
+}
+
 void Rasterizer::drawonTGA(TGAImage& framebuffer_) {
     int h = height / MSAA;
     int w = width  / MSAA;

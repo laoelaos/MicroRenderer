@@ -30,18 +30,8 @@ struct Material {
                     : properties(properties), diffuse_mapping(diffuse_mapping),
                       normal_type(normal_type), shade_frequency(shade_frequency) {
 
-        if (!texture_path.empty()) {
-            if (!texture.read_tga_file(texture_path)) {
-                throw std::runtime_error("Failed to load texture: " + texture_path);
-            }
-            texture.flip_vertically();
-        }
-        if (!normal_map_path.empty()) {
-            if (!normal_map.read_tga_file(normal_map_path)) {
-                throw std::runtime_error("Failed to load normal map: " + normal_map_path);
-            }
-            normal_map.flip_vertically();
-        }
+        set_texture(texture_path);
+        set_normal_map(normal_map_path);
     }
 
     TGAImage texture;
@@ -52,6 +42,9 @@ struct Material {
     bool diffuse_mapping;
     NormalType normal_type;
     ShadeFrequency shade_frequency;
+
+    void set_texture(const std::string& texture_path);
+    void set_normal_map(const std::string& normal_map_path);
 };
 
 struct triangle {

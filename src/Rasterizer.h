@@ -33,6 +33,8 @@ public:
     void set_projection_matrix(const mat4& m) { projection = m;}
     void set_options(int MSAA);
 
+    void rasterize_scene(Scene& scene);
+
     void rasterize();
     void drawonTGA(TGAImage& framebuffer);
 private:

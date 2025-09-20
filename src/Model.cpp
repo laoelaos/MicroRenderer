@@ -8,6 +8,24 @@
 #include "Model.h"
 #include "Geometry.h"
 
+void Material::set_texture(const std::string &texture_path) {
+    if (!texture_path.empty()) {
+        if (!texture.read_tga_file(texture_path)) {
+            throw std::runtime_error("Failed to load texture: " + texture_path);
+        }
+        texture.flip_vertically();
+    }
+}
+
+void Material::set_normal_map(const std::string &normal_map_path) {
+    if (!normal_map_path.empty()) {
+        if (!normal_map.read_tga_file(normal_map_path)) {
+            throw std::runtime_error("Failed to load normal map: " + normal_map_path);
+        }
+        normal_map.flip_vertically();
+    }
+}
+
 Model::Model(const std::string& filename) {
     std::ifstream file(filename);
     if (!file.is_open()) {
