@@ -3,6 +3,8 @@
 #include <fstream>
 #include <vector>
 
+#include "Geometry.h"
+
 #pragma pack(push,1)
 struct TGAHeader {
     std::uint8_t  idlength = 0;
@@ -24,6 +26,11 @@ struct TGAColor {
     std::uint8_t bgra[4] = {0,0,0,0};
     std::uint8_t bytespp = 4;
     std::uint8_t& operator[](const int i) { return bgra[i]; }
+
+    TGAColor() = default;
+    TGAColor(const std::uint8_t R, const std::uint8_t G, const std::uint8_t B, const std::uint8_t A=255, const std::uint8_t bytespp=4);
+    TGAColor(vec3 color);
+    vec3 to_vec3_rgb() const;
 };
 
 struct TGAImage {
@@ -34,7 +41,11 @@ struct TGAImage {
     bool write_tga_file(const std::string filename, const bool vflip=true, const bool rle=true) const;
     void flip_horizontally();
     void flip_vertically();
+
     TGAColor get(const int x, const int y) const;
+    vec3 get_nearest(vec2 uv) const;
+    vec3 get_bilinear(vec2 uv) const;
+
     void set(const int x, const int y, const TGAColor &c);
     int width()  const;
     int height() const;

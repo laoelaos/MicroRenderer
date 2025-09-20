@@ -154,7 +154,7 @@ void control_gui() {
                 if (ImGui::InputFloat3("位置", light_position.data(), "%.1f"))
                     scene.lights[i].position = {light_position[0], light_position[1], light_position[2]};
                 if (ImGui::ColorEdit3("颜色", light_color.data()))
-                    scene.lights[i].color = {light_color[2], light_color[1], light_color[0]};
+                    scene.lights[i].color = {light_color[0], light_color[1], light_color[2]};
                 if (ImGui::InputFloat("光强", &light_intensity, 10.0f, 100.0f, "%.1f"))
                     scene.lights[i].intensity = std::max(0.0f, light_intensity);
 

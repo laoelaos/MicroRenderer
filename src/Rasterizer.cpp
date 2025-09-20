@@ -3,12 +3,9 @@
 //
 
 #include <algorithm>
+#include <iostream>
 
 #include "Rasterizer.h"
-
-#include <iostream>
-#include <thread>
-
 #include "Model.h"
 #include "Util.h"
 
@@ -108,13 +105,13 @@ void Rasterizer::rasterize_model(const Model& obj_model) {
                     payload.tex_coords = c_alpha * tex_coords[0] + c_beta * tex_coords[1] + c_gamma * tex_coords[2];
 
                     if (diffuse_mapping) {
-                        payload.color = get_color_vec3_from_tga_bilinear(texture, payload.tex_coords);
+                        payload.color = texture.get_bilinear(payload.tex_coords);
                     } else {
                         payload.color = c_alpha * vec3{1, 1, 1} + c_beta * vec3{1, 1, 1} + c_gamma * vec3{1, 1, 1};
                     }
 
                     if (normal_type == GLOBAL) {
-                        payload.normal = get_nor_vec3_from_tga_bilinear(normal_map, payload.tex_coords);
+                        payload.normal = normal_map.get_bilinear(payload.tex_coords) * 2 - vec3{1, 1, 1};
                     } else if (shade_frequency == PER_FRAGMENT) {
                         payload.normal = normalize(c_alpha * normals[0] + c_beta * normals[1] + c_gamma * normals[2]);
                     } else {
@@ -134,7 +131,7 @@ void Rasterizer::rasterize_model(const Model& obj_model) {
                             vec3 b = normalize(tnb.get_col(1));
                             vec3 n = payload.normal;
                             mat<3,3> TBN {{{t.x, b.x, n.x}, {t.y, b.y, n.y}, {t.z, b.z, n.z}}};
-                            payload.normal = normalize(TBN * get_nor_vec3_from_tga_bilinear(normal_map, payload.tex_coords));
+                            payload.normal = normalize(TBN * (normal_map.get_bilinear(payload.tex_coords) * 2 - vec3{1, 1, 1}));
                         }
                     }
 
@@ -182,7 +179,7 @@ void Rasterizer::draw_on_TGA(TGAImage& framebuffer_) {
                 }
             }
             vec3 color = color_sum / MSAA / MSAA;
-            framebuffer_.set(x, y, vec3_to_color(color));
+            framebuffer_.set(x, y, TGAColor(color));
         }
     }
 }

@@ -39,7 +39,8 @@ set(IMGUI_SOURCES
         src/ImGui/imgui_impl_opengl3.cpp
 )
 
-set(SOURCES src/main.cpp src/tgaimage.cpp
+set(SOURCES src/main.cpp
+        src/TGAImage.cpp
         src/model.cpp
         src/Rasterizer.cpp
         src/util.cpp

@@ -2,6 +2,49 @@
 #include <cstring>
 #include "TGAImage.h"
 
+TGAColor::TGAColor(const std::uint8_t R, const std::uint8_t G, const std::uint8_t B, const std::uint8_t A,
+    const std::uint8_t bytespp) {
+    bgra[0] = B;
+    bgra[1] = G;
+    bgra[2] = R;
+    bgra[3] = A;
+    this->bytespp = bytespp;
+}
+
+TGAColor::TGAColor(vec3 color) {
+    bgra[0] = static_cast<std::uint8_t>(std::max(0., std::min(255., color.z * 255.)));
+    bgra[1] = static_cast<std::uint8_t>(std::max(0., std::min(255., color.y * 255.)));
+    bgra[2] = static_cast<std::uint8_t>(std::max(0., std::min(255., color.x * 255.)));
+    bgra[3] = 255;
+}
+
+vec3 TGAColor::to_vec3_rgb() const {
+    return {static_cast<double>(bgra[2]) / 255.0,
+            static_cast<double>(bgra[1]) / 255.0,
+            static_cast<double>(bgra[0]) / 255.0};
+}
+
+vec3 TGAImage::get_nearest(vec2 uv) const {
+    return get(static_cast<int>(uv.x * w), static_cast<int>(uv.y * h)).to_vec3_rgb();
+}
+
+vec3 TGAImage::get_bilinear(vec2 uv) const {
+    int x = static_cast<int>(uv.x * w);
+    int y = static_cast<int>(uv.y * h);
+    int xp = std::min(x + 1, w - 1);
+    int yp = std::min(y + 1, h - 1);
+    double u = uv.x * w - x;
+    double v = uv.y * h - y;
+    vec3 c00 = get(x, y).to_vec3_rgb();
+    vec3 c10 = get(xp, y).to_vec3_rgb();
+    vec3 c01 = get(x, yp).to_vec3_rgb();
+    vec3 c11 = get(xp, yp).to_vec3_rgb();
+    return (1 - u) * (1 - v) * c00 +
+           u * (1 - v) * c10 +
+           (1 - u) * v * c01 +
+           u * v * c11;
+}
+
 TGAImage::TGAImage(const int w, const int h, const int bpp) : w(w), h(h), bpp(bpp), data(w*h*bpp, 0) {}
 
 bool TGAImage::read_tga_file(const std::string filename) {
