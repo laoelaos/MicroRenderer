@@ -1,4 +1,5 @@
 #include "imgui.h"
+#include "imgui_stdlib.h"
 #include "imgui_impl_glfw.h"
 #include "imgui_impl_opengl3.h"
 #include <cstdio>
@@ -34,59 +35,18 @@ void initScene();
 void initRasterizer();
 void initTexture(int width, int height);
 
-void updateModels();
 void updateRotate();
 
 void performRendering();
 void loadTextureToGl();
 
-struct ModelInfo {
-    std::string name;
-    std::string model_path;
-    std::string diffuse_path;
-    std::string normal_path;
-    bool diffuse_mapping = true;
-    NormalType normal_type = GLOBAL;
-    ShadeFrequency shade_frequency = PER_FRAGMENT;
-    phong_properties material_props = {0.9, 0.6, 0.005, 150};
-    bool enabled = true;
-
-    // 模型变换参数
-    vec3 translation = {0, 0, 0};
-    vec3 rotation = {0, 0, 0};  // 欧拉角 (x, y, z) 弧度
-    vec3 scale = {1, 1, 1};     // 缩放因子
-
-    mat4 transform = identity_matrix<4>();
-};
-
 struct RenderContext {
-    bool use_euler_angles = false;
-
-    // 渲染参数
     int width = 600;
     int height = 600;
     int msaa_level = 1;
 
-    // 模型列表
-    std::vector<ModelInfo> models = {
-        {
-            "head",
-            R"(D:\CS_learning\Project\MicroRenderer\obj\african_head\african_head.obj)",
-            R"(D:\CS_learning\Project\MicroRenderer\obj\african_head\african_head_diffuse.tga)",
-            R"(D:\CS_learning\Project\MicroRenderer\obj\african_head\african_head_nm_tangent.tga)",
-            true, TANGENT, PER_FRAGMENT, {0.9, 0.6, 0.005, 150}, true,
-            {0, 0, 0}, {0, 0, 0}, {1, 1, 1}, identity_matrix<4>()
-        },
-        {
-            "eye",
-            R"(D:\CS_learning\Project\MicroRenderer\obj\african_head\african_head_eye_inner.obj)",
-            R"(D:\CS_learning\Project\MicroRenderer\obj\african_head\african_head_eye_inner_diffuse.tga)",
-            R"(D:\CS_learning\Project\MicroRenderer\obj\african_head\african_head_eye_inner_nm_tangent.tga)",
-            true, TANGENT, PER_FRAGMENT, {0.9, 0.6, 0.005, 150}, true,
-            {0, 0, 0}, {0, 0, 0}, {1, 1, 1}, identity_matrix<4>()
-        }
-    };
-    bool models_changed = true;
+    bool use_euler_angles = false;
+
     int selected_model = 0;
 
     // 渲染选项
@@ -104,326 +64,225 @@ struct RenderContext {
     // 控制标志
     bool force_render = true;
 };
+
 static Scene scene = {};
-static Rasterizer rasterizer(600, 600);
+static RenderContext renderContext;
+
+static Rasterizer rasterizer(renderContext.width, renderContext.height);
+
 static GLuint renderedTexture = 0;
 static std::vector<unsigned char> imageData;
-static RenderContext renderContext;
 static TGAImage tgaImage(renderContext.width, renderContext.height, TGAImage::RGB);
 
 void control_gui() {
     ImGui::Begin("渲染控制面板");
 
-        if (ImGui::CollapsingHeader("基本设置")) {
-            if (ImGui::InputInt("MSAA级别", &renderContext.msaa_level, 1, 1)) {
-                rasterizer.set_options(std::clamp(renderContext.msaa_level, 1, 10));
-            }
+    if (ImGui::CollapsingHeader("基本设置")) {
+        if (ImGui::InputInt("MSAA级别", &renderContext.msaa_level, 1, 1)) {
+            rasterizer.set_options(std::clamp(renderContext.msaa_level, 1, 10));
+        }
+    }
+
+    if (ImGui::CollapsingHeader("相机设置")) {
+        std::array<float, 3> eye_pos = to_float_array(scene.camera.eye);
+        std::array<float, 3> center_pos = to_float_array(scene.camera.center);
+        std::array<float, 3> up_dir = to_float_array(scene.camera.up);
+        auto fov = static_cast<float>(scene.camera.fov);
+        auto near_plane = static_cast<float>(scene.camera.near_);
+        auto far_plane = static_cast<float>(scene.camera.far_);
+        auto yaw = static_cast<float>(scene.camera.yaw);
+        auto pitch = static_cast<float>(scene.camera.pitch);
+        auto roll = static_cast<float>(scene.camera.roll);
+
+        if (ImGui::IsItemHovered())
+            ImGui::SetTooltip("远平面应大于近平面");
+
+        ImGui::Checkbox("使用滑条控制相机欧拉角", &renderContext.use_euler_angles);
+
+        if (renderContext.use_euler_angles) {
+            bool view_changed = false;
+            if (ImGui::SliderFloat("水平旋转 (Yaw)", &yaw, -180.0f, 180.0f, "%.1f°"))
+                view_changed = true;
+            if (ImGui::SliderFloat("垂直旋转 (Pitch)", &pitch, -89.0f, 89.0f, "%.1f°"))
+                view_changed = true;
+            if (ImGui::SliderFloat("滚转 (roll)", &roll, -180.0f, 180.0f, "%.1f°"))
+                view_changed = true;
+            if (view_changed)
+                scene.camera.set_toward_from_center(yaw, pitch, roll);
+
+            if (ImGui::InputFloat3("相机位置", eye_pos.data(), "%.2f"))
+                scene.camera.eye = float_array_to_vec(eye_pos);
+            ImGui::BeginDisabled();
+            ImGui::InputFloat3("上方向", to_float_array(scene.camera.up).data(), "%.2f");
+            ImGui::EndDisabled();
+        } else {
+            if (ImGui::InputFloat3("相机位置", eye_pos.data(), "%.2f"))
+                scene.camera.eye = float_array_to_vec(eye_pos);
+            if (ImGui::InputFloat3("观察点", center_pos.data(), "%.2f"))
+                scene.camera.center = float_array_to_vec(center_pos);
+            if (ImGui::InputFloat3("上方向", up_dir.data(), "%.2f"))
+                scene.camera.up = float_array_to_vec(up_dir);
         }
 
-        if (ImGui::CollapsingHeader("相机设置")) {
-            std::array<float, 3> eye_pos = to_float_array(scene.camera.eye);
-            std::array<float, 3> center_pos = to_float_array(scene.camera.center);
-            std::array<float, 3> up_dir = to_float_array(scene.camera.up);
-            auto fov = static_cast<float>(scene.camera.fov);
-            auto near_plane = static_cast<float>(scene.camera.near_);
-            auto far_plane = static_cast<float>(scene.camera.far_);
-            auto yaw = static_cast<float>(scene.camera.yaw);
-            auto pitch = static_cast<float>(scene.camera.pitch);
-            auto roll = static_cast<float>(scene.camera.roll);
+        if (ImGui::InputFloat("视场角FOV", &fov, 1.0f, 5.0f, "%.1f"))
+            scene.camera.fov = fov;
+        if (ImGui::InputFloat("近平面", &near_plane, 0.1f, 0.5f, "%.2f"))
+            scene.camera.near_ = near_plane;
+        if (ImGui::InputFloat("远平面", &far_plane, 0.1f, 0.5f, "%.2f"))
+            scene.camera.far_ = far_plane;
 
-            if (ImGui::IsItemHovered())
-                ImGui::SetTooltip("远平面应大于近平面");
+        if (ImGui::Button("重置相机"))
+            scene.camera = {};
+    }
 
-            ImGui::Checkbox("使用滑条控制相机欧拉角", &renderContext.use_euler_angles);
+    if (ImGui::CollapsingHeader("光照设置")) {
+        ImGui::Text("光源数量: %zu", scene.lights.size());
 
-            if (renderContext.use_euler_angles) {
-                bool view_changed = false;
-                if (ImGui::SliderFloat("水平旋转 (Yaw)", &yaw, -180.0f, 180.0f, "%.1f°"))
-                    view_changed = true;
-                if (ImGui::SliderFloat("垂直旋转 (Pitch)", &pitch, -89.0f, 89.0f, "%.1f°"))
-                    view_changed = true;
-                if (ImGui::SliderFloat("滚转 (roll)", &roll, -180.0f, 180.0f, "%.1f°"))
-                    view_changed = true;
-                if (view_changed)
-                    scene.camera.set_toward_from_center(yaw, pitch, roll);
+        if (ImGui::Button("添加光源"))
+            scene.lights.emplace_back();
 
-                if (ImGui::InputFloat3("相机位置", eye_pos.data(), "%.2f"))
-                    scene.camera.eye = float_array_to_vec(eye_pos);
-                ImGui::BeginDisabled();
-                ImGui::InputFloat3("上方向", to_float_array(scene.camera.up).data(), "%.2f");
-                ImGui::EndDisabled();
-            } else {
-                if (ImGui::InputFloat3("相机位置", eye_pos.data(), "%.2f"))
-                    scene.camera.eye = float_array_to_vec(eye_pos);
-                if (ImGui::InputFloat3("观察点", center_pos.data(), "%.2f"))
-                    scene.camera.center = float_array_to_vec(center_pos);
-                if (ImGui::InputFloat3("上方向", up_dir.data(), "%.2f"))
-                    scene.camera.up = float_array_to_vec(up_dir);
-            }
+        ImGui::Separator();
+        for (size_t i = 0; i < scene.lights.size(); i++) {
+            ImGui::PushID(static_cast<int>(i));
 
-            if (ImGui::InputFloat("视场角FOV", &fov, 1.0f, 5.0f, "%.1f"))
-                scene.camera.fov = fov;
-            if (ImGui::InputFloat("近平面", &near_plane, 0.1f, 0.5f, "%.2f"))
-                scene.camera.near_ = near_plane;
-            if (ImGui::InputFloat("远平面", &far_plane, 0.1f, 0.5f, "%.2f"))
-                scene.camera.far_ = far_plane;
+            std::string header = "光源 " + std::to_string(i + 1);
+            if (ImGui::TreeNode(header.c_str())) {
+                std::array<float, 3> light_position = to_float_array(scene.lights[i].position);
+                std::array<float, 3> light_color = to_float_array(scene.lights[i].color);
+                auto light_intensity = static_cast<float>(scene.lights[i].intensity);
 
-            if (ImGui::Button("重置相机"))
-                scene.camera = {};
-        }
+                if (ImGui::InputFloat3("位置", light_position.data(), "%.1f"))
+                    scene.lights[i].position = {light_position[0], light_position[1], light_position[2]};
+                if (ImGui::ColorEdit3("颜色", light_color.data()))
+                    scene.lights[i].color = {light_color[2], light_color[1], light_color[0]};
+                if (ImGui::InputFloat("光强", &light_intensity, 10.0f, 100.0f, "%.1f"))
+                    scene.lights[i].intensity = std::max(0.0f, light_intensity);
 
-        if (ImGui::CollapsingHeader("光照设置")) {
-            ImGui::Text("光源数量: %zu", scene.lights.size());
-
-            if (ImGui::Button("添加光源"))
-                scene.lights.emplace_back();
-            
-            ImGui::Separator();
-            for (size_t i = 0; i < scene.lights.size(); i++) {
-                ImGui::PushID(static_cast<int>(i));
-                
-                std::string header = "光源 " + std::to_string(i + 1);
-                if (ImGui::TreeNode(header.c_str())) {
-                    std::array<float, 3> light_position = to_float_array(scene.lights[i].position);
-                    std::array<float, 3> light_color = to_float_array(scene.lights[i].color);
-                    auto light_intensity = static_cast<float>(scene.lights[i].intensity);
-
-                    if (ImGui::InputFloat3("位置", light_position.data(), "%.1f"))
-                        scene.lights[i].position = {light_position[0], light_position[1], light_position[2]};
-                    if (ImGui::ColorEdit3("颜色", light_color.data()))
-                        scene.lights[i].color = {light_color[2], light_color[1], light_color[0]};
-                    if (ImGui::InputFloat("光强", &light_intensity, 10.0f, 100.0f, "%.1f"))
-                        scene.lights[i].intensity = std::max(0.0f, light_intensity);
-
-                    if (scene.lights.size() > 1) {
-                        ImGui::SameLine();
-                        if (ImGui::Button("删除")) {
-                            scene.lights.erase(scene.lights.begin() + static_cast<int64_t>(i));
-                            ImGui::TreePop();
-                            ImGui::PopID();
-                            break;
-                        }
+                if (scene.lights.size() > 1) {
+                    ImGui::SameLine();
+                    if (ImGui::Button("删除")) {
+                        scene.lights.erase(scene.lights.begin() + static_cast<int64_t>(i));
+                        ImGui::TreePop();
+                        ImGui::PopID();
+                        break;
                     }
+                }
+                ImGui::TreePop();
+            }
+            ImGui::PopID();
+        }
+    }
+
+    if (ImGui::CollapsingHeader("模型管理")) {
+        ImGui::Text("场景中的模型个数: %zu", scene.models.size());
+
+        if (ImGui::Button("添加新模型"))
+            scene.models.emplace_back();
+
+        ImGui::Separator();
+
+        static std::vector<const char*> model_names;
+        for (auto & model : scene.models)
+            model_names.push_back(model.name.c_str());
+
+        if (!model_names.empty()) {
+            ImGui::Combo("选择模型", &renderContext.selected_model, model_names.data(), static_cast<int>(model_names.size()));
+
+            if (renderContext.selected_model >= 0 && renderContext.selected_model < static_cast<int>(scene.models.size())) {
+                Model& model = scene.models[renderContext.selected_model];
+
+                if (ImGui::TreeNode("模型基础设置")) {
+                    ImGui::Checkbox("启用模型", &model.enable);
+
+                    ImGui::InputText("模型名称", &model.name);
+                    if (ImGui::InputText("模型文件路径", &model.name))
+                        model.load_obj();
+                    if (ImGui::InputText("漫反射贴图路径", &model.material.normal_map_path))
+                        model.material.load_normal_map();
+                    if (ImGui::InputText("法线贴图路径", &model.material.texture_path))
+                        model.material.load_texture();
+
+                    auto k_ambient = static_cast<float>(model.material.properties.k_ambient);
+                    auto k_diffuse = static_cast<float>(model.material.properties.k_diffuse);
+                    auto k_specular = static_cast<float>(model.material.properties.k_specular);
+                    int p = model.material.properties.p;
+                    if (ImGui::InputFloat("环境光系数", &k_ambient, 0.05f, 0.1f, "%.2f"))
+                        model.material.properties.k_ambient = std::clamp(static_cast<double>(k_ambient), 0.0, 1.0);
+                    if (ImGui::InputFloat("漫反射系数", &k_diffuse, 0.05f, 0.1f, "%.2f"))
+                        model.material.properties.k_diffuse = std::clamp(static_cast<double>(k_diffuse), 0.0, 1.0);
+                    if (ImGui::InputFloat("镜面反射系数", &k_specular, 0.005f, 0.01f, "%.3f"))
+                        model.material.properties.k_specular = std::clamp(static_cast<double>(k_specular), 0.0, 1.0);
+                    if (ImGui::InputInt("光泽度", &p, 10, 50))
+                        model.material.properties.p = std::clamp(p, 1, 1000);
+
+                    ImGui::Checkbox("使用贴图", &model.material.diffuse_mapping);
+
+                    const char *normal_types[] = {"全局法线贴图", "切线空间法线贴图"};
+                    int normal_type_idx = model.material.normal_type == GLOBAL ? 0 : 1;
+                    if (ImGui::Combo("法线类型", &normal_type_idx, normal_types, IM_ARRAYSIZE(normal_types))) {
+                        model.material.normal_type = normal_type_idx == 0 ? GLOBAL : TANGENT;
+                    }
+
+                    const char *shade_frequencies[] = {"每顶点着色", "每片段着色"};
+                    int shade_freq_idx = model.material.shade_frequency == PER_VERTEX ? 0 : 1;
+                    if (ImGui::Combo("着色频率", &shade_freq_idx, shade_frequencies, IM_ARRAYSIZE(shade_frequencies))) {
+                        model.material.shade_frequency = shade_freq_idx == 0 ? PER_VERTEX : PER_FRAGMENT;
+                    }
+
                     ImGui::TreePop();
                 }
-                ImGui::PopID();
-            }
-        }
 
-        if (ImGui::CollapsingHeader("模型管理")) {
-            // 显示模型列表
-            ImGui::Text("场景中的模型: %zu", renderContext.models.size());
+                if (ImGui::TreeNode("模型变换")) {
+                    std::array<float, 3> translation = to_float_array(model.translation);
+                    if (ImGui::InputFloat3("位移", translation.data(), "%.2f"))
+                        model.translation = float_array_to_vec(translation);
 
-            if (ImGui::Button("添加新模型")) {
-                // 添加默认模型
-                renderContext.models.push_back({
-                    "newObj_" + std::to_string(renderContext.models.size()),
-                    R"(D:\CS_learning\Project\MicroRenderer\obj\african_head\african_head.obj)",
-                    R"(D:\CS_learning\Project\MicroRenderer\obj\african_head\african_head_diffuse.tga)",
-                    R"(D:\CS_learning\Project\MicroRenderer\obj\african_head\african_head_nm.tga)",
-                    true, GLOBAL, PER_FRAGMENT, {0.9, 0.6, 0.005, 150}, true,
-                    {0, 0, 0}, {0, 0, 0}, {1, 1, 1}, identity_matrix<4>()
-                });
-                renderContext.models_changed = true;
-            }
+                    std::array<float, 3> rotation_degrees = to_float_array(model.rotation); //角度制
+                    if (ImGui::SliderFloat("X轴旋转", &rotation_degrees[0], -180.0f, 180.0f, "%.1f°"))
+                        model.rotation = float_array_to_vec(rotation_degrees);
+                    if (ImGui::SliderFloat("Y轴旋转", &rotation_degrees[1], -180.0f, 180.0f, "%.1f°"))
+                        model.rotation = float_array_to_vec(rotation_degrees);
+                    if (ImGui::SliderFloat("Z轴旋转", &rotation_degrees[2], -180.0f, 180.0f, "%.1f°"))
+                        model.rotation = float_array_to_vec(rotation_degrees);
 
-            ImGui::Separator();
+                    std::array<float, 3> scale = to_float_array(model.scale);
+                    if (ImGui::InputFloat3("缩放", scale.data(), "%.2f"))
+                        model.scale = {
+                        std::max(0.01, static_cast<double>(scale[0])),
+                        std::max(0.01, static_cast<double>(scale[1])),
+                        std::max(0.01, static_cast<double>(scale[2]))
+                    };
 
-            // 模型选择列表
-            static std::vector<const char*> model_names;
-            model_names.clear();
-            for (size_t i = 0; i < renderContext.models.size(); i++) {
-                model_names.push_back(renderContext.models[i].name.c_str());
-            }
-
-            // 模型选择下拉菜单
-            if (!model_names.empty()) {
-                if (ImGui::Combo("选择模型", &renderContext.selected_model, model_names.data(), static_cast<int>(model_names.size()))) {
-                    // 模型选择改变
-                }
-
-                // 如果有选择的模型，显示编辑界面
-                if (renderContext.selected_model >= 0 && renderContext.selected_model < static_cast<int>(renderContext.models.size())) {
-                    ModelInfo &model = renderContext.models[renderContext.selected_model];
-
-                    if (ImGui::TreeNode("模型基础设置")) {
-                        if (ImGui::Checkbox("启用模型", &model.enabled)) {
-                            renderContext.models_changed = true;
-                        }
-
-                        char name[256];
-                        strncpy(name, model.name.c_str(), sizeof(name) - 1);
-                        name[sizeof(name) - 1] = '\0';
-                        if (ImGui::InputText("模型名称", name, sizeof(name))) {
-                            model.name = name;
-                        }
-
-                        strncpy(name, model.model_path.c_str(), sizeof(name) - 1);
-                        name[sizeof(name) - 1] = '\0';
-                        if (ImGui::InputText("模型文件路径", name, sizeof(name))) {
-                            model.model_path = name;
-                            renderContext.models_changed = true;
-                        }
-
-                        strncpy(name, model.diffuse_path.c_str(), sizeof(name) - 1);
-                        name[sizeof(name) - 1] = '\0';
-                        if (ImGui::InputText("漫反射贴图路径", name, sizeof(name))) {
-                            model.diffuse_path = name;
-                            renderContext.models_changed = true;
-                        }
-
-                        strncpy(name, model.normal_path.c_str(), sizeof(name) - 1);
-                        name[sizeof(name) - 1] = '\0';
-                        if (ImGui::InputText("法线贴图路径", name, sizeof(name))) {
-                            model.normal_path = name;
-                            renderContext.models_changed = true;
-                        }
-
-                        // 材质属性
-                        auto k_ambient = static_cast<float>(model.material_props.k_ambient);
-                        auto k_diffuse = static_cast<float>(model.material_props.k_diffuse);
-                        auto k_specular = static_cast<float>(model.material_props.k_specular);
-                        int p = model.material_props.p;
-
-                        if (ImGui::InputFloat("环境光系数", &k_ambient, 0.05f, 0.1f, "%.2f")) {
-                            model.material_props.k_ambient = std::clamp(static_cast<double>(k_ambient), 0.0, 1.0);
-                            renderContext.models_changed = true;
-                        }
-                        if (ImGui::InputFloat("漫反射系数", &k_diffuse, 0.05f, 0.1f, "%.2f")) {
-                            model.material_props.k_diffuse = std::clamp(static_cast<double>(k_diffuse), 0.0, 1.0);
-                            renderContext.models_changed = true;
-                        }
-                        if (ImGui::InputFloat("镜面反射系数", &k_specular, 0.005f, 0.01f, "%.3f")) {
-                            model.material_props.k_specular = std::clamp(static_cast<double>(k_specular), 0.0, 1.0);
-                            renderContext.models_changed = true;
-                        }
-                        if (ImGui::InputInt("光泽度", &p, 10, 50)) {
-                            model.material_props.p = std::clamp(p, 1, 1000);
-                            renderContext.models_changed = true;
-                        }
-
-                        // 贴图选项
-                        if (ImGui::Checkbox("使用贴图", &model.diffuse_mapping)) {
-                            renderContext.models_changed = true;
-                        }
-
-                        // 法线类型
-                        const char *normal_types[] = {"全局法线贴图", "切线空间法线贴图"};
-                        int normal_type_idx = model.normal_type == GLOBAL ? 0 : 1;
-                        if (ImGui::Combo("法线类型", &normal_type_idx, normal_types, IM_ARRAYSIZE(normal_types))) {
-                            model.normal_type = normal_type_idx == 0 ? GLOBAL : TANGENT;
-                            renderContext.models_changed = true;
-                        }
-
-                        // 着色频率
-                        const char *shade_frequencies[] = {"每顶点着色", "每片段着色"};
-                        int shade_freq_idx = model.shade_frequency == PER_VERTEX ? 0 : 1;
-                        if (ImGui::Combo("着色频率", &shade_freq_idx, shade_frequencies, IM_ARRAYSIZE(shade_frequencies))) {
-                            model.shade_frequency = shade_freq_idx == 0 ? PER_VERTEX : PER_FRAGMENT;
-                            renderContext.models_changed = true;
-                        }
-
-                        ImGui::TreePop();
-                    }
-
-                    if (ImGui::TreeNode("模型变换")) {
-                        // 位移控制
-                        float translation[3] = {
-                            static_cast<float>(model.translation.x),
-                            static_cast<float>(model.translation.y),
-                            static_cast<float>(model.translation.z)
-                        };
-                        if (ImGui::InputFloat3("位移", translation, "%.2f")) {
-                            model.translation = {translation[0], translation[1], translation[2]};
-                            model.transform = calculate_transform_matrix(model.translation, model.rotation, model.scale);
-                            renderContext.models_changed = true;
-                        }
-
-                        // 旋转控制 - 使用滑条 (角度制显示)
-                        float rotation_degrees[3] = {
-                            static_cast<float>(model.rotation.x * 180.0 / M_PI),
-                            static_cast<float>(model.rotation.y * 180.0 / M_PI),
-                            static_cast<float>(model.rotation.z * 180.0 / M_PI)
-                        };
-
-                        if (ImGui::SliderFloat("X轴旋转", &rotation_degrees[0], -180.0f, 180.0f, "%.1f°")) {
-                            model.rotation.x = rotation_degrees[0] * M_PI / 180.0;
-                            model.transform = calculate_transform_matrix(model.translation, model.rotation, model.scale);
-                            renderContext.models_changed = true;
-                        }
-
-                        if (ImGui::SliderFloat("Y轴旋转", &rotation_degrees[1], -180.0f, 180.0f, "%.1f°")) {
-                            model.rotation.y = rotation_degrees[1] * M_PI / 180.0;
-                            model.transform = calculate_transform_matrix(model.translation, model.rotation, model.scale);
-                            renderContext.models_changed = true;
-                        }
-
-                        if (ImGui::SliderFloat("Z轴旋转", &rotation_degrees[2], -180.0f, 180.0f, "%.1f°")) {
-                            model.rotation.z = rotation_degrees[2] * M_PI / 180.0;
-                            model.transform = calculate_transform_matrix(model.translation, model.rotation, model.scale);
-                            renderContext.models_changed = true;
-                        }
-
-                        // 缩放控制 - 使用输入框
-                        float scale[3] = {
-                            static_cast<float>(model.scale.x),
-                            static_cast<float>(model.scale.y),
-                            static_cast<float>(model.scale.z)
-                        };
-
-                        if (ImGui::InputFloat3("缩放", scale, "%.2f")) {
-                            // 限制缩放不能为零或负数
-                            model.scale = {
-                                std::max(0.01, static_cast<double>(scale[0])),
-                                std::max(0.01, static_cast<double>(scale[1])),
-                                std::max(0.01, static_cast<double>(scale[2]))
-                            };
-                            model.transform = calculate_transform_matrix(model.translation, model.rotation, model.scale);
-                            renderContext.models_changed = true;
-                        }
-
-                        // 统一缩放按钮和滑条
-                        ImGui::Separator();
-
-                        static float uniform_scale = 1.0f;
-                        if (ImGui::SliderFloat("统一缩放", &uniform_scale, 0.1f, 5.0f, "%.2f")) {
-                            // 不更新model.scale，仅供操作
-                        }
-
-                        ImGui::SameLine();
-                        if (ImGui::Button("应用统一缩放")) {
-                            model.scale = {uniform_scale, uniform_scale, uniform_scale};
-                            model.transform = calculate_transform_matrix(model.translation, model.rotation, model.scale);
-                            renderContext.models_changed = true;
-                        }
-
-                        // 重置变换按钮
-                        if (ImGui::Button("重置所有变换")) {
-                            model.translation = {0, 0, 0};
-                            model.rotation = {0, 0, 0};
-                            model.scale = {1, 1, 1};
-                            model.transform = identity_matrix<4>();
-                            renderContext.models_changed = true;
-                            uniform_scale = 1.0f;
-                        }
-
-                        ImGui::TreePop();
-                    }
-
-                    // 删除模型按钮
                     ImGui::Separator();
-                    if (renderContext.models.size() > 1) {  // 至少保留一个模型
-                        if (ImGui::Button("删除模型")) {
-                            renderContext.models.erase(renderContext.models.begin() + renderContext.selected_model);
-                            renderContext.selected_model = std::min(renderContext.selected_model, static_cast<int>(renderContext.models.size()) - 1);
-                            renderContext.models_changed = true;
-                        }
+
+                    static float uniform_scale = 1.0f;
+                    ImGui::SliderFloat("统一缩放", &uniform_scale, 0.1f, 5.0f, "%.2f");
+                    ImGui::SameLine();
+                    if (ImGui::Button("应用统一缩放"))
+                        model.scale = {uniform_scale, uniform_scale, uniform_scale};
+
+                    if (ImGui::Button("重置所有变换")) {
+                        model.translation = {0, 0, 0};
+                        model.rotation = {0, 0, 0};
+                        model.scale = {1, 1, 1};
+                        uniform_scale = 1.0f;
+                    }
+
+                    ImGui::TreePop();
+                }
+
+                ImGui::Separator();
+                if (scene.models.size() > 1) {  // 至少保留一个模型
+                    if (ImGui::Button("删除模型")) {
+                        scene.models.erase(scene.models.begin() + renderContext.selected_model);
+                        renderContext.selected_model = std::min(renderContext.selected_model, static_cast<int>(scene.models.size()) - 1);
                     }
                 }
             }
         }
+    }
 
-        if (ImGui::CollapsingHeader("实时渲染设置", ImGuiTreeNodeFlags_DefaultOpen)) {
+    if (ImGui::CollapsingHeader("实时渲染设置", ImGuiTreeNodeFlags_DefaultOpen)) {
             ImGui::Checkbox("启用实时渲染", &renderContext.real_time_rendering);
             ImGui::Checkbox("自动旋转模型", &renderContext.auto_rotate);
 
@@ -439,11 +298,11 @@ void control_gui() {
             renderContext.refresh_interval = std::max(100, refresh_interval);
         }
 
-        if (ImGui::Button("强制重新渲染")) {
-            renderContext.force_render = true;
-        }
+    if (ImGui::Button("强制重新渲染")) {
+        renderContext.force_render = true;
+    }
 
-        ImGui::End();
+    ImGui::End();
 }
 
 void output_gui() {
@@ -473,7 +332,7 @@ void output_gui() {
         renderContext.force_render = false;
         last_frame_time = current_time;
         if (frame_duration > 0 && frame_time_accumulator > renderContext.refresh_interval) {
-            renderContext.current_fps = 1000.0f / static_cast<float>(frame_time_accumulator) * frame_count;
+            renderContext.current_fps = 1000.0f / static_cast<float>(frame_time_accumulator) * static_cast<float>(frame_count);
             frame_count = 0;
             frame_time_accumulator = 0;
         }
@@ -680,34 +539,25 @@ void initTexture(int width, int height) {
 
 void initScene() {
     scene.lights.emplace_back();
-    updateModels();
+
+    Model model1{R"(D:\CS_learning\Project\MicroRenderer\obj\african_head\african_head.obj)"};
+    model1.material =
+        Material(R"(D:\CS_learning\Project\MicroRenderer\obj\african_head\african_head_diffuse.tga)",
+        R"(D:\CS_learning\Project\MicroRenderer\obj\african_head\african_head_nm_tangent.tga)",
+        {0.9, 0.6, 0.005, 150}, true, TANGENT, PER_FRAGMENT);
+
+    Model model2{R"(D:\CS_learning\Project\MicroRenderer\obj\african_head\african_head_eye_inner.obj)"};
+    model2.material =
+        Material(R"(D:\CS_learning\Project\MicroRenderer\obj\african_head\african_head_eye_inner_diffuse.tga)",
+            R"(D:\CS_learning\Project\MicroRenderer\obj\african_head\african_head_eye_inner_nm_tangent.tga)",
+        {0.9, 0.6, 0.005, 150}, true, TANGENT, PER_FRAGMENT);
+
+    scene.models.push_back(model1);
+    scene.models.push_back(model2);
 }
 
 void initRasterizer() {
     rasterizer.load_fragment_shader(std::make_shared<PhongShader>());
-}
-
-void updateModels() {
-    if (!renderContext.models_changed)
-        return;
-    
-    rasterizer.clear_models();
-    for (const auto& modelInfo : renderContext.models) {
-        if (modelInfo.enabled) {
-            try {
-                Model model(modelInfo.model_path);
-                model.material = Material(modelInfo.diffuse_path, modelInfo.normal_path,
-                                     modelInfo.material_props, modelInfo.diffuse_mapping,
-                                     modelInfo.normal_type, modelInfo.shade_frequency);
-                model.transform = modelInfo.transform;
-                rasterizer.load_model(model);
-            }
-            catch (const std::exception& e) {
-                print_utf8_stdout("加载模型失败: %s - %s\n", modelInfo.model_path.c_str(), e.what());
-            }
-        }
-    }
-    renderContext.models_changed = false;
 }
 
 void updateRotate() {
@@ -721,12 +571,11 @@ void updateRotate() {
 void performRendering() {
     auto start_time = std::chrono::high_resolution_clock::now();
 
-    updateModels();
     updateRotate();
 
     rasterizer.clear_buffer();
     rasterizer.rasterize_scene(scene);
-    rasterizer.drawonTGA(tgaImage);
+    rasterizer.draw_on_TGA(tgaImage);
 
     auto end_time = std::chrono::high_resolution_clock::now();
     auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end_time - start_time).count();

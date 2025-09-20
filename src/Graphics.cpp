@@ -3,6 +3,9 @@
 //
 
 #include "Graphics.h"
+
+#include <algorithm>
+
 #include "Geometry.h"
 
 
@@ -11,7 +14,7 @@ Camera::Camera(const vec3& eye_, const vec3& center_, const vec3& up_, int w, in
 : eye(eye_), center(center_), up(up_), width(w), height(h),
   fov(fov_), aspect(static_cast<double>(w)/h), near_(near_), far_(far_) {}
 
-mat4 Camera::get_view_matrix() {
+mat4 Camera::get_view_matrix() const {
     vec3 z = normalize(eye - center);
     vec3 x = normalize(z ^ up);
     vec3 y = normalize(x ^ z);
@@ -34,7 +37,7 @@ mat4 Camera::get_view_matrix() {
     return rotate * translate;
 }
 
-mat4 Camera::get_projection_matrix() {
+mat4 Camera::get_projection_matrix() const {
     double top = near_ * std::tan(fov * M_PI / 360.0);
     double bottom = -top;
     double right = top * aspect;
@@ -68,10 +71,19 @@ mat4 Camera::get_projection_matrix() {
     return scale * translate * pers;
 }
 
+mat4 Camera::get_viewport_matrix() const {
+    return {{{width/2., 0, 0, width/2.},
+                        {0, height/2., 0, height/2.},
+                        {0, 0, 1, 0},
+                        {0, 0, 0, 1}}};
+}
+
 void Camera::update() {
     double yaw_rad = yaw * M_PI / 180.0;
     double pitch_rad = pitch * M_PI / 180.0;
     double roll_rad = roll * M_PI / 180.0;
+
+    pitch_rad = std::clamp(pitch_rad, -M_PI/2.0 + 0.001, M_PI/2.0 - 0.001);
 
     double x = cos(yaw_rad) * cos(pitch_rad);
     double y = sin(pitch_rad);
@@ -88,6 +100,8 @@ void Camera::update() {
     }
     vec3 up0 = normalize(right ^ forward);
     up = up0 * cos(roll_rad) + right * sin(roll_rad);
+
+    aspect = static_cast<double>(width) / height;
 }
 
 void Camera::set_toward_from_center(double yaw, double pitch, double roll) {

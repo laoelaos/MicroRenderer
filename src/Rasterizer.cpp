@@ -15,15 +15,10 @@
 Rasterizer::Rasterizer(int w, int h) : width(w), height(h) {
     z_buffer.resize(w * h);
     framebuffer.resize(w * h);
-    clear_all();
-}
-
-void Rasterizer::clear_all() {
     model = identity_matrix<4>();
     view = identity_matrix<4>();
     projection = identity_matrix<4>();
-    viewport = viewport_matrix(width, height);
-    models = {};
+    viewport = identity_matrix<4>();
     lights = {};
     texture = {};
     normal_map = {};
@@ -36,86 +31,27 @@ void Rasterizer::clear_buffer() {
     std::ranges::fill(z_buffer, -std::numeric_limits<double>::infinity());
 }
 
-void Rasterizer::load_lights(const std::vector<Light> &lights_) {
-    lights.insert(lights.end(), lights_.begin(), lights_.end());
-}
-
 void Rasterizer::set_options(int MSAA) {
     double change_msaa = static_cast<double>(MSAA) / this->MSAA;
     this->MSAA = MSAA;
     height *= change_msaa;
     width  *= change_msaa;
-    viewport = viewport_matrix(width, height);;
     z_buffer.resize(width * height);
     framebuffer.resize(width * height);
     clear_buffer();
 }
 
 void Rasterizer::rasterize_scene(Scene &scene) {
-    set_view_matrix(scene.camera.get_view_matrix());
-    set_projection_matrix(scene.camera.get_projection_matrix());
-    viewport = viewport_matrix(width, height);
-    lights = {};
-    load_lights(scene.lights);
-    for (const Model& obj_model: models) {
-        model = obj_model.transform;
+    view = scene.camera.get_view_matrix();
+    projection = scene.camera.get_projection_matrix();
+    viewport = scene.camera.get_viewport_matrix();
+    lights = scene.lights;
+    for (const Model& obj_model: scene.models) {
+        model = obj_model.get_transform_matrix();
         mvpv = viewport * projection * view * model;
         mv = view * model;
         mvit = (view * model).invert().transpose();
         rasterize_model(obj_model);
-    }
-}
-
-void Rasterizer::drawonTGA(TGAImage& framebuffer_) {
-    int h = height / MSAA;
-    int w = width  / MSAA;
-    for (int y = 0; y < h; y++) {
-        for (int x = 0; x < w; x++) {
-            vec3 color_sum = {};
-            for (int dy = 0; dy < MSAA; dy++) {
-                for (int dx = 0; dx < MSAA; dx++) {
-                    color_sum += framebuffer[get_index(x * MSAA + dx,
-                                                     y * MSAA + dy)];
-                }
-            }
-            vec3 color = color_sum / MSAA / MSAA;
-            framebuffer_.set(x, y, vec3_to_color(color));
-        }
-    }
-}
-
-void Rasterizer::rasterize() {
-    for (const Model& obj_model: models) {
-        model = obj_model.transform;
-        mvpv = viewport * projection * view * model;
-        mv = view * model;
-        mvit = (view * model).invert().transpose();
-        rasterize_model(obj_model);
-    }
-}
-
-void Rasterizer::pre_z() {
-    for (const Model& obj_model: models) {
-        for (size_t idx = 0; idx < obj_model.triangles.size(); ++idx) {
-            std::array<vec3, 3> vertices_screen_pos = {};
-            for (int i = 0; i < 3; i++) {
-                vertices_screen_pos[i] = (mvpv * obj_model.triangles[idx].vertices[i].to_vec4(1.0)).to_vec3_point();
-            }
-            auto [x_min, x_max, y_min, y_max] = find_bounding_box_int(vertices_screen_pos, width, height);
-
-            for (int x = x_min; x <= x_max; x++) {
-                for (int y = y_min; y <= y_max; y++) {
-                    auto [alpha, beta, gamma] = compute_barycentric_2D(x + .5, y + .5, vertices_screen_pos);
-                    if (alpha<0 || beta<0 || gamma<0)
-                        continue;
-                    double z = alpha * vertices_screen_pos[0].z + beta * vertices_screen_pos[1].z + gamma * vertices_screen_pos[2].z;
-
-                    if (z > z_buffer[get_index(x, y)] - 1e-4) {
-                        z_buffer[get_index(x, y)] = z;
-                    }
-                }
-            }
-        }
     }
 }
 
@@ -209,3 +145,45 @@ void Rasterizer::rasterize_model(const Model& obj_model) {
         }
     }
 }
+
+void Rasterizer::pre_z(Model& obj_model) {
+    for (size_t idx = 0; idx < obj_model.triangles.size(); ++idx) {
+        std::array<vec3, 3> vertices_screen_pos = {};
+        for (int i = 0; i < 3; i++) {
+            vertices_screen_pos[i] = (mvpv * obj_model.triangles[idx].vertices[i].to_vec4(1.0)).to_vec3_point();
+        }
+        auto [x_min, x_max, y_min, y_max] = find_bounding_box_int(vertices_screen_pos, width, height);
+
+        for (int x = x_min; x <= x_max; x++) {
+            for (int y = y_min; y <= y_max; y++) {
+                auto [alpha, beta, gamma] = compute_barycentric_2D(x + .5, y + .5, vertices_screen_pos);
+                if (alpha<0 || beta<0 || gamma<0)
+                    continue;
+                double z = alpha * vertices_screen_pos[0].z + beta * vertices_screen_pos[1].z + gamma * vertices_screen_pos[2].z;
+
+                if (z > z_buffer[get_index(x, y)] - 1e-4) {
+                    z_buffer[get_index(x, y)] = z;
+                }
+            }
+        }
+    }
+}
+
+void Rasterizer::draw_on_TGA(TGAImage& framebuffer_) {
+    int h = height / MSAA;
+    int w = width  / MSAA;
+    for (int y = 0; y < h; y++) {
+        for (int x = 0; x < w; x++) {
+            vec3 color_sum = {};
+            for (int dy = 0; dy < MSAA; dy++) {
+                for (int dx = 0; dx < MSAA; dx++) {
+                    color_sum += framebuffer[get_index(x * MSAA + dx,
+                                                     y * MSAA + dy)];
+                }
+            }
+            vec3 color = color_sum / MSAA / MSAA;
+            framebuffer_.set(x, y, vec3_to_color(color));
+        }
+    }
+}
+

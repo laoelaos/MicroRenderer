@@ -30,11 +30,12 @@ struct Material {
                     : properties(properties), diffuse_mapping(diffuse_mapping),
                       normal_type(normal_type), shade_frequency(shade_frequency) {
 
-        set_texture(texture_path);
-        set_normal_map(normal_map_path);
+        load_texture(texture_path);
+        load_normal_map(normal_map_path);
     }
-
+    std::string texture_path;
     TGAImage texture;
+    std::string normal_map_path;
     TGAImage normal_map;
 
     phong_properties properties;
@@ -43,8 +44,10 @@ struct Material {
     NormalType normal_type;
     ShadeFrequency shade_frequency;
 
-    void set_texture(const std::string& texture_path);
-    void set_normal_map(const std::string& normal_map_path);
+    void load_texture();
+    void load_texture(const std::string& texture_path);
+    void load_normal_map();
+    void load_normal_map(const std::string& normal_map_path);
 };
 
 struct triangle {
@@ -55,10 +58,23 @@ struct triangle {
 
 class Model {
 public:
-    std::vector<triangle> triangles;
+    std::string name = "newObj";
+    bool enable = false;
+
+    std::string model_path;
+    std::vector<triangle> triangles = {};
+
     Material material;
-    mat4 transform = identity_matrix<4>();
-    explicit Model(const std::string& filename );
+    vec3 translation = {0, 0, 0};
+    vec3 rotation = {0, 0, 0};
+    vec3 scale = {1, 1, 1};
+
+    Model() = default;
+    explicit Model( const std::string& filename );
+
+    void load_obj();
+    void load_obj(const std::string& filename);
+    [[nodiscard]] mat4 get_transform_matrix() const;
 };
 
 #endif //MODEL_H

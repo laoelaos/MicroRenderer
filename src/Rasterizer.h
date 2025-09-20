@@ -19,42 +19,33 @@ class Rasterizer {
 public:
     Rasterizer(int w, int h);
 
-    // Clear all settings, including transformation matrices, loaded triangles, lights, shaders, textures, and framebuffer, z-buffer
-    void clear_all();
-    void clear_models() { models = {}; }
     void clear_buffer();
-    void clear_lights() { lights = {}; }
 
-    void load_model(const Model& model) { models.push_back(model); }
-    void load_lights(const std::vector<Light>& lights_);
     void load_fragment_shader(std::shared_ptr<Shader> shader) { fragment_shader = std::move(shader); }
-    void set_model_matrix(const mat4& m) { model = m; }
-    void set_view_matrix(const mat4& m) { view = m; }
-    void set_projection_matrix(const mat4& m) { projection = m;}
     void set_options(int MSAA);
 
     void rasterize_scene(Scene& scene);
 
-    void rasterize();
-    void drawonTGA(TGAImage& framebuffer);
+    void draw_on_TGA(TGAImage& framebuffer);
 private:
+    void pre_z(Model& obj_model);
+    void rasterize_model(const Model& model);
+
     int get_index(int x, int y) const { return x + y * width; }
     int get_tile_lock(int x, int y) const {
         int tile_x = x / (width / tile_cols);
         int tile_y = y / (height / tile_rows);
         return tile_x + tile_y * tile_cols;
     }
-    void pre_z();
-    void rasterize_model(const Model& model);
 
-    std::vector<Model> models;
 
     std::vector<Light> lights;
+
     TGAImage texture, normal_map;
 
     std::shared_ptr<Shader> fragment_shader;
-    mat4 model, view, projection, viewport;
 
+    mat4 model, view, projection, viewport;
     mat4 mvpv, mv, mvit, mvpvi;
 
     int width, height;

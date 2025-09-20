@@ -10,14 +10,14 @@
 #include "Model.h"
 
 class Camera {
-private:
     void update();
 public:
+    int height = 600;
+    int width = 600;
+
     vec3 eye = {0, 0, 0};
     vec3 center = {0, 0, 2};
     vec3 up = {0, 1, 0};
-    int width = 600;
-    int height = 600;
     double fov = 55.0;
     double aspect = 1.0;
     double near_ = 2.0;
@@ -31,8 +31,9 @@ public:
     Camera(const vec3& eye_, const vec3& center_, const vec3& up_, int w = 600, int h = 600,
            double fov_ = 55.0, double near_ = 2.0, double far_ = 3.0);
 
-    mat4 get_view_matrix();
-    mat4 get_projection_matrix();
+    [[nodiscard]] mat4 get_view_matrix() const;
+    [[nodiscard]] mat4 get_projection_matrix() const;
+    [[nodiscard]] mat4 get_viewport_matrix() const;
 
     /**
      *  @brief 设置相机朝向，基于相机位置旋转，顺时针旋转
