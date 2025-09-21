@@ -51,7 +51,7 @@ template<> struct vec<4> {
 inline vec<3> vec<2>::to_vec3() const { return {x, y, 0}; }
 inline vec<2> vec<3>::to_vec2() const { return {x, y}; }
 inline vec<4> vec<3>::to_vec4(double w_) const { return {x, y, z, w_}; }
-inline vec<3> vec<4>::to_vec3_point() const { assert(w != 0); return {x/w, y/w, z/w}; }
+inline vec<3> vec<4>::to_vec3_point() const { if (w == 0) return {0, 0, 0}; return {x/w, y/w, z/w}; }
 inline vec<3> vec<4>::to_vec3_vec() const { return {x, y, z}; }
 
 

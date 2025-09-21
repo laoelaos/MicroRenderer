@@ -37,6 +37,9 @@ void Rasterizer::set_options(int MSAA) {
     clear_buffer();
 }
 
+//TODO: 光栅化管线
+//TODO: 目前透视投影前z=0的点经过透视后w=0, 导致无法投影到屏幕上，应该实现裁剪来处理
+
 void Rasterizer::rasterize_scene(Scene &scene) {
     view = scene.camera.get_view_matrix();
     projection = scene.camera.get_projection_matrix();

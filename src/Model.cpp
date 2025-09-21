@@ -22,7 +22,7 @@ void triangle::get_vertices(const mat4& mvpv, const mat4& mv) {
 
 void triangle::get_normal(const mat4 &mvit) {
     for (int i = 0; i < 3; i++) {
-        normals[i] = (mvit * normals[i].to_vec4(1.0)).to_vec3_point();
+        normals[i] = (mvit * normals[i].to_vec4(0.0)).to_vec3_vec();
     }
 }
 

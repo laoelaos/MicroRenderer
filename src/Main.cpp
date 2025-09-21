@@ -31,7 +31,6 @@
 void glfw_error_callback(int error, const char* description);
 void print_utf8_stdout(const char* fmt, ...);
 
-void initScene();
 void initRasterizer();
 void initTexture(int width, int height);
 
@@ -65,7 +64,7 @@ struct RenderContext {
     bool force_render = true;
 };
 
-static Scene scene = {};
+static Scene scene("../obj/default2.sc");
 static RenderContext renderContext;
 
 static Rasterizer rasterizer(renderContext.width, renderContext.height);
@@ -442,7 +441,6 @@ int main(int, char**)
     ImVec4 clear_color = ImVec4(0.15f, 0.15f, 0.15f, 1.00f);
 
     initTexture(renderContext.width, renderContext.height);
-    initScene();
     initRasterizer();
 
     while (!glfwWindowShouldClose(window))
@@ -537,14 +535,6 @@ void initTexture(int width, int height) {
 
     // 初始化一个空白纹理
     imageData.resize(width * height * 4, 255); // 全白RGBA格式
-}
-
-void initScene() {
-    try {
-        scene = Scene("../obj/default_now.sc");
-    } catch (std::runtime_error& e) {
-        std::cerr << "Error loading scene: " << e.what() << std::endl;
-    }
 }
 
 void initRasterizer() {
