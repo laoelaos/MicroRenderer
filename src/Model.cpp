@@ -6,7 +6,89 @@
 #include <sstream>
 
 #include "Model.h"
+
+#include <algorithm>
+
 #include "Geometry.h"
+
+void triangle::get_vertices(const mat4& mvpv, const mat4& mv) {
+    for (int i = 0; i < 3; i++) {
+        screen_vertices[i] = (mvpv * world_vertices[i].to_vec4(1.0)).to_vec3_point();
+    }
+    for (int i = 0; i < 3; i++) {
+        world_vertices[i] = (mv * world_vertices[i].to_vec4(1.0)).to_vec3_point();
+    }
+}
+
+void triangle::get_normal(const mat4 &mvit) {
+    for (int i = 0; i < 3; i++) {
+        normals[i] = (mvit * normals[i].to_vec4(1.0)).to_vec3_point();
+    }
+}
+
+bool triangle::is_backface() const {
+    return ((screen_vertices[1] - screen_vertices[0]) ^ (screen_vertices[2] - screen_vertices[1])).z < 0;
+}
+
+bool triangle::is_invalid() const {
+    return (alpha < 0 || gamma < 0 || beta < 0);
+}
+
+void triangle::get_barycentric(double x, double y) {
+    double alpha_denominator = - (screen_vertices[0].x - screen_vertices[1].x) * (screen_vertices[2].y - screen_vertices[1].y) +
+        (screen_vertices[0].y - screen_vertices[1].y) * (screen_vertices[2].x - screen_vertices[1].x);
+    double beta_denominator = - (screen_vertices[1].x - screen_vertices[2].x) * (screen_vertices[0].y - screen_vertices[2].y) +
+        (screen_vertices[1].y - screen_vertices[2].y) * (screen_vertices[0].x - screen_vertices[2].x);
+
+    if (std::abs(alpha_denominator) < 1e-8 || std::abs(beta_denominator) < 1e-8) {
+        alpha = -1;
+        beta = -1;
+        gamma = -1;
+        return;
+    }
+
+    alpha = (- (x - screen_vertices[1].x) * (screen_vertices[2].y - screen_vertices[1].y) + (y - screen_vertices[1].y) * (screen_vertices[2].x - screen_vertices[1].x)) / alpha_denominator;
+    beta = (- (x - screen_vertices[2].x) * (screen_vertices[0].y - screen_vertices[2].y) + (y - screen_vertices[2].y) * (screen_vertices[0].x - screen_vertices[2].x)) / beta_denominator;
+    gamma = 1. - alpha - beta;
+}
+
+void triangle::get_barycentric_correct(double x, double y) {
+    get_barycentric(x, y);
+    if (alpha < 0 || beta < 0 || gamma < 0)
+        return;
+    double z0 = 1.0/world_vertices[0].z;
+    double z1 = 1.0/world_vertices[1].z;
+    double z2 = 1.0/world_vertices[2].z;
+    c_alpha = alpha * z0 / (alpha * z0 + beta * z1 + gamma * z2);
+    c_beta = beta * z1 / (alpha * z0 + beta * z1 + gamma * z2);
+    c_gamma = gamma * z2 / (alpha * z0 + beta * z1 + gamma * z2);
+}
+
+vec3 triangle::get_interpolated_normal() const {
+    return normalize(normals[0] * c_alpha + normals[1] * c_beta + normals[2] * c_gamma);
+}
+
+vec3 triangle::get_interpolated_world_position() const {
+    return world_vertices[0] * c_alpha + world_vertices[1] * c_beta + world_vertices[2] * c_gamma;
+}
+
+vec2 triangle::get_interpolated_tex_coords() const {
+    return tex_coords[0] * c_alpha + tex_coords[1] * c_beta + tex_coords[2] * c_gamma;
+}
+
+double triangle::get_interpolated_z() const {
+    return screen_vertices[0].z * alpha + screen_vertices[1].z * beta + screen_vertices[2].z * gamma;
+}
+
+std::tuple<int, int, int, int> triangle::find_bounding_box_int(int width, int height) const {
+    auto [x_min, x_max] = std::minmax({screen_vertices[0].x, screen_vertices[1].x, screen_vertices[2].x});
+    auto [y_min, y_max] = std::minmax({screen_vertices[0].y, screen_vertices[1].y, screen_vertices[2].y});
+    x_min = std::max(0, static_cast<int>(std::floor(x_min)));
+    x_max = std::min(width - 1, static_cast<int>(std::ceil(x_max)));
+    y_min = std::max(0, static_cast<int>(std::floor(y_min)));
+    y_max = std::min(height - 1, static_cast<int>(std::ceil(y_max)));
+    return {x_min, x_max, y_min, y_max};
+}
 
 void Material::load_texture() {
     load_texture(texture_path);
@@ -77,7 +159,7 @@ void Model::load_obj(const std::string &filename) {
             int cnt = 0;
             triangle tri;
             while (iss >> i1 >> trash >> i2 >> trash >> i3) {
-                tri.vertices[cnt] = vertices[i1 - 1];
+                tri.world_vertices[cnt] = vertices[i1 - 1];
                 tri.normals[cnt] = vertices_normal[i3 - 1];
                 tri.tex_coords[cnt] = vertices_texture[i2 - 1];
                 cnt++;

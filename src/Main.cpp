@@ -12,7 +12,6 @@
 
 #include "Rasterizer.h"
 #include "TGAImage.h"
-#include "Util.h"
 #include <memory>
 #include <chrono>
 

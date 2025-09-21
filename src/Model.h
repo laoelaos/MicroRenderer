@@ -51,9 +51,29 @@ struct Material {
 };
 
 struct triangle {
-    std::array<vec3, 3> vertices;
+    std::array<vec3, 3> world_vertices;
+    std::array<vec3, 3> screen_vertices;
     std::array<vec3, 3> normals;
     std::array<vec2, 3> tex_coords;
+
+    void get_vertices(const mat4& mvpv, const mat4& mv);
+    void get_normal(const mat4& mvit);
+
+    bool is_backface() const;
+    bool is_invalid() const;
+
+    void get_barycentric(double x, double y);
+    void get_barycentric_correct(double x, double y);
+
+    vec3 get_interpolated_normal() const;
+    vec3 get_interpolated_world_position() const;
+    vec2 get_interpolated_tex_coords() const;
+    double get_interpolated_z() const;
+
+    [[nodiscard]] std::tuple<int, int, int, int> find_bounding_box_int(int width, int height) const;
+private:
+    double alpha = 0, beta = 0, gamma = 0;
+    double c_alpha = 0, c_beta = 0, c_gamma = 0;
 };
 
 class Model {

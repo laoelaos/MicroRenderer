@@ -12,12 +12,13 @@
 class Camera {
     void update();
 public:
-    int height = 600;
-    int width = 600;
-
     vec3 eye = {0, 0, 0};
     vec3 center = {0, 0, 2};
     vec3 up = {0, 1, 0};
+
+    int width = 600;
+    int height = 600;
+
     double fov = 55.0;
     double aspect = 1.0;
     double near_ = 2.0;

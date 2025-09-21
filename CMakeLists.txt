@@ -43,7 +43,6 @@ set(SOURCES src/main.cpp
         src/TGAImage.cpp
         src/model.cpp
         src/Rasterizer.cpp
-        src/util.cpp
         src/Shader.cpp
         src/Graphics.cpp
         ${IMGUI_SOURCES})

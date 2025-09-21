@@ -3,7 +3,6 @@
 //
 
 #include "Shader.h"
-#include "Util.h"
 
 vec3 PhongShader::shade(const shader_payload &payload) {
     const double k_ambient  = payload.properties.k_ambient;

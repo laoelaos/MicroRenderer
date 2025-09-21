@@ -28,7 +28,7 @@ public:
 
     void draw_on_TGA(TGAImage& framebuffer);
 private:
-    void pre_z(Model& obj_model);
+    void pre_z(const Model& obj_model);
     void rasterize_model(const Model& model);
 
     int get_index(int x, int y) const { return x + y * width; }
