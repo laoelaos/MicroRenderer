@@ -4,6 +4,7 @@
 
 #ifndef GRAPHICS_H
 #define GRAPHICS_H
+#include <optional>
 #include <vector>
 
 #include "Geometry.h"
@@ -35,7 +36,7 @@ public:
     [[nodiscard]] mat4 get_view_matrix() const;
     [[nodiscard]] mat4 get_projection_matrix() const;
     [[nodiscard]] mat4 get_viewport_matrix() const;
-
+    //TODO: 欧拉角旋转好像有点问题
     /**
      *  @brief 设置相机朝向，基于相机位置旋转，顺时针旋转
      *  @param yaw 水平旋转角度，单位度
@@ -75,6 +76,8 @@ public:
     vec3 position = {20.0, 20.0, 20.0};
     double intensity = 2000.0;
 
+    std::optional<Camera> LightCamera;
+
     Light() = default;
     Light(const vec3& color_, const vec3& position_, double intensity_);
 
@@ -88,6 +91,7 @@ public:
     Camera camera;
     std::vector<Light> lights;
     std::vector<Model> models;
+    bool light_move = false;
 
     Scene() = default;
     explicit Scene(const std::string& filename);

@@ -31,7 +31,6 @@
 void glfw_error_callback(int error, const char* description);
 void print_utf8_stdout(const char* fmt, ...);
 
-void initRasterizer();
 void initTexture(int width, int height);
 
 void updateRotate();
@@ -40,8 +39,6 @@ void performRendering();
 void loadTextureToGl();
 
 struct RenderContext {
-    int width = 600;
-    int height = 600;
     int msaa_level = 1;
 
     bool use_euler_angles = false;
@@ -67,18 +64,18 @@ struct RenderContext {
 static Scene scene("../obj/default2.sc");
 static RenderContext renderContext;
 
-static Rasterizer rasterizer(renderContext.width, renderContext.height);
+static Rasterizer rasterizer = {};
 
 static GLuint renderedTexture = 0;
 static std::vector<unsigned char> imageData;
-static TGAImage tgaImage(renderContext.width, renderContext.height, TGAImage::RGB);
+static TGAImage tgaImage(scene.camera.width, scene.camera.height, TGAImage::RGB);
 
 void control_gui() {
     ImGui::Begin("渲染控制面板");
 
     if (ImGui::CollapsingHeader("基本设置")) {
         if (ImGui::InputInt("MSAA级别", &renderContext.msaa_level, 1, 1)) {
-            rasterizer.set_options(std::clamp(renderContext.msaa_level, 1, 10));
+            rasterizer.set_msaa(std::clamp(renderContext.msaa_level, 1, 10));
         }
     }
 
@@ -150,8 +147,10 @@ void control_gui() {
                 std::array<float, 3> light_color = to_float_array(scene.lights[i].color);
                 auto light_intensity = static_cast<float>(scene.lights[i].intensity);
 
-                if (ImGui::InputFloat3("位置", light_position.data(), "%.1f"))
+                if (ImGui::InputFloat3("位置", light_position.data(), "%.1f")) {
                     scene.lights[i].position = {light_position[0], light_position[1], light_position[2]};
+                    scene.light_move = true;
+                }
                 if (ImGui::ColorEdit3("颜色", light_color.data()))
                     scene.lights[i].color = {light_color[0], light_color[1], light_color[2]};
                 if (ImGui::InputFloat("光强", &light_intensity, 10.0f, 100.0f, "%.1f"))
@@ -340,8 +339,7 @@ void output_gui() {
     // 获取窗口内容区域大小以调整图像大小
     ImVec2 windowSize = ImGui::GetContentRegionAvail();
 
-    // 计算正确的宽高比
-    float aspectRatio = static_cast<float>(renderContext.width) / static_cast<float>(renderContext.height);
+    auto aspectRatio = static_cast<float>(scene.camera.aspect);
 
     // 显示纹理，保持纵横比
     ImVec2 imageSize;
@@ -440,9 +438,9 @@ int main(int, char**)
 
     ImVec4 clear_color = ImVec4(0.15f, 0.15f, 0.15f, 1.00f);
 
-    initTexture(renderContext.width, renderContext.height);
-    initRasterizer();
-
+    initTexture(scene.camera.width, scene.camera.height);
+    rasterizer.set_msaa(1);
+    rasterizer.set_mode(PHONG_WITH_SHADOW);
     while (!glfwWindowShouldClose(window))
     {
         glfwPollEvents();
@@ -537,10 +535,6 @@ void initTexture(int width, int height) {
     imageData.resize(width * height * 4, 255); // 全白RGBA格式
 }
 
-void initRasterizer() {
-    rasterizer.load_fragment_shader(std::make_shared<PhongShader>());
-}
-
 void updateRotate() {
     if (!renderContext.auto_rotate)
         return;
@@ -554,9 +548,8 @@ void performRendering() {
 
     updateRotate();
 
-    rasterizer.clear_buffer();
-    rasterizer.rasterize_scene(scene);
-    rasterizer.draw_on_TGA(tgaImage);
+    rasterizer.rasterize(scene);
+    rasterizer.framebuffer_to_TGA(tgaImage);
 
     auto end_time = std::chrono::high_resolution_clock::now();
     auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end_time - start_time).count();

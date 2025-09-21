@@ -8,9 +8,9 @@
 #include "Rasterizer.h"
 #include "Model.h"
 
-Rasterizer::Rasterizer(int w, int h) : width(w), height(h) {
-    z_buffer.resize(w * h);
-    framebuffer.resize(w * h);
+Rasterizer::Rasterizer() {
+    width = 1;
+    height = 1;
     model = identity_matrix<4>();
     view = identity_matrix<4>();
     projection = identity_matrix<4>();
@@ -18,29 +18,60 @@ Rasterizer::Rasterizer(int w, int h) : width(w), height(h) {
     lights = {};
     texture = {};
     normal_map = {};
-    fragment_shader = nullptr;
-    clear_buffer();
+    mode = PHONG_WITH_SHADOW;
+    build_buffer();
 }
 
-void Rasterizer::clear_buffer() {
+void Rasterizer::build_buffer() {
+    z_buffer.resize(width * height);
+    framebuffer.resize(width * height);
     std::ranges::fill(framebuffer, vec3());
     std::ranges::fill(z_buffer, -std::numeric_limits<double>::infinity());
 }
 
-void Rasterizer::set_options(int MSAA) {
-    double change_msaa = static_cast<double>(MSAA) / this->MSAA;
-    this->MSAA = MSAA;
-    height *= change_msaa;
-    width  *= change_msaa;
-    z_buffer.resize(width * height);
-    framebuffer.resize(width * height);
-    clear_buffer();
+//TODO: 暂时禁用MSAA, 目前实现方式不好
+void Rasterizer::set_msaa(int MSAA) {
+    // double change_msaa = static_cast<double>(MSAA) / this->MSAA;
+    // this->MSAA = MSAA;
+    // height *= change_msaa;
+    // width  *= change_msaa;
+    // z_buffer.resize(width * height);
+    // framebuffer.resize(width * height);
+    // clear_buffer();
 }
 
 //TODO: 光栅化管线
 //TODO: 目前透视投影前z=0的点经过透视后w=0, 导致无法投影到屏幕上，应该实现裁剪来处理
 
-void Rasterizer::rasterize_scene(Scene &scene) {
+void Rasterizer::rasterize(Scene &scene) {
+    if (mode == ZTEST) {
+        pass(scene, ZTEST);
+    } else if (mode == PHONG) {
+        pass(scene, PHONG);
+    } else if (mode == PHONG_WITH_SHADOW) {
+        Camera tmp = scene.camera;
+        if (scene.light_move) {
+            Phong_Shadow_Shader::LightMaps.clear();
+            for (Light& light : scene.lights) {
+                if (light.LightCamera.has_value())
+                    scene.camera = light.LightCamera.value();
+                pass(scene, ZTEST);
+
+                auto light_map = std::make_unique<TGAImage>(scene.camera.width, scene.camera.height, TGAImage::GRAYSCALE);
+                zbuffer_to_TGA(*light_map);
+                Phong_Shadow_Shader::LightMaps.push_back(std::move(light_map));
+            }
+            scene.light_move = false;
+        }
+        scene.camera = tmp;
+        pass(scene, PHONG);
+    }
+}
+
+void Rasterizer::pass(const Scene& scene, RasterizerMode mode) {
+    width = scene.camera.width;
+    height = scene.camera.height;
+    build_buffer();
     view = scene.camera.get_view_matrix();
     projection = scene.camera.get_projection_matrix();
     viewport = scene.camera.get_viewport_matrix();
@@ -50,12 +81,14 @@ void Rasterizer::rasterize_scene(Scene &scene) {
         mvpv = viewport * projection * view * model;
         mv = view * model;
         mvit = (view * model).invert().transpose();
-        pre_z(obj_model);
-        rasterize_model(obj_model);
+        if (mode == ZTEST)
+            pre_z(obj_model);
+        if (mode == PHONG || mode == PHONG_WITH_SHADOW)
+            rasterize_model_phong(obj_model);
     }
 }
 
-void Rasterizer::rasterize_model(const Model& obj_model) {
+void Rasterizer::rasterize_model_phong(const Model& obj_model) {
     texture = obj_model.material.texture;
     normal_map = obj_model.material.normal_map;
     bool diffuse_mapping = obj_model.material.diffuse_mapping;
@@ -63,12 +96,11 @@ void Rasterizer::rasterize_model(const Model& obj_model) {
     ShadeFrequency shade_frequency = obj_model.material.shade_frequency;
 
     size_t tri_count = obj_model.triangles.size();
-#pragma omp parallel for default(none) shared(obj_model, tri_count, diffuse_mapping, normal_type, shade_frequency, mvit, mvpv, mv, width, height, framebuffer, z_buffer, lights, texture, normal_map, fragment_shader)
+#pragma omp parallel for default(none) shared(obj_model, tri_count, diffuse_mapping, normal_type, shade_frequency, mvit, mvpv, mv, width, height, framebuffer, z_buffer, lights, texture, normal_map)
     for (size_t idx = 0; idx < tri_count; ++idx) {
-        shader_payload payload;
-        payload.light_info = lights;
-        payload.properties = obj_model.material.properties;
-
+        Phong_Shadow_Shader shader;
+        shader.light_info = lights;
+        shader.properties = &obj_model.material.properties;
 
         triangle now_triangle = obj_model.triangles[idx];
         now_triangle.get_vertices(mvpv, mv);
@@ -88,21 +120,21 @@ void Rasterizer::rasterize_model(const Model& obj_model) {
                 if (z >= z_buffer[get_index(x, y)]) {
                     z_buffer[get_index(x, y)] = z;
 
-                    payload.position = now_triangle.get_interpolated_world_position();
-                    payload.tex_coords = now_triangle.get_interpolated_tex_coords();
+                    shader.position = now_triangle.get_interpolated_world_position();
+                    shader.tex_coords = now_triangle.get_interpolated_tex_coords();
 
                     if (diffuse_mapping) {
-                        payload.color = texture.get_bilinear(payload.tex_coords);
+                        shader.color = texture.get_bilinear(shader.tex_coords);
                     } else {
-                        payload.color = {0.5, 0.5, 0.5};
+                        shader.color = {0.5, 0.5, 0.5};
                     }
 
-                    {if (normal_type == GLOBAL) {
-                        payload.normal = normal_map.get_bilinear(payload.tex_coords) * 2 - vec3{1, 1, 1};
+                    if (normal_type == GLOBAL) {
+                        shader.normal = normal_map.get_bilinear(shader.tex_coords) * 2 - vec3{1, 1, 1};
                     } else if (shade_frequency == PER_FRAGMENT) {
-                        payload.normal = now_triangle.get_interpolated_normal();
+                        shader.normal = now_triangle.get_interpolated_normal();
                     } else {
-                        payload.normal = normalize((now_triangle.world_vertices[1] - now_triangle.world_vertices[0]) ^
+                        shader.normal = normalize((now_triangle.world_vertices[1] - now_triangle.world_vertices[0]) ^
                                                    (now_triangle.world_vertices[2] - now_triangle.world_vertices[1]));
                     }
                     if (normal_type == TANGENT) {
@@ -116,14 +148,14 @@ void Rasterizer::rasterize_model(const Model& obj_model) {
                             mat<3, 2> tnb = edge_matrix * uv_matrix.invert();
                             vec3 t = normalize(tnb.get_col(0));
                             vec3 b = normalize(tnb.get_col(1));
-                            vec3 n = payload.normal;
+                            vec3 n = shader.normal;
                             mat<3, 3> TBN{{{t.x, b.x, n.x}, {t.y, b.y, n.y}, {t.z, b.z, n.z}}};
-                            payload.normal = normalize(
-                                TBN * (normal_map.get_bilinear(payload.tex_coords) * 2 - vec3{1, 1, 1}));
+                            shader.normal = normalize(
+                                TBN * (normal_map.get_bilinear(shader.tex_coords) * 2 - vec3{1, 1, 1}));
                         }
-                    }}
+                    }
 
-                    framebuffer[get_index(x, y)] = fragment_shader->shade(payload);
+                    framebuffer[get_index(x, y)] = shader.shade();
                 }
             }
         }
@@ -154,21 +186,18 @@ void Rasterizer::pre_z(const Model& obj_model) {
     }
 }
 
-void Rasterizer::draw_on_TGA(TGAImage& framebuffer_) {
-    int h = height / MSAA;
-    int w = width  / MSAA;
-    for (int y = 0; y < h; y++) {
-        for (int x = 0; x < w; x++) {
-            vec3 color_sum = {};
-            for (int dy = 0; dy < MSAA; dy++) {
-                for (int dx = 0; dx < MSAA; dx++) {
-                    color_sum += framebuffer[get_index(x * MSAA + dx,
-                                                     y * MSAA + dy)];
-                }
-            }
-            vec3 color = color_sum / MSAA / MSAA;
-            framebuffer_.set(x, y, TGAColor(color));
+void Rasterizer::framebuffer_to_TGA(TGAImage& framebuffer_) {
+    for (int y = 0; y < height; y++) {
+        for (int x = 0; x < width; x++) {
+            framebuffer_.set(x, y, TGAColor(framebuffer[get_index(x, y)]));
         }
     }
 }
 
+void Rasterizer::zbuffer_to_TGA(TGAImage& framebuffer_) {
+    for (int y = 0; y < height; y++) {
+        for (int x = 0; x < width; x++) {
+            framebuffer_.set(x, y, TGAColor(z_buffer[get_index(x, y)]));
+        }
+    }
+}

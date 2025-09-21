@@ -18,6 +18,13 @@ TGAColor::TGAColor(vec3 color) {
     bgra[3] = 255;
 }
 
+TGAColor::TGAColor(double color) {
+    bgra[0] = static_cast<std::uint8_t>(std::max(0., std::min(255., color * 255.)));
+    bgra[1] = static_cast<std::uint8_t>(std::max(0., std::min(255., color * 255.)));
+    bgra[2] = static_cast<std::uint8_t>(std::max(0., std::min(255., color * 255.)));
+    bgra[3] = 255;
+}
+
 vec3 TGAColor::to_vec3_rgb() const {
     return {static_cast<double>(bgra[2]) / 255.0,
             static_cast<double>(bgra[1]) / 255.0,
@@ -209,9 +216,13 @@ bool TGAImage::unload_rle_data(std::ofstream &out) const {
 }
 
 TGAColor TGAImage::get(const int x, const int y) const {
-    if (!data.size() || x<0 || y<0 || x>=w || y>=h) return {};
+    int c_x = x % w;
+    int c_y = y % h;
+    if (c_x < 0) c_x += w;
+    if (c_y < 0) c_y += h;
+    if (!data.size()) return {};
     TGAColor ret = {0, 0, 0, 0, bpp};
-    const std::uint8_t *p = data.data()+(x+y*w)*bpp;
+    const std::uint8_t *p = data.data()+(c_x+c_y*w)*bpp;
     for (int i=bpp; i--; ret.bgra[i] = p[i]);
     return ret;
 }

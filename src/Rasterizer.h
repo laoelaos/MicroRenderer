@@ -15,21 +15,26 @@
 #include "Shader.h"
 #include "TGAImage.h"
 
+enum RasterizerMode {ZTEST, PHONG, PHONG_WITH_SHADOW};
+
 class Rasterizer {
 public:
-    Rasterizer(int w, int h);
+    Rasterizer();
 
-    void clear_buffer();
+    void build_buffer();
 
-    void load_fragment_shader(std::shared_ptr<Shader> shader) { fragment_shader = std::move(shader); }
-    void set_options(int MSAA);
+    void set_msaa(int MSAA);
+    void set_mode(RasterizerMode mode) { this->mode = mode; }
 
-    void rasterize_scene(Scene& scene);
+    void rasterize(Scene& scene);
 
-    void draw_on_TGA(TGAImage& framebuffer);
+    void framebuffer_to_TGA(TGAImage& framebuffer);
+    void zbuffer_to_TGA(TGAImage& framebuffer);
 private:
+    void pass(const Scene& scene, RasterizerMode mode);
+
     void pre_z(const Model& obj_model);
-    void rasterize_model(const Model& model);
+    void rasterize_model_phong(const Model& model);
 
     int get_index(int x, int y) const { return x + y * width; }
     int get_tile_lock(int x, int y) const {
@@ -38,24 +43,26 @@ private:
         return tile_x + tile_y * tile_cols;
     }
 
-
-    std::vector<Light> lights;
-
-    TGAImage texture, normal_map;
-
-    std::shared_ptr<Shader> fragment_shader;
-
-    mat4 model, view, projection, viewport;
-    mat4 mvpv, mv, mvit, mvpvi;
-
+    //basic
     int width, height;
     std::vector<double> z_buffer;
     std::vector<vec3> framebuffer;
-    int MSAA = 1;
 
+
+    //options
+    int MSAA = 1;
+    RasterizerMode mode;
+
+    //lock
     int tile_rows = 20;
     int tile_cols = 20;
     std::vector<std::mutex> tile_locks = std::vector<std::mutex>(tile_rows * tile_cols);
+
+    //helper
+    TGAImage texture, normal_map;
+    std::vector<Light> lights;
+    mat4 model, view, projection, viewport;
+    mat4 mvpv, mv, mvit, mvpvi;
 };
 
 #endif //RASTERIZER_H

@@ -5,32 +5,28 @@
 #ifndef SHADER_H
 #define SHADER_H
 
+#include <memory>
 #include "Geometry.h"
 #include "Graphics.h"
 
-// position, normal, light_info, tex_coords, texture
-//
-// position is in world space
-// normal should be normalized
-struct shader_payload {
+class Shader {
+public:
+    std::vector<Light> light_info;
+    virtual ~Shader() = default;
+    virtual vec3 shade() = 0;
+};
+
+class Phong_Shadow_Shader : public Shader {
+public:
     vec3 position;
     vec3 normal;
     vec3 color;
     vec2 tex_coords;
+    const phong_properties* properties;
 
-    phong_properties properties;
-    std::vector<Light> light_info;
-};
+    static std::vector<std::unique_ptr<TGAImage>> LightMaps;
 
-class Shader {
-public:
-    virtual ~Shader() = default;
-    virtual vec3 shade(const shader_payload& payload) = 0;
-};
-
-class PhongShader : public Shader {
-public:
-    vec3 shade(const shader_payload &payload) override;
+    vec3 shade() override;
 };
 
 #endif //SHADER_H

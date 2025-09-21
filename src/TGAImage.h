@@ -29,7 +29,9 @@ struct TGAColor {
 
     TGAColor() = default;
     TGAColor(const std::uint8_t R, const std::uint8_t G, const std::uint8_t B, const std::uint8_t A=255, const std::uint8_t bytespp=4);
-    TGAColor(vec3 color);
+    explicit TGAColor(vec3 color);
+    explicit TGAColor(double color);
+
     vec3 to_vec3_rgb() const;
 };
 
