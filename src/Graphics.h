@@ -10,7 +10,6 @@
 #include "Model.h"
 
 class Camera {
-    void update();
 public:
     vec3 eye = {0, 0, 0};
     vec3 center = {0, 0, 2};
@@ -32,6 +31,7 @@ public:
     Camera(const vec3& eye_, const vec3& center_, const vec3& up_, int w = 600, int h = 600,
            double fov_ = 55.0, double near_ = 2.0, double far_ = 3.0);
 
+    void update();
     [[nodiscard]] mat4 get_view_matrix() const;
     [[nodiscard]] mat4 get_projection_matrix() const;
     [[nodiscard]] mat4 get_viewport_matrix() const;
@@ -83,10 +83,17 @@ public:
 };
 
 class Scene {
+    std::string filename;
 public:
     Camera camera;
     std::vector<Light> lights;
     std::vector<Model> models;
+
+    Scene() = default;
+    explicit Scene(const std::string& filename);
+
+    void save_path_file() const;
+    void save_path_file(const std::string& filename) const;
 };
 
 #endif //GRAPHICS_H

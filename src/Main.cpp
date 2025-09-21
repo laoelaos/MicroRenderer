@@ -22,6 +22,7 @@
 #include <windows.h>
 #endif
 #include <cstdarg>
+#include <iostream>
 #include <string>
 #include <thread>
 
@@ -115,9 +116,9 @@ void control_gui() {
             ImGui::InputFloat3("上方向", to_float_array(scene.camera.up).data(), "%.2f");
             ImGui::EndDisabled();
         } else {
-            if (ImGui::InputFloat3("相机位置", eye_pos.data(), "%.2f"))
+            if (ImGui::InputFloat3("观察点", eye_pos.data(), "%.2f"))
                 scene.camera.eye = float_array_to_vec(eye_pos);
-            if (ImGui::InputFloat3("观察点", center_pos.data(), "%.2f"))
+            if (ImGui::InputFloat3("相机位置", center_pos.data(), "%.2f"))
                 scene.camera.center = float_array_to_vec(center_pos);
             if (ImGui::InputFloat3("上方向", up_dir.data(), "%.2f"))
                 scene.camera.up = float_array_to_vec(up_dir);
@@ -472,6 +473,8 @@ int main(int, char**)
         glfwSwapBuffers(window);
     }
 
+    //scene.save_path_file();
+
     // 清理资源
     if (renderedTexture != 0) {
         glDeleteTextures(1, &renderedTexture);
@@ -537,22 +540,11 @@ void initTexture(int width, int height) {
 }
 
 void initScene() {
-    scene.lights.emplace_back();
-
-    Model model1{R"(D:\CS_learning\Project\MicroRenderer\obj\african_head\african_head.obj)"};
-    model1.material =
-        Material(R"(D:\CS_learning\Project\MicroRenderer\obj\african_head\african_head_diffuse.tga)",
-        R"(D:\CS_learning\Project\MicroRenderer\obj\african_head\african_head_nm_tangent.tga)",
-        {0.9, 0.6, 0.005, 150}, true, TANGENT, PER_FRAGMENT);
-
-    Model model2{R"(D:\CS_learning\Project\MicroRenderer\obj\african_head\african_head_eye_inner.obj)"};
-    model2.material =
-        Material(R"(D:\CS_learning\Project\MicroRenderer\obj\african_head\african_head_eye_inner_diffuse.tga)",
-            R"(D:\CS_learning\Project\MicroRenderer\obj\african_head\african_head_eye_inner_nm_tangent.tga)",
-        {0.9, 0.6, 0.005, 150}, true, TANGENT, PER_FRAGMENT);
-
-    scene.models.push_back(model1);
-    scene.models.push_back(model2);
+    try {
+        scene = Scene("../obj/default_now.sc");
+    } catch (std::runtime_error& e) {
+        std::cerr << "Error loading scene: " << e.what() << std::endl;
+    }
 }
 
 void initRasterizer() {
