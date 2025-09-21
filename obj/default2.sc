@@ -13,6 +13,14 @@ yaw_pitch_roll -90 0 0
 color 1 1 1
 position 20 20 20
 intensity 2000
+LightCamera
+eye 0 0 0
+center 20 20 20
+up 0 1 0
+size 600 600
+fov 90
+near_far 0.1 1000
+yaw_pitch_roll 0 0 0
 end
 
 [Model]

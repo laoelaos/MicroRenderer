@@ -76,6 +76,8 @@ public:
     vec3 position = {20.0, 20.0, 20.0};
     double intensity = 2000.0;
 
+    //TODO: 是否需要新建一个Light类？LightCamera是否与Camera不同
+    //TODO: LightCamera与Light移动不同步
     std::optional<Camera> LightCamera;
 
     Light() = default;
@@ -91,7 +93,7 @@ public:
     Camera camera;
     std::vector<Light> lights;
     std::vector<Model> models;
-    bool light_move = false;
+    bool light_move = true;
 
     Scene() = default;
     explicit Scene(const std::string& filename);

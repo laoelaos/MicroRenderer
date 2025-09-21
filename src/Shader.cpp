@@ -5,6 +5,8 @@
 #include "Shader.h"
 
 std::vector<std::unique_ptr<TGAImage>> Phong_Shadow_Shader::LightMaps;
+std::vector<mat4> Phong_Shadow_Shader::LightN;
+mat4 Phong_Shadow_Shader::model;
 vec3 Phong_Shadow_Shader::shade() {
     vec3 result{};
     for (auto light : light_info)

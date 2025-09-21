@@ -33,8 +33,8 @@ public:
 private:
     void pass(const Scene& scene, RasterizerMode mode);
 
-    void pre_z(const Model& obj_model);
-    void rasterize_model_phong(const Model& model);
+    void Ztest(const Model& obj_model);
+    void Phong_Shadow(const Model& model);
 
     int get_index(int x, int y) const { return x + y * width; }
     int get_tile_lock(int x, int y) const {

@@ -52,6 +52,7 @@ void Rasterizer::rasterize(Scene &scene) {
         Camera tmp = scene.camera;
         if (scene.light_move) {
             Phong_Shadow_Shader::LightMaps.clear();
+            Phong_Shadow_Shader::LightN.clear();
             for (Light& light : scene.lights) {
                 if (light.LightCamera.has_value())
                     scene.camera = light.LightCamera.value();
@@ -60,11 +61,12 @@ void Rasterizer::rasterize(Scene &scene) {
                 auto light_map = std::make_unique<TGAImage>(scene.camera.width, scene.camera.height, TGAImage::GRAYSCALE);
                 zbuffer_to_TGA(*light_map);
                 Phong_Shadow_Shader::LightMaps.push_back(std::move(light_map));
+                Phong_Shadow_Shader::LightN.push_back(light.LightCamera->get_projection_matrix() * light.LightCamera->get_view_matrix());
             }
             scene.light_move = false;
         }
         scene.camera = tmp;
-        pass(scene, PHONG);
+        pass(scene, PHONG_WITH_SHADOW);
     }
 }
 
@@ -82,13 +84,17 @@ void Rasterizer::pass(const Scene& scene, RasterizerMode mode) {
         mv = view * model;
         mvit = (view * model).invert().transpose();
         if (mode == ZTEST)
-            pre_z(obj_model);
-        if (mode == PHONG || mode == PHONG_WITH_SHADOW)
-            rasterize_model_phong(obj_model);
+            Ztest(obj_model);
+        if (mode == PHONG_WITH_SHADOW)
+            Phong_Shadow(obj_model);
+        if (mode == PHONG )
+            return; //TODO: phong
     }
 }
 
-void Rasterizer::rasterize_model_phong(const Model& obj_model) {
+//TODO: phong_with_shadow 与 phong 进行区分
+void Rasterizer::Phong_Shadow(const Model& obj_model) {
+    Phong_Shadow_Shader::model = model;
     texture = obj_model.material.texture;
     normal_map = obj_model.material.normal_map;
     bool diffuse_mapping = obj_model.material.diffuse_mapping;
@@ -162,7 +168,7 @@ void Rasterizer::rasterize_model_phong(const Model& obj_model) {
     }
 }
 
-void Rasterizer::pre_z(const Model& obj_model) {
+void Rasterizer::Ztest(const Model& obj_model) {
 #pragma omp parallel for default(none) shared(obj_model, mvpv, mv, width, height, z_buffer, tile_locks)
     for (auto now_triangle : obj_model.triangles) {
         now_triangle.get_vertices(mvpv, mv);

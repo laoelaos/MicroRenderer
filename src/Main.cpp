@@ -73,6 +73,7 @@ static TGAImage tgaImage(scene.camera.width, scene.camera.height, TGAImage::RGB)
 void control_gui() {
     ImGui::Begin("渲染控制面板");
 
+    //TODO: 渲染类型选择
     if (ImGui::CollapsingHeader("基本设置")) {
         if (ImGui::InputInt("MSAA级别", &renderContext.msaa_level, 1, 1)) {
             rasterizer.set_msaa(std::clamp(renderContext.msaa_level, 1, 10));
@@ -131,6 +132,7 @@ void control_gui() {
             scene.camera = {};
     }
 
+    //TODO: LightCamera管理
     if (ImGui::CollapsingHeader("光照设置")) {
         ImGui::Text("光源数量: %zu", scene.lights.size());
 

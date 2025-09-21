@@ -139,6 +139,7 @@ vec3 Light::get_illumination_at(const vec3& point) const {
     return color * intensity / norm2(point - position);
 }
 
+//TODO: 是否有些繁琐，是否应当将输出方法迁移到各个类
 Scene::Scene(const std::string &filename) {
     std::ifstream file(filename);
     if (!file.is_open()) {
@@ -150,6 +151,7 @@ Scene::Scene(const std::string &filename) {
     std::string model_filename;
 
     camera = Camera();
+    Light light;
     while (std::getline(file, line)) {
         std::istringstream iss(line);
         std::string key;
@@ -173,10 +175,23 @@ Scene::Scene(const std::string &filename) {
             else if (key == "yaw_pitch_roll") iss >> camera.yaw >> camera.pitch >> camera.roll;
         }
         else if (section == "Light") {
-            Light light;
-            if (key == "color") iss >> light.color.x >> light.color.y >> light.color.z;
+            if (key == "color") {
+                light = {};
+                iss >> light.color.x >> light.color.y >> light.color.z;
+            }
+
             else if (key == "position") iss >> light.position.x >> light.position.y >> light.position.z;
             else if (key == "intensity") iss >> light.intensity;
+
+            else if (key == "LightCamera") light.LightCamera = Camera();
+            else if (key == "eye") iss >> light.LightCamera->eye.x >> light.LightCamera->eye.y >> light.LightCamera->eye.z;
+            else if (key == "center") iss >> light.LightCamera->center.x >> light.LightCamera->center.y >> light.LightCamera->center.z;
+            else if (key == "up") iss >> light.LightCamera->up.x >> light.LightCamera->up.y >> light.LightCamera->up.z;
+            else if (key == "size") iss >> light.LightCamera->width >> light.LightCamera->height;
+            else if (key == "fov") iss >> light.LightCamera->fov;
+            else if (key == "near_far") iss >> light.LightCamera->near_ >> light.LightCamera->far_;
+            else if (key == "yaw_pitch_roll") iss >> light.LightCamera->yaw >> light.LightCamera->pitch >> light.LightCamera->roll;
+
             else if (key == "end") lights.push_back(light);
         }
         else if (section == "Model") {
@@ -271,7 +286,18 @@ void Scene::save_path_file(const std::string &filename) const {
         file << "color " << light.color.x << " " << light.color.y << " " << light.color.z << "\n";
         file << "position " << light.position.x << " " << light.position.y << " " << light.position.z << "\n";
         file << "intensity " << light.intensity << "\n";
-        file << "end\n\n";
+        if (light.LightCamera.has_value()) {
+            file << "LightCamera" << '\n';
+            file << "eye " << light.LightCamera.value().eye.x << " " << light.LightCamera.value().eye.y << " " << light.LightCamera.value().eye.z << "\n";
+            file << "center " << light.LightCamera.value().center.x << " " << light.LightCamera.value().center.y << " " << light.LightCamera.value().center.z << "\n";
+            file << "up " << light.LightCamera.value().up.x << " " << light.LightCamera.value().up.y << " " << light.LightCamera.value().up.z << "\n";
+            file << "size " << light.LightCamera.value().width << " " << light.LightCamera.value().height << "\n";
+            file << "fov " << light.LightCamera.value().fov << "\n";
+            file << "near_far " << light.LightCamera.value().near_ << " " << light.LightCamera.value().far_ << "\n";
+            file << "yaw_pitch_roll " << light.LightCamera.value().yaw << " " << light.LightCamera.value().pitch << " " << light.LightCamera.value().roll << "\n\n";
+        } else {
+            file << "end\n\n";
+        }
     }
 
     for (const auto& model : models) {

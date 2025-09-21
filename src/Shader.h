@@ -16,6 +16,8 @@ public:
     virtual vec3 shade() = 0;
 };
 
+//TODO: Phong_Shader类
+
 class Phong_Shadow_Shader : public Shader {
 public:
     vec3 position;
@@ -25,6 +27,8 @@ public:
     const phong_properties* properties;
 
     static std::vector<std::unique_ptr<TGAImage>> LightMaps;
+    static std::vector<mat4> LightN;
+    static mat4 model;
 
     vec3 shade() override;
 };
