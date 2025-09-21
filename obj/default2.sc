@@ -11,11 +11,11 @@ yaw_pitch_roll -90 0 0
 
 [Light]
 color 1 1 1
-position 20 20 20
-intensity 2000
+position 2 2 2
+intensity 50
 LightCamera
 eye 0 0 0
-center 20 20 20
+center 2 2 2
 up 0 1 0
 size 600 600
 fov 90

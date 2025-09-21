@@ -12,7 +12,6 @@
 #include "Geometry.h"
 #include "Graphics.h"
 #include "Model.h"
-#include "Shader.h"
 #include "TGAImage.h"
 
 enum RasterizerMode {ZTEST, PHONG, PHONG_WITH_SHADOW};

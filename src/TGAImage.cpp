@@ -2,8 +2,10 @@
 #include <cstring>
 #include "TGAImage.h"
 
+#include <algorithm>
+
 TGAColor::TGAColor(const std::uint8_t R, const std::uint8_t G, const std::uint8_t B, const std::uint8_t A,
-    const std::uint8_t bytespp) {
+                   const std::uint8_t bytespp) {
     bgra[0] = B;
     bgra[1] = G;
     bgra[2] = R;
@@ -18,17 +20,40 @@ TGAColor::TGAColor(vec3 color) {
     bgra[3] = 255;
 }
 
+#define z_min (-1.0)
+#define z_max 1.0
 TGAColor::TGAColor(double color) {
-    bgra[0] = static_cast<std::uint8_t>(std::max(0., std::min(255., color * 255.)));
-    bgra[1] = static_cast<std::uint8_t>(std::max(0., std::min(255., color * 255.)));
-    bgra[2] = static_cast<std::uint8_t>(std::max(0., std::min(255., color * 255.)));
-    bgra[3] = 255;
+    // 将 z 值规范化到 [0, 1] 范围
+    double normalized_z = std::clamp((color - z_min) / (z_max - z_min), 0.0, 1.0);
+
+    // 将 [0, 1] 范围的值映射到 32 位整数范围
+    uint32_t int_value = static_cast<uint32_t>(normalized_z * 0xFFFFFFFF);
+
+    // 分解为 4 个 8 位通道
+    bgra[2] = (int_value >> 24) & 0xFF;  // 最高位字节
+    bgra[1] = (int_value >> 16) & 0xFF;  // 次高位字节
+    bgra[0] = (int_value >> 8) & 0xFF;   // 次低位字节
+    bgra[3] = int_value & 0xFF;          // 最低位字节
 }
 
 vec3 TGAColor::to_vec3_rgb() const {
     return {static_cast<double>(bgra[2]) / 255.0,
             static_cast<double>(bgra[1]) / 255.0,
             static_cast<double>(bgra[0]) / 255.0};
+}
+
+double TGAColor::to_double() const {
+    // 从 4 个 8 位通道重构 32 位整数
+    uint32_t int_value = (static_cast<uint32_t>(bgra[2]) << 24) |  // r
+                         (static_cast<uint32_t>(bgra[1]) << 16) |  // g
+                         (static_cast<uint32_t>(bgra[0]) << 8) |   // b
+                         static_cast<uint32_t>(bgra[3]);           // a
+
+    // 转换回 [0, 1] 范围的 double
+    double normalized_z = static_cast<double>(int_value) / 0xFFFFFFFF;
+
+    // 转换回原始的 z 值范围 [-1, 1]
+    return z_min + normalized_z * (z_max - z_min);
 }
 
 vec3 TGAImage::get_nearest(vec2 uv) const {
@@ -253,4 +278,3 @@ int TGAImage::width() const {
 int TGAImage::height() const {
     return h;
 }
-

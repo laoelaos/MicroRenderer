@@ -7,6 +7,7 @@
 
 #include "Rasterizer.h"
 #include "Model.h"
+#include "Shader.h"
 
 Rasterizer::Rasterizer() {
     width = 1;
@@ -56,12 +57,15 @@ void Rasterizer::rasterize(Scene &scene) {
             for (Light& light : scene.lights) {
                 if (light.LightCamera.has_value())
                     scene.camera = light.LightCamera.value();
+                else
+                    throw std::runtime_error("one light dont have a light camera");
+
                 pass(scene, ZTEST);
 
-                auto light_map = std::make_unique<TGAImage>(scene.camera.width, scene.camera.height, TGAImage::GRAYSCALE);
-                zbuffer_to_TGA(*light_map);
-                Phong_Shadow_Shader::LightMaps.push_back(std::move(light_map));
-                Phong_Shadow_Shader::LightN.push_back(light.LightCamera->get_projection_matrix() * light.LightCamera->get_view_matrix());
+                auto light_map = TGAImage(scene.camera.width, scene.camera.height, TGAImage::BIG_GRAYSCALE);
+                zbuffer_to_TGA(light_map);
+                Phong_Shadow_Shader::LightMaps.push_back(light_map);
+                Phong_Shadow_Shader::LightN.push_back(light.LightCamera->get_viewport_matrix() * light.LightCamera->get_projection_matrix() * light.LightCamera->get_view_matrix());
             }
             scene.light_move = false;
         }
@@ -85,16 +89,20 @@ void Rasterizer::pass(const Scene& scene, RasterizerMode mode) {
         mvit = (view * model).invert().transpose();
         if (mode == ZTEST)
             Ztest(obj_model);
-        if (mode == PHONG_WITH_SHADOW)
+        if (mode == PHONG_WITH_SHADOW) {
+            Phong_Shadow_Shader::MainCameraM = view.invert();
+            Ztest(obj_model);
             Phong_Shadow(obj_model);
-        if (mode == PHONG )
+        }
+        if (mode == PHONG ) {
+            Ztest(obj_model);
             return; //TODO: phong
+        }
     }
 }
 
 //TODO: phong_with_shadow 与 phong 进行区分
 void Rasterizer::Phong_Shadow(const Model& obj_model) {
-    Phong_Shadow_Shader::model = model;
     texture = obj_model.material.texture;
     normal_map = obj_model.material.normal_map;
     bool diffuse_mapping = obj_model.material.diffuse_mapping;
@@ -184,7 +192,7 @@ void Rasterizer::Ztest(const Model& obj_model) {
 
                 std::lock_guard guard(tile_locks[get_tile_lock(x, y)]);
                 double z = now_triangle.get_interpolated_z();
-                if (z > z_buffer[get_index(x, y)] - 1e-4) {
+                if (z >= z_buffer[get_index(x, y)]) {
                     z_buffer[get_index(x, y)] = z;
                 }
             }

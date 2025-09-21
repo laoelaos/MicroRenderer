@@ -33,10 +33,11 @@ struct TGAColor {
     explicit TGAColor(double color);
 
     vec3 to_vec3_rgb() const;
+    double to_double() const;
 };
 
 struct TGAImage {
-    enum Format { GRAYSCALE=1, RGB=3, RGBA=4 };
+    enum Format { GRAYSCALE=1, RGB=3, RGBA=4, BIG_GRAYSCALE = 4 };
     TGAImage() = default;
     TGAImage(const int w, const int h, const int bpp);
     bool  read_tga_file(const std::string filename);
