@@ -181,7 +181,7 @@ void control_gui() {
 
         ImGui::Separator();
 
-        static std::vector<const char*> model_names;
+        std::vector<const char*> model_names;
         for (auto & model : scene.models)
             model_names.push_back(model.name.c_str());
 

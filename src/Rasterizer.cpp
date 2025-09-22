@@ -49,11 +49,13 @@ void Rasterizer::rasterize(Scene &scene) {
         pass(scene, ZTEST);
     } else if (mode == PHONG) {
         pass(scene, PHONG);
+        Phong_Shadow_Shader::camera_pos = scene.camera.center;
     } else if (mode == PHONG_WITH_SHADOW) {
-        Camera tmp = scene.camera;
         if (scene.light_move) {
+            Camera tmp = scene.camera;
             Phong_Shadow_Shader::LightMaps.clear();
             Phong_Shadow_Shader::LightN.clear();
+
             for (Light& light : scene.lights) {
                 if (light.LightCamera.has_value())
                     scene.camera = light.LightCamera.value();
@@ -67,9 +69,11 @@ void Rasterizer::rasterize(Scene &scene) {
                 Phong_Shadow_Shader::LightMaps.push_back(light_map);
                 Phong_Shadow_Shader::LightN.push_back(light.LightCamera->get_viewport_matrix() * light.LightCamera->get_projection_matrix() * light.LightCamera->get_view_matrix());
             }
+
             scene.light_move = false;
+            scene.camera = tmp;
         }
-        scene.camera = tmp;
+        Phong_Shadow_Shader::camera_pos = scene.camera.center;
         pass(scene, PHONG_WITH_SHADOW);
     }
 }
@@ -87,36 +91,36 @@ void Rasterizer::pass(const Scene& scene, RasterizerMode mode) {
         mvpv = viewport * projection * view * model;
         mv = view * model;
         mvit = (view * model).invert().transpose();
+
         if (mode == ZTEST)
             Ztest(obj_model);
         if (mode == PHONG_WITH_SHADOW) {
             Phong_Shadow_Shader::MainCameraM = view.invert();
             Ztest(obj_model);
-            Phong_Shadow(obj_model);
+            Phong(obj_model);
         }
-        if (mode == PHONG ) {
+        if (mode == PHONG) {
             Ztest(obj_model);
-            return; //TODO: phong
+            Phong(obj_model);
         }
     }
 }
 
-//TODO: phong_with_shadow 与 phong 进行区分
-void Rasterizer::Phong_Shadow(const Model& obj_model) {
-    texture = obj_model.material.texture;
-    normal_map = obj_model.material.normal_map;
-    bool diffuse_mapping = obj_model.material.diffuse_mapping;
-    NormalType normal_type = obj_model.material.normal_type;
-    ShadeFrequency shade_frequency = obj_model.material.shade_frequency;
+void Rasterizer::Phong(const Model& model) {
+    texture = model.material.texture;
+    normal_map = model.material.normal_map;
+    bool diffuse_mapping = model.material.diffuse_mapping;
+    NormalType normal_type = model.material.normal_type;
+    ShadeFrequency shade_frequency = model.material.shade_frequency;
 
-    size_t tri_count = obj_model.triangles.size();
-#pragma omp parallel for default(none) shared(obj_model, tri_count, diffuse_mapping, normal_type, shade_frequency, mvit, mvpv, mv, width, height, framebuffer, z_buffer, lights, texture, normal_map)
+    size_t tri_count = model.triangles.size();
+#pragma omp parallel for default(none) shared(model, tri_count, diffuse_mapping, normal_type, shade_frequency, mvit, mvpv, mv, width, height, framebuffer, z_buffer, lights, texture, normal_map)
     for (size_t idx = 0; idx < tri_count; ++idx) {
         Phong_Shadow_Shader shader;
         shader.light_info = lights;
-        shader.properties = &obj_model.material.properties;
+        shader.properties = &model.material.properties;
 
-        triangle now_triangle = obj_model.triangles[idx];
+        triangle now_triangle = model.triangles[idx];
         now_triangle.get_vertices(mvpv, mv);
         now_triangle.get_normal(mvit);
         if (now_triangle.is_backface())
@@ -176,9 +180,9 @@ void Rasterizer::Phong_Shadow(const Model& obj_model) {
     }
 }
 
-void Rasterizer::Ztest(const Model& obj_model) {
-#pragma omp parallel for default(none) shared(obj_model, mvpv, mv, width, height, z_buffer, tile_locks)
-    for (auto now_triangle : obj_model.triangles) {
+void Rasterizer::Ztest(const Model& model) {
+#pragma omp parallel for default(none) shared(model, mvpv, mv, width, height, z_buffer, tile_locks)
+    for (auto now_triangle : model.triangles) {
         now_triangle.get_vertices(mvpv, mv);
         if (now_triangle.is_backface())
             continue;

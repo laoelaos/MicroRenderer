@@ -19,7 +19,7 @@ public:
 //TODO: Phong_Shader类
 
 class Phong_Shadow_Shader : public Shader {
-    const double bias = 1e-2; //阴影偏移
+    const double bias = 1e-3; //阴影偏移
 public:
     vec3 position;
     vec3 normal;
@@ -27,6 +27,7 @@ public:
     vec2 tex_coords;
     const phong_properties* properties;
 
+    static vec3 camera_pos;
     static std::vector<TGAImage> LightMaps;
     static std::vector<mat4> LightN;
     static mat4 MainCameraM;

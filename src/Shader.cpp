@@ -6,6 +6,7 @@
 
 #include <iostream>
 
+vec3 Phong_Shadow_Shader::camera_pos;
 std::vector<TGAImage> Phong_Shadow_Shader::LightMaps;
 std::vector<mat4> Phong_Shadow_Shader::LightN;
 mat4 Phong_Shadow_Shader::MainCameraM;
@@ -18,7 +19,7 @@ vec3 Phong_Shadow_Shader::shade() {
 
         vec3 light_color = light.get_illumination_at(position);
         vec3 light_dir = normalize(light.position - position);
-        vec3 view_dir = normalize(vec3{0, 0, 0} - position);
+        vec3 view_dir = normalize(camera_pos - position);
         vec3 half_vec = normalize(light_dir + view_dir);
 
         double visibility;
