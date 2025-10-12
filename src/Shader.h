@@ -9,11 +9,11 @@
 
 #include "Light.h"
 #include "Model.h"
-#include "TGAImage.h"
 
 class Shader {
 public:
     static const std::vector<Light>* s_lightInfo;
+    static std::vector<vec3> s_lightPos;
     virtual ~Shader() = default;
     virtual vec3 shade() = 0;
 };
@@ -29,7 +29,6 @@ public:
     vec2 tex_coords;
     const PhongProperties* properties;
 
-    static vec3 s_cameraPos;
     static mat4 s_mainCameraM;
 
     vec3 shade() override;

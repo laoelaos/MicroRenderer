@@ -15,7 +15,6 @@ Rasterizer::Rasterizer() {
     m_view = identity_matrix<4>();
     m_projection = identity_matrix<4>();
     m_viewport = identity_matrix<4>();
-    m_lights = {};
     m_texture = {};
     m_normalMap = {};
     build_buffer();
@@ -39,11 +38,9 @@ void Rasterizer::rasterize(Scene &scene, RasterizerMode mode) {
     if (mode == ZTEST) {
         pass(scene, ZTEST);
     } else if (mode == PHONG) {
-        Phong_Shadow_Shader::s_cameraPos = scene.camera.center;
         pass(scene, PHONG);
     } else if (mode == PHONG_WITH_SHADOW) {
         processLight(scene, scene.lights);
-        Phong_Shadow_Shader::s_cameraPos = scene.camera.center;
         pass(scene, PHONG_WITH_SHADOW);
     }
 }
@@ -77,6 +74,10 @@ void Rasterizer::pass(const Scene& scene, RasterizerMode mode) {
         }
         if (mode == PHONG_WITH_SHADOW) {
             Phong_Shadow_Shader::s_lightInfo = &scene.lights;
+            Phong_Shadow_Shader::s_lightPos = {};
+            for (const Light& light : scene.lights) {
+                Phong_Shadow_Shader::s_lightPos.push_back((m_MV * light.position.to_vec4(1.0)).to_vec3_point());
+            }
             Phong_Shadow_Shader::s_mainCameraM = m_view.invert();
             Ztest(obj_model);
             Phong(obj_model);
@@ -92,7 +93,7 @@ void Rasterizer::Phong(const Model& model) {
     ShadeFrequency shade_frequency = model.material.shade_frequency;
 
     size_t tri_count = model.triangles.size();
-#pragma omp parallel for default(none) shared(model, tri_count, diffuse_mapping, normal_type, shade_frequency, m_MVit, m_MVPV, m_MV, m_width, m_height, m_frameBuffer, m_zBuffer, m_lights, m_texture, m_normalMap)
+#pragma omp parallel for default(none) shared(model, tri_count, diffuse_mapping, normal_type, shade_frequency, m_MVit, m_MVPV, m_MV, m_width, m_height, m_frameBuffer, m_zBuffer, m_texture, m_normalMap)
     for (size_t idx = 0; idx < tri_count; ++idx) {
         Phong_Shadow_Shader shader;
         shader.properties = &model.material.properties;

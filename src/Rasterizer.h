@@ -55,7 +55,6 @@ private:
 
     //helper
     TGAImage m_texture, m_normalMap;
-    std::vector<Light> m_lights;
     mat4 m_model, m_view, m_projection, m_viewport;
     mat4 m_MVPV, m_MV, m_MVit, m_MVPVi;
 };
