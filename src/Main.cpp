@@ -22,11 +22,10 @@
 #include <windows.h>
 #endif
 #include <cstdarg>
-#include <iostream>
 #include <string>
 #include <thread>
 
-#include "Graphics.h"
+#include "Scene.h"
 
 void glfw_error_callback(int error, const char* description);
 void print_utf8_stdout(const char* fmt, ...);

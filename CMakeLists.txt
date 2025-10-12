@@ -39,17 +39,23 @@ set(IMGUI_SOURCES
         src/ImGui/imgui_impl_opengl3.cpp
 )
 
-set(SOURCES src/main.cpp
+set(Graphics_SOURCES
+        src/Graphics/Camera.cpp
+        src/Graphics/Scene.cpp
+        src/Graphics/Light.cpp
+        src/Graphics/Model.cpp
+)
+
+set(SOURCES ${IMGUI_SOURCES} ${Graphics_SOURCES}
+        src/main.cpp
         src/TGAImage.cpp
-        src/model.cpp
         src/Rasterizer.cpp
         src/Shader.cpp
-        src/Graphics.cpp
-        ${IMGUI_SOURCES})
+)
 
 add_executable(${PROJECT_NAME} ${SOURCES})
 
-target_include_directories(${PROJECT_NAME} PRIVATE src/ImGui)
+target_include_directories(${PROJECT_NAME} PRIVATE src/ImGui src/Graphics)
 
 target_link_libraries(${PROJECT_NAME} PRIVATE
         glfw

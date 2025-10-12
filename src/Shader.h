@@ -5,9 +5,11 @@
 #ifndef SHADER_H
 #define SHADER_H
 
-#include <memory>
-#include "Geometry.h"
-#include "Graphics.h"
+#include <vector>
+
+#include "Light.h"
+#include "Model.h"
+#include "TGAImage.h"
 
 class Shader {
 public:
@@ -25,7 +27,7 @@ public:
     vec3 normal;
     vec3 color;
     vec2 tex_coords;
-    const phong_properties* properties;
+    const PhongProperties* properties;
 
     static vec3 camera_pos;
     static std::vector<TGAImage> LightMaps;

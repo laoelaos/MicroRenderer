@@ -4,14 +4,11 @@
 
 #ifndef RASTERIZER_H
 #define RASTERIZER_H
-#include <memory>
-#include <utility>
+
 #include <vector>
 #include <mutex>
 
-#include "Geometry.h"
-#include "Graphics.h"
-#include "Model.h"
+#include "Scene.h"
 #include "TGAImage.h"
 
 enum RasterizerMode {ZTEST, PHONG, PHONG_WITH_SHADOW};
@@ -28,8 +25,10 @@ public:
     void rasterize(Scene& scene);
 
     void framebuffer_to_TGA(TGAImage& framebuffer);
-    void zbuffer_to_TGA(TGAImage& framebuffer);
+    void zBuffer_to_TGA(TGAImage& framebuffer);
 private:
+    void processLight();
+
     void pass(const Scene& scene, RasterizerMode mode);
 
     void Ztest(const Model& model);

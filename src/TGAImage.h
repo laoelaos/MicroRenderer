@@ -3,7 +3,7 @@
 #include <fstream>
 #include <vector>
 
-#include "Geometry.h"
+#include "Graphics/Geometry.h"
 
 #pragma pack(push,1)
 struct TGAHeader {

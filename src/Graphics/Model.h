@@ -8,12 +8,12 @@
 #include <vector>
 
 #include "Geometry.h"
-#include "TGAImage.h"
+#include "../TGAImage.h"
 
 enum NormalType {GLOBAL, TANGENT, NONE};
 enum ShadeFrequency {FLAT, PER_VERTEX, PER_FRAGMENT};
 
-struct phong_properties {
+struct PhongProperties {
     double k_diffuse;
     double k_specular;
     double k_ambient;
@@ -23,7 +23,7 @@ struct phong_properties {
 struct Material {
     explicit Material(const std::string& texture_path = "",
              const std::string& normal_map_path = "",
-             const phong_properties &properties = {},
+             const PhongProperties &properties = {},
              bool diffuse_mapping = false,
              NormalType normal_type = NONE,
              ShadeFrequency shade_frequency = FLAT)
@@ -38,7 +38,7 @@ struct Material {
     std::string normal_map_path;
     TGAImage normal_map;
 
-    phong_properties properties;
+    PhongProperties properties;
 
     bool diffuse_mapping;
     NormalType normal_type;
@@ -50,7 +50,7 @@ struct Material {
     void load_normal_map(const std::string& normal_map_path);
 };
 
-struct triangle {
+struct Triangle {
     std::array<vec3, 3> world_vertices;
     std::array<vec3, 3> screen_vertices;
     std::array<vec3, 3> normals;
@@ -82,7 +82,7 @@ public:
     bool enable = false;
 
     std::string model_path;
-    std::vector<triangle> triangles = {};
+    std::vector<Triangle> triangles = {};
 
     Material material;
     vec3 translation = {0, 0, 0};

@@ -6,7 +6,6 @@
 #include <iostream>
 
 #include "Rasterizer.h"
-#include "Model.h"
 #include "Shader.h"
 
 Rasterizer::Rasterizer() {
@@ -65,7 +64,7 @@ void Rasterizer::rasterize(Scene &scene) {
                 pass(scene, ZTEST);
 
                 auto light_map = TGAImage(scene.camera.width, scene.camera.height, TGAImage::BIG_GRAYSCALE);
-                zbuffer_to_TGA(light_map);
+                zBuffer_to_TGA(light_map);
                 Phong_Shadow_Shader::LightMaps.push_back(light_map);
                 Phong_Shadow_Shader::LightN.push_back(light.LightCamera->get_viewport_matrix() * light.LightCamera->get_projection_matrix() * light.LightCamera->get_view_matrix());
             }
@@ -120,7 +119,7 @@ void Rasterizer::Phong(const Model& model) {
         shader.light_info = m_lights;
         shader.properties = &model.material.properties;
 
-        triangle now_triangle = model.triangles[idx];
+        Triangle now_triangle = model.triangles[idx];
         now_triangle.get_vertices(m_MVPV, m_MV);
         now_triangle.get_normal(m_MVit);
         if (now_triangle.is_backface())
@@ -212,10 +211,14 @@ void Rasterizer::framebuffer_to_TGA(TGAImage& framebuffer_) {
     }
 }
 
-void Rasterizer::zbuffer_to_TGA(TGAImage& framebuffer_) {
+void Rasterizer::zBuffer_to_TGA(TGAImage& framebuffer_) {
     for (int y = 0; y < m_height; y++) {
         for (int x = 0; x < m_width; x++) {
             framebuffer_.set(x, y, TGAColor(m_zBuffer[get_index(x, y)]));
         }
     }
+}
+
+void Rasterizer::processLight() {
+
 }
