@@ -28,12 +28,7 @@
 #include "Scene.h"
 
 void glfw_error_callback(int error, const char* description);
-void print_utf8_stdout(const char* fmt, ...);
-
 void initTexture(int width, int height);
-
-void updateRotate();
-
 void performRendering();
 void loadTextureToGl();
 
@@ -53,16 +48,15 @@ struct RenderContext {
     // 性能监控
     float target_fps = 60.0f;           // 目标帧率
     float current_fps = 0.0f;           // 当前帧率
-    long long last_render_time = 0;     // 上次渲染耗时(ms)
+    long long avg_render_time = 0;     // 上次渲染耗时(ms)
     long long refresh_interval = 500;  // 刷新间隔(ms)
 
     // 控制标志
     bool force_render = true;
 };
 
-static Scene g_scene("../obj/default2.sc");
 static RenderContext g_renderContext;
-
+static Scene g_scene("../obj/default2.sc");
 static Rasterizer g_rasterizer = {};
 
 static GLuint g_renderedTexture = 0;
@@ -309,34 +303,17 @@ void control_gui() {
 void output_gui() {
     ImGui::Begin("渲染结果");
 
-    // 计算渲染所需时间，不包括跳过渲染只进行imgui的时间
-    static auto last_frame_time = std::chrono::high_resolution_clock::now();
-    auto current_time = std::chrono::high_resolution_clock::now();
-    auto frame_duration = std::chrono::duration_cast<std::chrono::milliseconds>(current_time - last_frame_time).count();
+    if (g_renderContext.force_render ||
+        g_renderContext.real_time_rendering ||
+        g_renderContext.auto_rotate) {
 
-    if (g_renderContext.force_render) {
         performRendering();
         loadTextureToGl();
         g_renderContext.force_render = false;
-        g_renderContext.current_fps = 0.0f;
     }
 
-    static int frame_count = 0;
-    static long long frame_time_accumulator = 0;
-    if (g_renderContext.real_time_rendering ||
-        g_renderContext.auto_rotate) {
-        frame_count++;
-        frame_time_accumulator += frame_duration;
-
-        performRendering();
-        loadTextureToGl();
-        g_renderContext.force_render = false;
-        last_frame_time = current_time;
-        if (frame_duration > 0 && frame_time_accumulator > g_renderContext.refresh_interval) {
-            g_renderContext.current_fps = 1000.0f / static_cast<float>(frame_time_accumulator) * static_cast<float>(frame_count);
-            frame_count = 0;
-            frame_time_accumulator = 0;
-        }
+    if (g_renderContext.force_render) {
+        g_renderContext.current_fps = 0.0f;
     }
 
     // 获取窗口内容区域大小以调整图像大小
@@ -362,7 +339,7 @@ void output_gui() {
     // 显示纹理信息和预览
     ImGui::Text("渲染纹理: ID=%u, 尺寸=%dx%d", g_renderedTexture,
                 g_tgaImage.width(), g_tgaImage.height());
-    ImGui::Text("渲染时间: %lld ms | FPS: %.1f", g_renderContext.last_render_time, g_renderContext.current_fps);
+    ImGui::Text("渲染时间: %lld ms | FPS: %.1f", g_renderContext.avg_render_time, g_renderContext.current_fps);
 
     // 显示渲染模式状态
     if (g_renderContext.real_time_rendering || g_renderContext.auto_rotate) {
@@ -493,34 +470,6 @@ void glfw_error_callback(int error, const char* description)
     fprintf(stderr, "GLFW Error %d: %s\n", error, description);
 }
 
-void print_utf8_stdout(const char* fmt, ...) {
-    va_list ap;
-    va_start(ap, fmt);
-    // 格式化为 UTF-8 字节串
-    char buffer[4096];
-    int n = vsnprintf(buffer, sizeof(buffer), fmt, ap);
-    va_end(ap);
-    if (n < 0) return;
-#ifdef _WIN32
-    // 将 UTF-8 转为 UTF-16 并写入控制台（避免控制台按 OEM/ANSI 错误解码）
-    int wlen = MultiByteToWideChar(CP_UTF8, 0, buffer, -1, nullptr, 0);
-    if (wlen > 0) {
-        std::wstring wbuf;
-        wbuf.resize(wlen);
-        MultiByteToWideChar(CP_UTF8, 0, buffer, -1, &wbuf[0], wlen);
-        HANDLE h = GetStdHandle(STD_OUTPUT_HANDLE);
-        if (h != INVALID_HANDLE_VALUE) {
-            DWORD written = 0;
-            // 写入时去掉末尾的 NUL
-            WriteConsoleW(h, wbuf.c_str(), static_cast<DWORD>(wbuf.size() - 1), &written, nullptr);
-        }
-    }
-#else
-    // 非 Windows，标准终端一般能正确显示 UTF-8
-    fputs(buffer, stdout);
-#endif
-}
-
 void initTexture(int width, int height) {
     if (g_renderedTexture != 0) {
         glDeleteTextures(1, &g_renderedTexture);
@@ -537,30 +486,30 @@ void initTexture(int width, int height) {
     g_imageData.resize(width * height * 4, 255); // 全白RGBA格式
 }
 
-void updateRotate() {
-    if (!g_renderContext.auto_rotate)
-        return;
-
-    double delta_time = 1.0 / g_renderContext.target_fps; // 估算的时间间隔
-    g_scene.camera.rotate_around_eye(g_renderContext.rotation_speed * delta_time * 60.0, 0, 0);
-}
-
 void performRendering() {
     auto start_time = std::chrono::high_resolution_clock::now();
 
-    updateRotate();
+
+    if (g_renderContext.auto_rotate) {
+        double delta_time = 1.0 / g_renderContext.target_fps; // 估算的时间间隔
+        g_scene.camera.rotate_around_eye(g_renderContext.rotation_speed * delta_time * 60.0, 0, 0);
+    }
 
     g_rasterizer.rasterize(g_scene, PHONG_WITH_SHADOW);
     g_rasterizer.framebuffer_to_TGA(g_tgaImage);
 
+
     auto end_time = std::chrono::high_resolution_clock::now();
     auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end_time - start_time).count();
-
-    static long long frame_count = 0;
-    frame_count += duration;
-    if (frame_count >= g_renderContext.refresh_interval) {
-        g_renderContext.last_render_time = duration;
-        frame_count = 0;
+    static int frame_counter = 0;
+    static long long duration_counter = 0;
+    frame_counter++;
+    duration_counter += duration;
+    if (duration_counter >= g_renderContext.refresh_interval) {
+        g_renderContext.avg_render_time = duration_counter / frame_counter;
+        g_renderContext.current_fps = 1000.0f / static_cast<float>(g_renderContext.avg_render_time);
+        frame_counter = 0;
+        duration_counter = 0;
     }
 }
 
