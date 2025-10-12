@@ -9,11 +9,10 @@ fov 55
 near_far 0.1 3
 yaw_pitch_roll -90 0 0
 
-[Light]
+[DIRECTIONAL_LIGHT]
 color 1 1 1
 position 2 2 2
 intensity 50
-LightCamera
 eye 0 0 0
 center 2 2 2
 up 0 1 0

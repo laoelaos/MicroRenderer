@@ -18,15 +18,7 @@ Rasterizer::Rasterizer() {
     m_lights = {};
     m_texture = {};
     m_normalMap = {};
-    m_mode = PHONG_WITH_SHADOW;
     build_buffer();
-}
-
-void Rasterizer::build_buffer() {
-    m_zBuffer.resize(m_width * m_height);
-    m_frameBuffer.resize(m_width * m_height);
-    std::ranges::fill(m_frameBuffer, vec3());
-    std::ranges::fill(m_zBuffer, -std::numeric_limits<double>::infinity());
 }
 
 //TODO: 暂时禁用MSAA, 目前实现方式不好
@@ -43,38 +35,24 @@ void Rasterizer::set_msaa(int MSAA) {
 //TODO: 光栅化管线
 //TODO: 目前透视投影前z=0的点经过透视后w=0, 导致无法投影到屏幕上，应该实现裁剪来处理
 
-void Rasterizer::rasterize(Scene &scene) {
-    if (m_mode == ZTEST) {
+void Rasterizer::rasterize(Scene &scene, RasterizerMode mode) {
+    if (mode == ZTEST) {
         pass(scene, ZTEST);
-    } else if (m_mode == PHONG) {
+    } else if (mode == PHONG) {
+        Phong_Shadow_Shader::s_cameraPos = scene.camera.center;
         pass(scene, PHONG);
-        Phong_Shadow_Shader::camera_pos = scene.camera.center;
-    } else if (m_mode == PHONG_WITH_SHADOW) {
-        if (scene.light_move) {
-            Camera tmp = scene.camera;
-            Phong_Shadow_Shader::LightMaps.clear();
-            Phong_Shadow_Shader::LightN.clear();
-
-            for (Light& light : scene.lights) {
-                if (light.LightCamera.has_value())
-                    scene.camera = light.LightCamera.value();
-                else
-                    throw std::runtime_error("one light dont have a light camera");
-
-                pass(scene, ZTEST);
-
-                auto light_map = TGAImage(scene.camera.width, scene.camera.height, TGAImage::BIG_GRAYSCALE);
-                zBuffer_to_TGA(light_map);
-                Phong_Shadow_Shader::LightMaps.push_back(light_map);
-                Phong_Shadow_Shader::LightN.push_back(light.LightCamera->get_viewport_matrix() * light.LightCamera->get_projection_matrix() * light.LightCamera->get_view_matrix());
-            }
-
-            scene.light_move = false;
-            scene.camera = tmp;
-        }
-        Phong_Shadow_Shader::camera_pos = scene.camera.center;
+    } else if (mode == PHONG_WITH_SHADOW) {
+        processLight(scene, scene.lights);
+        Phong_Shadow_Shader::s_cameraPos = scene.camera.center;
         pass(scene, PHONG_WITH_SHADOW);
     }
+}
+
+void Rasterizer::build_buffer() {
+    m_zBuffer.resize(m_width * m_height);
+    m_frameBuffer.resize(m_width * m_height);
+    std::ranges::fill(m_frameBuffer, vec3());
+    std::ranges::fill(m_zBuffer, -std::numeric_limits<double>::infinity());
 }
 
 void Rasterizer::pass(const Scene& scene, RasterizerMode mode) {
@@ -84,7 +62,6 @@ void Rasterizer::pass(const Scene& scene, RasterizerMode mode) {
     m_view = scene.camera.get_view_matrix();
     m_projection = scene.camera.get_projection_matrix();
     m_viewport = scene.camera.get_viewport_matrix();
-    m_lights = scene.lights;
     for (const Model& obj_model: scene.models) {
         m_model = obj_model.get_transform_matrix();
         m_MVPV = m_viewport * m_projection * m_view * m_model;
@@ -93,12 +70,14 @@ void Rasterizer::pass(const Scene& scene, RasterizerMode mode) {
 
         if (mode == ZTEST)
             Ztest(obj_model);
-        if (mode == PHONG_WITH_SHADOW) {
-            Phong_Shadow_Shader::MainCameraM = m_view.invert();
+        if (mode == PHONG) {
+            //sth..
             Ztest(obj_model);
             Phong(obj_model);
         }
-        if (mode == PHONG) {
+        if (mode == PHONG_WITH_SHADOW) {
+            Phong_Shadow_Shader::s_lightInfo = &scene.lights;
+            Phong_Shadow_Shader::s_mainCameraM = m_view.invert();
             Ztest(obj_model);
             Phong(obj_model);
         }
@@ -116,7 +95,6 @@ void Rasterizer::Phong(const Model& model) {
 #pragma omp parallel for default(none) shared(model, tri_count, diffuse_mapping, normal_type, shade_frequency, m_MVit, m_MVPV, m_MV, m_width, m_height, m_frameBuffer, m_zBuffer, m_lights, m_texture, m_normalMap)
     for (size_t idx = 0; idx < tri_count; ++idx) {
         Phong_Shadow_Shader shader;
-        shader.light_info = m_lights;
         shader.properties = &model.material.properties;
 
         Triangle now_triangle = model.triangles[idx];
@@ -219,6 +197,32 @@ void Rasterizer::zBuffer_to_TGA(TGAImage& framebuffer_) {
     }
 }
 
-void Rasterizer::processLight() {
+void Rasterizer::processLight(Scene& scene, std::vector<Light>& lights) {
+    for (Light& light : lights) {
+        switch (light.getType()) {
+            case POINT_LIGHT:
+                break;
+            case DIRECTIONAL_LIGHT:
+                if (light.LightCamera.has_value()) {
+                    if (light.lightMove) {
+                        // Prepare shadow map size if not matching
+                        int lw = light.LightCamera->width;
+                        int lh = light.LightCamera->height;
+                        if (light.shadowMap.width() != lw || light.shadowMap.height() != lh) {
+                            light.shadowMap = TGAImage(lw, lh, TGAImage::RGB);
+                        }
 
+                        Camera tmp = scene.camera;
+                        scene.camera = light.LightCamera.value();
+                        pass(scene, ZTEST);
+                        scene.camera = tmp;
+
+                        zBuffer_to_TGA(light.shadowMap);
+                        light.LightN = light.LightCamera->get_viewport_matrix() * light.LightCamera->get_projection_matrix() * light.LightCamera->get_view_matrix();
+                        light.lightMove = false;
+                    }
+                }
+                break;
+        }
+    }
 }

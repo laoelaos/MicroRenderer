@@ -44,6 +44,7 @@ set(Graphics_SOURCES
         src/Graphics/Scene.cpp
         src/Graphics/Light.cpp
         src/Graphics/Model.cpp
+        src/Graphics/Geometry.cpp
 )
 
 set(SOURCES ${IMGUI_SOURCES} ${Graphics_SOURCES}

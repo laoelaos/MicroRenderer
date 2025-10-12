@@ -149,8 +149,10 @@ void control_gui() {
                 auto light_intensity = static_cast<float>(g_scene.lights[i].intensity);
 
                 if (ImGui::InputFloat3("位置", light_position.data(), "%.1f")) {
-                    g_scene.lights[i].position = {light_position[0], light_position[1], light_position[2]};
-                    g_scene.light_move = true;
+                    g_scene.lights[i].setPosition(float_array_to_vec(light_position));
+                    if (g_scene.lights[i].getType() == DIRECTIONAL_LIGHT) {
+                        g_scene.lights[i].lightMove = true;
+                    }
                 }
                 if (ImGui::ColorEdit3("颜色", light_color.data()))
                     g_scene.lights[i].color = {light_color[0], light_color[1], light_color[2]};
@@ -441,7 +443,6 @@ int main(int, char**)
 
     initTexture(g_scene.camera.width, g_scene.camera.height);
     g_rasterizer.set_msaa(1);
-    g_rasterizer.set_mode(PHONG_WITH_SHADOW);
     while (!glfwWindowShouldClose(window))
     {
         glfwPollEvents();
@@ -549,7 +550,7 @@ void performRendering() {
 
     updateRotate();
 
-    g_rasterizer.rasterize(g_scene);
+    g_rasterizer.rasterize(g_scene, PHONG_WITH_SHADOW);
     g_rasterizer.framebuffer_to_TGA(g_tgaImage);
 
     auto end_time = std::chrono::high_resolution_clock::now();

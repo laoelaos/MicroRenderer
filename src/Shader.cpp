@@ -6,29 +6,32 @@
 
 #include <iostream>
 
-vec3 Phong_Shadow_Shader::camera_pos;
-std::vector<TGAImage> Phong_Shadow_Shader::LightMaps;
-std::vector<mat4> Phong_Shadow_Shader::LightN;
-mat4 Phong_Shadow_Shader::MainCameraM;
+const std::vector<Light>* Shader::s_lightInfo;
+vec3 Phong_Shadow_Shader::s_cameraPos;
+mat4 Phong_Shadow_Shader::s_mainCameraM;
 
 vec3 Phong_Shadow_Shader::shade() {
     vec3 result{};
-    for (int i = 0; i < static_cast<int>(light_info.size()); i++)
+    for (const auto & light : *s_lightInfo)
     {
-        Light& light = light_info[i];
-
         vec3 light_color = light.get_illumination_at(position);
         vec3 light_dir = normalize(light.position - position);
-        vec3 view_dir = normalize(camera_pos - position);
+        vec3 view_dir = normalize(s_cameraPos - position);
         vec3 half_vec = normalize(light_dir + view_dir);
 
-        double visibility;
-        vec3 light_space_pos = (LightN[i] * MainCameraM * position.to_vec4(1.0)).to_vec3_point();
-        double z = light_space_pos.z;
-        if (LightMaps[i].get(static_cast<int>(light_space_pos.x), static_cast<int>(light_space_pos.y)).to_double() > z + bias) {
-            visibility = 0.0;
-        } else {
-            visibility = 1.0;
+        double visibility = 1.0;
+        if (light.getType() == DIRECTIONAL_LIGHT && light.LightCamera.has_value()) {
+            if (!light.haveShadow) {
+                // 如果这个光不投影，直接按无阴影处理
+            } else {
+                vec3 light_space_pos = (light.LightN * s_mainCameraM * position.to_vec4(1.0)).to_vec3_point();
+                double z = light_space_pos.z;
+                if (light.shadowMap.get(static_cast<int>(light_space_pos.x), static_cast<int>(light_space_pos.y)).to_double() > z + bias) {
+                    visibility = 0.0;
+                } else {
+                    visibility = 1.0;
+                }
+            }
         }
 
         //ambient

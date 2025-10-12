@@ -18,7 +18,7 @@ Scene::Scene(const std::string &filename) {
     std::string model_filename;
 
     camera = Camera();
-    Light light;
+    Light light; // 当前在解析的光
     while (std::getline(file, line)) {
         std::istringstream iss(line);
         std::string key;
@@ -41,16 +41,25 @@ Scene::Scene(const std::string &filename) {
             else if (key == "near_far") iss >> camera.near_ >> camera.far_;
             else if (key == "yaw_pitch_roll") iss >> camera.yaw >> camera.pitch >> camera.roll;
         }
-        else if (section == "Light") {
+        else if (section == "POINT_LIGHT") {
             if (key == "color") {
                 light = {};
+                light.type = POINT_LIGHT;
                 iss >> light.color.x >> light.color.y >> light.color.z;
             }
-
             else if (key == "position") iss >> light.position.x >> light.position.y >> light.position.z;
             else if (key == "intensity") iss >> light.intensity;
-
-            else if (key == "LightCamera") light.LightCamera = Camera();
+            else if (key == "end") lights.push_back(light);
+        }
+        else if (section == "DIRECTIONAL_LIGHT") {
+            if (key == "color") {
+                light = {};
+                light.type = DIRECTIONAL_LIGHT;
+                light.LightCamera.emplace(); // 实例化LightCamera
+                iss >> light.color.x >> light.color.y >> light.color.z;
+            }
+            else if (key == "position") iss >> light.position.x >> light.position.y >> light.position.z;
+            else if (key == "intensity") iss >> light.intensity;
             else if (key == "eye") iss >> light.LightCamera->eye.x >> light.LightCamera->eye.y >> light.LightCamera->eye.z;
             else if (key == "center") iss >> light.LightCamera->center.x >> light.LightCamera->center.y >> light.LightCamera->center.z;
             else if (key == "up") iss >> light.LightCamera->up.x >> light.LightCamera->up.y >> light.LightCamera->up.z;
@@ -58,7 +67,6 @@ Scene::Scene(const std::string &filename) {
             else if (key == "fov") iss >> light.LightCamera->fov;
             else if (key == "near_far") iss >> light.LightCamera->near_ >> light.LightCamera->far_;
             else if (key == "yaw_pitch_roll") iss >> light.LightCamera->yaw >> light.LightCamera->pitch >> light.LightCamera->roll;
-
             else if (key == "end") lights.push_back(light);
         }
         else if (section == "Model") {
@@ -149,22 +157,26 @@ void Scene::save_path_file(const std::string &filename) const {
     file << "yaw_pitch_roll " << camera.yaw << " " << camera.pitch << " " << camera.roll << "\n\n";
 
     for (const auto& light : lights) {
-        file << "[Light]\n";
-        file << "color " << light.color.x << " " << light.color.y << " " << light.color.z << "\n";
-        file << "position " << light.position.x << " " << light.position.y << " " << light.position.z << "\n";
-        file << "intensity " << light.intensity << "\n";
-        if (light.LightCamera.has_value()) {
-            file << "LightCamera" << '\n';
-            file << "eye " << light.LightCamera.value().eye.x << " " << light.LightCamera.value().eye.y << " " << light.LightCamera.value().eye.z << "\n";
-            file << "center " << light.LightCamera.value().center.x << " " << light.LightCamera.value().center.y << " " << light.LightCamera.value().center.z << "\n";
-            file << "up " << light.LightCamera.value().up.x << " " << light.LightCamera.value().up.y << " " << light.LightCamera.value().up.z << "\n";
-            file << "size " << light.LightCamera.value().width << " " << light.LightCamera.value().height << "\n";
-            file << "fov " << light.LightCamera.value().fov << "\n";
-            file << "near_far " << light.LightCamera.value().near_ << " " << light.LightCamera.value().far_ << "\n";
-            file << "yaw_pitch_roll " << light.LightCamera.value().yaw << " " << light.LightCamera.value().pitch << " " << light.LightCamera.value().roll << "\n\n";
-        } else {
-            file << "end\n\n";
+        if (light.getType() == POINT_LIGHT) {
+            file << "[POINT_LIGHT]\n";
+            file << "color " << light.color.x << " " << light.color.y << " " << light.color.z << "\n";
+            file << "position " << light.position.x << " " << light.position.y << " " << light.position.z << "\n";
+            file << "intensity " << light.intensity << "\n";
+        } else if (light.getType() == DIRECTIONAL_LIGHT && light.LightCamera.has_value()) {
+            file << "[DIRECTIONAL_LIGHT]\n";
+            file << "color " << light.color.x << " " << light.color.y << " " << light.color.z << "\n";
+            file << "position " << light.position.x << " " << light.position.y << " " << light.position.z << "\n";
+            file << "intensity " << light.intensity << "\n";
+            const Camera& lc = light.LightCamera.value();
+            file << "eye " << lc.eye.x << " " << lc.eye.y << " " << lc.eye.z << "\n";
+            file << "center " << lc.center.x << " " << lc.center.y << " " << lc.center.z << "\n";
+            file << "up " << lc.up.x << " " << lc.up.y << " " << lc.up.z << "\n";
+            file << "size " << lc.width << " " << lc.height << "\n";
+            file << "fov " << lc.fov << "\n";
+            file << "near_far " << lc.near_ << " " << lc.far_ << "\n";
+            file << "yaw_pitch_roll " << lc.yaw << " " << lc.pitch << " " << lc.roll << "\n";
         }
+        file << "end\n\n";
     }
 
     for (const auto& model : models) {

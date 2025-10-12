@@ -13,7 +13,7 @@
 
 class Shader {
 public:
-    std::vector<Light> light_info;
+    static const std::vector<Light>* s_lightInfo;
     virtual ~Shader() = default;
     virtual vec3 shade() = 0;
 };
@@ -29,10 +29,8 @@ public:
     vec2 tex_coords;
     const PhongProperties* properties;
 
-    static vec3 camera_pos;
-    static std::vector<TGAImage> LightMaps;
-    static std::vector<mat4> LightN;
-    static mat4 MainCameraM;
+    static vec3 s_cameraPos;
+    static mat4 s_mainCameraM;
 
     vec3 shade() override;
 };

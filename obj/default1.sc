@@ -9,7 +9,7 @@ fov 55
 near_far 2 3
 yaw_pitch_roll -90 0 0
 
-[Light]
+[POINT_LIGHT]
 color 1 1 1
 position 20 20 20
 intensity 2000

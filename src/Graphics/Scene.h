@@ -19,7 +19,6 @@ public:
     Camera camera;
     std::vector<Light> lights;
     std::vector<Model> models;
-    bool light_move = true;
 
     Scene() = default;
     explicit Scene(const std::string& filename);

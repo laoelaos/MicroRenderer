@@ -17,22 +17,21 @@ class Rasterizer {
 public:
     Rasterizer();
 
-    void build_buffer();
 
     void set_msaa(int MSAA);
-    void set_mode(RasterizerMode mode) { this->m_mode = mode; }
 
-    void rasterize(Scene& scene);
+    void rasterize(Scene& scene, RasterizerMode mode);
 
     void framebuffer_to_TGA(TGAImage& framebuffer);
     void zBuffer_to_TGA(TGAImage& framebuffer);
 private:
-    void processLight();
+    void processLight(Scene& scene, std::vector<Light>& lights);
 
     void pass(const Scene& scene, RasterizerMode mode);
 
     void Ztest(const Model& model);
     void Phong(const Model& model);
+    void build_buffer();
 
     int get_index(int x, int y) const { return x + y * m_width; }
     int get_tile_lock(int x, int y) const {
@@ -48,7 +47,6 @@ private:
 
     //options
     int m_MSAA = 1;
-    RasterizerMode m_mode;
 
     //lock
     int m_tileRows = 20;
