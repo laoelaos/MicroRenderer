@@ -61,42 +61,42 @@ struct RenderContext {
     bool force_render = true;
 };
 
-static Scene scene("../obj/default2.sc");
-static RenderContext renderContext;
+static Scene g_scene("../obj/default2.sc");
+static RenderContext g_renderContext;
 
-static Rasterizer rasterizer = {};
+static Rasterizer g_rasterizer = {};
 
-static GLuint renderedTexture = 0;
-static std::vector<unsigned char> imageData;
-static TGAImage tgaImage(scene.camera.width, scene.camera.height, TGAImage::RGB);
+static GLuint g_renderedTexture = 0;
+static std::vector<unsigned char> g_imageData;
+static TGAImage g_tgaImage(g_scene.camera.width, g_scene.camera.height, TGAImage::RGB);
 
 void control_gui() {
     ImGui::Begin("渲染控制面板");
 
     //TODO: 渲染类型选择
     if (ImGui::CollapsingHeader("基本设置")) {
-        if (ImGui::InputInt("MSAA级别", &renderContext.msaa_level, 1, 1)) {
-            rasterizer.set_msaa(std::clamp(renderContext.msaa_level, 1, 10));
+        if (ImGui::InputInt("MSAA级别", &g_renderContext.msaa_level, 1, 1)) {
+            g_rasterizer.set_msaa(std::clamp(g_renderContext.msaa_level, 1, 10));
         }
     }
 
     if (ImGui::CollapsingHeader("相机设置")) {
-        std::array<float, 3> eye_pos = to_float_array(scene.camera.eye);
-        std::array<float, 3> center_pos = to_float_array(scene.camera.center);
-        std::array<float, 3> up_dir = to_float_array(scene.camera.up);
-        auto fov = static_cast<float>(scene.camera.fov);
-        auto near_plane = static_cast<float>(scene.camera.near_);
-        auto far_plane = static_cast<float>(scene.camera.far_);
-        auto yaw = static_cast<float>(scene.camera.yaw);
-        auto pitch = static_cast<float>(scene.camera.pitch);
-        auto roll = static_cast<float>(scene.camera.roll);
+        std::array<float, 3> eye_pos = to_float_array(g_scene.camera.eye);
+        std::array<float, 3> center_pos = to_float_array(g_scene.camera.center);
+        std::array<float, 3> up_dir = to_float_array(g_scene.camera.up);
+        auto fov = static_cast<float>(g_scene.camera.fov);
+        auto near_plane = static_cast<float>(g_scene.camera.near_);
+        auto far_plane = static_cast<float>(g_scene.camera.far_);
+        auto yaw = static_cast<float>(g_scene.camera.yaw);
+        auto pitch = static_cast<float>(g_scene.camera.pitch);
+        auto roll = static_cast<float>(g_scene.camera.roll);
 
         if (ImGui::IsItemHovered())
             ImGui::SetTooltip("远平面应大于近平面");
 
-        ImGui::Checkbox("使用滑条控制相机欧拉角", &renderContext.use_euler_angles);
+        ImGui::Checkbox("使用滑条控制相机欧拉角", &g_renderContext.use_euler_angles);
 
-        if (renderContext.use_euler_angles) {
+        if (g_renderContext.use_euler_angles) {
             bool view_changed = false;
             if (ImGui::SliderFloat("水平旋转 (Yaw)", &yaw, -180.0f, 180.0f, "%.1f°"))
                 view_changed = true;
@@ -105,63 +105,63 @@ void control_gui() {
             if (ImGui::SliderFloat("滚转 (roll)", &roll, -180.0f, 180.0f, "%.1f°"))
                 view_changed = true;
             if (view_changed)
-                scene.camera.set_toward_from_center(yaw, pitch, roll);
+                g_scene.camera.set_toward_from_center(yaw, pitch, roll);
 
             if (ImGui::InputFloat3("相机位置", eye_pos.data(), "%.2f"))
-                scene.camera.eye = float_array_to_vec(eye_pos);
+                g_scene.camera.eye = float_array_to_vec(eye_pos);
             ImGui::BeginDisabled();
-            ImGui::InputFloat3("上方向", to_float_array(scene.camera.up).data(), "%.2f");
+            ImGui::InputFloat3("上方向", to_float_array(g_scene.camera.up).data(), "%.2f");
             ImGui::EndDisabled();
         } else {
             if (ImGui::InputFloat3("观察点", eye_pos.data(), "%.2f"))
-                scene.camera.eye = float_array_to_vec(eye_pos);
+                g_scene.camera.eye = float_array_to_vec(eye_pos);
             if (ImGui::InputFloat3("相机位置", center_pos.data(), "%.2f"))
-                scene.camera.center = float_array_to_vec(center_pos);
+                g_scene.camera.center = float_array_to_vec(center_pos);
             if (ImGui::InputFloat3("上方向", up_dir.data(), "%.2f"))
-                scene.camera.up = float_array_to_vec(up_dir);
+                g_scene.camera.up = float_array_to_vec(up_dir);
         }
 
         if (ImGui::InputFloat("视场角FOV", &fov, 1.0f, 5.0f, "%.1f"))
-            scene.camera.fov = fov;
+            g_scene.camera.fov = fov;
         if (ImGui::InputFloat("近平面", &near_plane, 0.1f, 0.5f, "%.2f"))
-            scene.camera.near_ = near_plane;
+            g_scene.camera.near_ = near_plane;
         if (ImGui::InputFloat("远平面", &far_plane, 0.1f, 0.5f, "%.2f"))
-            scene.camera.far_ = far_plane;
+            g_scene.camera.far_ = far_plane;
 
         if (ImGui::Button("重置相机"))
-            scene.camera = {};
+            g_scene.camera = {};
     }
 
     //TODO: LightCamera管理
     if (ImGui::CollapsingHeader("光照设置")) {
-        ImGui::Text("光源数量: %zu", scene.lights.size());
+        ImGui::Text("光源数量: %zu", g_scene.lights.size());
 
         if (ImGui::Button("添加光源"))
-            scene.lights.emplace_back();
+            g_scene.lights.emplace_back();
 
         ImGui::Separator();
-        for (size_t i = 0; i < scene.lights.size(); i++) {
+        for (size_t i = 0; i < g_scene.lights.size(); i++) {
             ImGui::PushID(static_cast<int>(i));
 
             std::string header = "光源 " + std::to_string(i + 1);
             if (ImGui::TreeNode(header.c_str())) {
-                std::array<float, 3> light_position = to_float_array(scene.lights[i].position);
-                std::array<float, 3> light_color = to_float_array(scene.lights[i].color);
-                auto light_intensity = static_cast<float>(scene.lights[i].intensity);
+                std::array<float, 3> light_position = to_float_array(g_scene.lights[i].position);
+                std::array<float, 3> light_color = to_float_array(g_scene.lights[i].color);
+                auto light_intensity = static_cast<float>(g_scene.lights[i].intensity);
 
                 if (ImGui::InputFloat3("位置", light_position.data(), "%.1f")) {
-                    scene.lights[i].position = {light_position[0], light_position[1], light_position[2]};
-                    scene.light_move = true;
+                    g_scene.lights[i].position = {light_position[0], light_position[1], light_position[2]};
+                    g_scene.light_move = true;
                 }
                 if (ImGui::ColorEdit3("颜色", light_color.data()))
-                    scene.lights[i].color = {light_color[0], light_color[1], light_color[2]};
+                    g_scene.lights[i].color = {light_color[0], light_color[1], light_color[2]};
                 if (ImGui::InputFloat("光强", &light_intensity, 10.0f, 100.0f, "%.1f"))
-                    scene.lights[i].intensity = std::max(0.0f, light_intensity);
+                    g_scene.lights[i].intensity = std::max(0.0f, light_intensity);
 
-                if (scene.lights.size() > 1) {
+                if (g_scene.lights.size() > 1) {
                     ImGui::SameLine();
                     if (ImGui::Button("删除")) {
-                        scene.lights.erase(scene.lights.begin() + static_cast<int64_t>(i));
+                        g_scene.lights.erase(g_scene.lights.begin() + static_cast<int64_t>(i));
                         ImGui::TreePop();
                         ImGui::PopID();
                         break;
@@ -174,22 +174,22 @@ void control_gui() {
     }
 
     if (ImGui::CollapsingHeader("模型管理")) {
-        ImGui::Text("场景中的模型个数: %zu", scene.models.size());
+        ImGui::Text("场景中的模型个数: %zu", g_scene.models.size());
 
         if (ImGui::Button("添加新模型"))
-            scene.models.emplace_back();
+            g_scene.models.emplace_back();
 
         ImGui::Separator();
 
         std::vector<const char*> model_names;
-        for (auto & model : scene.models)
+        for (auto & model : g_scene.models)
             model_names.push_back(model.name.c_str());
 
         if (!model_names.empty()) {
-            ImGui::Combo("选择模型", &renderContext.selected_model, model_names.data(), static_cast<int>(model_names.size()));
+            ImGui::Combo("选择模型", &g_renderContext.selected_model, model_names.data(), static_cast<int>(model_names.size()));
 
-            if (renderContext.selected_model >= 0 && renderContext.selected_model < static_cast<int>(scene.models.size())) {
-                Model& model = scene.models[renderContext.selected_model];
+            if (g_renderContext.selected_model >= 0 && g_renderContext.selected_model < static_cast<int>(g_scene.models.size())) {
+                Model& model = g_scene.models[g_renderContext.selected_model];
 
                 if (ImGui::TreeNode("模型基础设置")) {
                     ImGui::Checkbox("启用模型", &model.enable);
@@ -272,10 +272,10 @@ void control_gui() {
                 }
 
                 ImGui::Separator();
-                if (scene.models.size() > 1) {  // 至少保留一个模型
+                if (g_scene.models.size() > 1) {  // 至少保留一个模型
                     if (ImGui::Button("删除模型")) {
-                        scene.models.erase(scene.models.begin() + renderContext.selected_model);
-                        renderContext.selected_model = std::min(renderContext.selected_model, static_cast<int>(scene.models.size()) - 1);
+                        g_scene.models.erase(g_scene.models.begin() + g_renderContext.selected_model);
+                        g_renderContext.selected_model = std::min(g_renderContext.selected_model, static_cast<int>(g_scene.models.size()) - 1);
                     }
                 }
             }
@@ -283,23 +283,23 @@ void control_gui() {
     }
 
     if (ImGui::CollapsingHeader("实时渲染设置", ImGuiTreeNodeFlags_DefaultOpen)) {
-            ImGui::Checkbox("启用实时渲染", &renderContext.real_time_rendering);
-            ImGui::Checkbox("自动旋转模型", &renderContext.auto_rotate);
+            ImGui::Checkbox("启用实时渲染", &g_renderContext.real_time_rendering);
+            ImGui::Checkbox("自动旋转模型", &g_renderContext.auto_rotate);
 
-            if (renderContext.auto_rotate) {
-                ImGui::SliderFloat("旋转速度", &renderContext.rotation_speed, 0.1f, 5.0f, "%.1f");
+            if (g_renderContext.auto_rotate) {
+                ImGui::SliderFloat("旋转速度", &g_renderContext.rotation_speed, 0.1f, 5.0f, "%.1f");
             }
 
             // 目标帧率设置
-            ImGui::SliderFloat("目标帧率", &renderContext.target_fps, 10.0f, 120.0f, "%.1f");
+            ImGui::SliderFloat("目标帧率", &g_renderContext.target_fps, 10.0f, 120.0f, "%.1f");
 
-            int refresh_interval = static_cast<int>(renderContext.refresh_interval);
+            int refresh_interval = static_cast<int>(g_renderContext.refresh_interval);
             ImGui::InputInt("信息刷新间隔(ms)", &refresh_interval);
-            renderContext.refresh_interval = std::max(100, refresh_interval);
+            g_renderContext.refresh_interval = std::max(100, refresh_interval);
         }
 
     if (ImGui::Button("强制重新渲染")) {
-        renderContext.force_render = true;
+        g_renderContext.force_render = true;
     }
 
     ImGui::End();
@@ -313,26 +313,26 @@ void output_gui() {
     auto current_time = std::chrono::high_resolution_clock::now();
     auto frame_duration = std::chrono::duration_cast<std::chrono::milliseconds>(current_time - last_frame_time).count();
 
-    if (renderContext.force_render) {
+    if (g_renderContext.force_render) {
         performRendering();
         loadTextureToGl();
-        renderContext.force_render = false;
-        renderContext.current_fps = 0.0f;
+        g_renderContext.force_render = false;
+        g_renderContext.current_fps = 0.0f;
     }
 
     static int frame_count = 0;
     static long long frame_time_accumulator = 0;
-    if (renderContext.real_time_rendering ||
-        renderContext.auto_rotate) {
+    if (g_renderContext.real_time_rendering ||
+        g_renderContext.auto_rotate) {
         frame_count++;
         frame_time_accumulator += frame_duration;
 
         performRendering();
         loadTextureToGl();
-        renderContext.force_render = false;
+        g_renderContext.force_render = false;
         last_frame_time = current_time;
-        if (frame_duration > 0 && frame_time_accumulator > renderContext.refresh_interval) {
-            renderContext.current_fps = 1000.0f / static_cast<float>(frame_time_accumulator) * static_cast<float>(frame_count);
+        if (frame_duration > 0 && frame_time_accumulator > g_renderContext.refresh_interval) {
+            g_renderContext.current_fps = 1000.0f / static_cast<float>(frame_time_accumulator) * static_cast<float>(frame_count);
             frame_count = 0;
             frame_time_accumulator = 0;
         }
@@ -341,7 +341,7 @@ void output_gui() {
     // 获取窗口内容区域大小以调整图像大小
     ImVec2 windowSize = ImGui::GetContentRegionAvail();
 
-    auto aspectRatio = static_cast<float>(scene.camera.aspect);
+    auto aspectRatio = static_cast<float>(g_scene.camera.aspect);
 
     // 显示纹理，保持纵横比
     ImVec2 imageSize;
@@ -359,18 +359,18 @@ void output_gui() {
     }
 
     // 显示纹理信息和预览
-    ImGui::Text("渲染纹理: ID=%u, 尺寸=%dx%d", renderedTexture,
-                tgaImage.width(), tgaImage.height());
-    ImGui::Text("渲染时间: %lld ms | FPS: %.1f", renderContext.last_render_time, renderContext.current_fps);
+    ImGui::Text("渲染纹理: ID=%u, 尺寸=%dx%d", g_renderedTexture,
+                g_tgaImage.width(), g_tgaImage.height());
+    ImGui::Text("渲染时间: %lld ms | FPS: %.1f", g_renderContext.last_render_time, g_renderContext.current_fps);
 
     // 显示渲染模式状态
-    if (renderContext.real_time_rendering || renderContext.auto_rotate) {
+    if (g_renderContext.real_time_rendering || g_renderContext.auto_rotate) {
         ImGui::TextColored(ImVec4(0, 1, 0, 1), "实时渲染已启用");
     } else {
         ImGui::TextColored(ImVec4(1, 1, 0, 1), "按需渲染模式");
     }
 
-    ImGui::Image((void*)static_cast<intptr_t>(renderedTexture), imageSize);
+    ImGui::Image((void*)static_cast<intptr_t>(g_renderedTexture), imageSize);
     ImGui::End();
 }
 
@@ -440,9 +440,9 @@ int main(int, char**)
 
     ImVec4 clear_color = ImVec4(0.15f, 0.15f, 0.15f, 1.00f);
 
-    initTexture(scene.camera.width, scene.camera.height);
-    rasterizer.set_msaa(1);
-    rasterizer.set_mode(PHONG_WITH_SHADOW);
+    initTexture(g_scene.camera.width, g_scene.camera.height);
+    g_rasterizer.set_msaa(1);
+    g_rasterizer.set_mode(PHONG_WITH_SHADOW);
     while (!glfwWindowShouldClose(window))
     {
         glfwPollEvents();
@@ -474,8 +474,8 @@ int main(int, char**)
     //scene.save_path_file();
 
     // 清理资源
-    if (renderedTexture != 0) {
-        glDeleteTextures(1, &renderedTexture);
+    if (g_renderedTexture != 0) {
+        glDeleteTextures(1, &g_renderedTexture);
     }
 
     ImGui_ImplOpenGL3_Shutdown();   // Cleanup
@@ -522,27 +522,27 @@ void print_utf8_stdout(const char* fmt, ...) {
 }
 
 void initTexture(int width, int height) {
-    if (renderedTexture != 0) {
-        glDeleteTextures(1, &renderedTexture);
+    if (g_renderedTexture != 0) {
+        glDeleteTextures(1, &g_renderedTexture);
     }
 
-    glGenTextures(1, &renderedTexture);
-    glBindTexture(GL_TEXTURE_2D, renderedTexture);
+    glGenTextures(1, &g_renderedTexture);
+    glBindTexture(GL_TEXTURE_2D, g_renderedTexture);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, 0x812F);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, 0x812F);
 
     // 初始化一个空白纹理
-    imageData.resize(width * height * 4, 255); // 全白RGBA格式
+    g_imageData.resize(width * height * 4, 255); // 全白RGBA格式
 }
 
 void updateRotate() {
-    if (!renderContext.auto_rotate)
+    if (!g_renderContext.auto_rotate)
         return;
 
-    double delta_time = 1.0 / renderContext.target_fps; // 估算的时间间隔
-    scene.camera.rotate_around_eye(renderContext.rotation_speed * delta_time * 60.0, 0, 0);
+    double delta_time = 1.0 / g_renderContext.target_fps; // 估算的时间间隔
+    g_scene.camera.rotate_around_eye(g_renderContext.rotation_speed * delta_time * 60.0, 0, 0);
 }
 
 void performRendering() {
@@ -550,36 +550,36 @@ void performRendering() {
 
     updateRotate();
 
-    rasterizer.rasterize(scene);
-    rasterizer.framebuffer_to_TGA(tgaImage);
+    g_rasterizer.rasterize(g_scene);
+    g_rasterizer.framebuffer_to_TGA(g_tgaImage);
 
     auto end_time = std::chrono::high_resolution_clock::now();
     auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end_time - start_time).count();
 
     static long long frame_count = 0;
     frame_count += duration;
-    if (frame_count >= renderContext.refresh_interval) {
-        renderContext.last_render_time = duration;
+    if (frame_count >= g_renderContext.refresh_interval) {
+        g_renderContext.last_render_time = duration;
         frame_count = 0;
     }
 }
 
 void loadTextureToGl() {
-    int width = tgaImage.width();
-    int height = tgaImage.height();
+    int width = g_tgaImage.width();
+    int height = g_tgaImage.height();
 
     // 从TGA转换到RGBA格式
     for (int y = 0; y < height; y++) {
         for (int x = 0; x < width; x++) {
-            TGAColor color = tgaImage.get(x, y);
+            TGAColor color = g_tgaImage.get(x, y);
             int index = ((height - y - 1) * width + x) * 4;
-            imageData[index] = color.bgra[2];     // R
-            imageData[index + 1] = color.bgra[1]; // G
-            imageData[index + 2] = color.bgra[0]; // B
-            imageData[index + 3] = 255;           // A (强制设为不透明)
+            g_imageData[index] = color.bgra[2];     // R
+            g_imageData[index + 1] = color.bgra[1]; // G
+            g_imageData[index + 2] = color.bgra[0]; // B
+            g_imageData[index + 3] = 255;           // A (强制设为不透明)
         }
     }
 
-    glBindTexture(GL_TEXTURE_2D, renderedTexture);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, imageData.data());
+    glBindTexture(GL_TEXTURE_2D, g_renderedTexture);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, g_imageData.data());
 }

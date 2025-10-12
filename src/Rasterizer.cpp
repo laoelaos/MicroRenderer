@@ -10,24 +10,24 @@
 #include "Shader.h"
 
 Rasterizer::Rasterizer() {
-    width = 1;
-    height = 1;
-    model = identity_matrix<4>();
-    view = identity_matrix<4>();
-    projection = identity_matrix<4>();
-    viewport = identity_matrix<4>();
-    lights = {};
-    texture = {};
-    normal_map = {};
-    mode = PHONG_WITH_SHADOW;
+    m_width = 1;
+    m_height = 1;
+    m_model = identity_matrix<4>();
+    m_view = identity_matrix<4>();
+    m_projection = identity_matrix<4>();
+    m_viewport = identity_matrix<4>();
+    m_lights = {};
+    m_texture = {};
+    m_normalMap = {};
+    m_mode = PHONG_WITH_SHADOW;
     build_buffer();
 }
 
 void Rasterizer::build_buffer() {
-    z_buffer.resize(width * height);
-    framebuffer.resize(width * height);
-    std::ranges::fill(framebuffer, vec3());
-    std::ranges::fill(z_buffer, -std::numeric_limits<double>::infinity());
+    m_zBuffer.resize(m_width * m_height);
+    m_frameBuffer.resize(m_width * m_height);
+    std::ranges::fill(m_frameBuffer, vec3());
+    std::ranges::fill(m_zBuffer, -std::numeric_limits<double>::infinity());
 }
 
 //TODO: 暂时禁用MSAA, 目前实现方式不好
@@ -45,12 +45,12 @@ void Rasterizer::set_msaa(int MSAA) {
 //TODO: 目前透视投影前z=0的点经过透视后w=0, 导致无法投影到屏幕上，应该实现裁剪来处理
 
 void Rasterizer::rasterize(Scene &scene) {
-    if (mode == ZTEST) {
+    if (m_mode == ZTEST) {
         pass(scene, ZTEST);
-    } else if (mode == PHONG) {
+    } else if (m_mode == PHONG) {
         pass(scene, PHONG);
         Phong_Shadow_Shader::camera_pos = scene.camera.center;
-    } else if (mode == PHONG_WITH_SHADOW) {
+    } else if (m_mode == PHONG_WITH_SHADOW) {
         if (scene.light_move) {
             Camera tmp = scene.camera;
             Phong_Shadow_Shader::LightMaps.clear();
@@ -79,23 +79,23 @@ void Rasterizer::rasterize(Scene &scene) {
 }
 
 void Rasterizer::pass(const Scene& scene, RasterizerMode mode) {
-    width = scene.camera.width;
-    height = scene.camera.height;
+    m_width = scene.camera.width;
+    m_height = scene.camera.height;
     build_buffer();
-    view = scene.camera.get_view_matrix();
-    projection = scene.camera.get_projection_matrix();
-    viewport = scene.camera.get_viewport_matrix();
-    lights = scene.lights;
+    m_view = scene.camera.get_view_matrix();
+    m_projection = scene.camera.get_projection_matrix();
+    m_viewport = scene.camera.get_viewport_matrix();
+    m_lights = scene.lights;
     for (const Model& obj_model: scene.models) {
-        model = obj_model.get_transform_matrix();
-        mvpv = viewport * projection * view * model;
-        mv = view * model;
-        mvit = (view * model).invert().transpose();
+        m_model = obj_model.get_transform_matrix();
+        m_MVPV = m_viewport * m_projection * m_view * m_model;
+        m_MV = m_view * m_model;
+        m_MVit = (m_view * m_model).invert().transpose();
 
         if (mode == ZTEST)
             Ztest(obj_model);
         if (mode == PHONG_WITH_SHADOW) {
-            Phong_Shadow_Shader::MainCameraM = view.invert();
+            Phong_Shadow_Shader::MainCameraM = m_view.invert();
             Ztest(obj_model);
             Phong(obj_model);
         }
@@ -107,48 +107,48 @@ void Rasterizer::pass(const Scene& scene, RasterizerMode mode) {
 }
 
 void Rasterizer::Phong(const Model& model) {
-    texture = model.material.texture;
-    normal_map = model.material.normal_map;
+    m_texture = model.material.texture;
+    m_normalMap = model.material.normal_map;
     bool diffuse_mapping = model.material.diffuse_mapping;
     NormalType normal_type = model.material.normal_type;
     ShadeFrequency shade_frequency = model.material.shade_frequency;
 
     size_t tri_count = model.triangles.size();
-#pragma omp parallel for default(none) shared(model, tri_count, diffuse_mapping, normal_type, shade_frequency, mvit, mvpv, mv, width, height, framebuffer, z_buffer, lights, texture, normal_map)
+#pragma omp parallel for default(none) shared(model, tri_count, diffuse_mapping, normal_type, shade_frequency, m_MVit, m_MVPV, m_MV, m_width, m_height, m_frameBuffer, m_zBuffer, m_lights, m_texture, m_normalMap)
     for (size_t idx = 0; idx < tri_count; ++idx) {
         Phong_Shadow_Shader shader;
-        shader.light_info = lights;
+        shader.light_info = m_lights;
         shader.properties = &model.material.properties;
 
         triangle now_triangle = model.triangles[idx];
-        now_triangle.get_vertices(mvpv, mv);
-        now_triangle.get_normal(mvit);
+        now_triangle.get_vertices(m_MVPV, m_MV);
+        now_triangle.get_normal(m_MVit);
         if (now_triangle.is_backface())
              continue;
 
-        auto [x_min, x_max, y_min, y_max] = now_triangle.find_bounding_box_int(width, height);
+        auto [x_min, x_max, y_min, y_max] = now_triangle.find_bounding_box_int(m_width, m_height);
         for (int x = x_min; x <= x_max; x++) {
             for (int y = y_min; y <= y_max; y++) {
                 now_triangle.get_barycentric_correct(x + .5, y + .5);
                 if (now_triangle.is_invalid())
                      continue;
 
-                std::lock_guard guard(tile_locks[get_tile_lock(x, y)]);
+                std::lock_guard guard(m_tileLocks[get_tile_lock(x, y)]);
                 double z = now_triangle.get_interpolated_z();
-                if (z >= z_buffer[get_index(x, y)]) {
-                    z_buffer[get_index(x, y)] = z;
+                if (z >= m_zBuffer[get_index(x, y)]) {
+                    m_zBuffer[get_index(x, y)] = z;
 
                     shader.position = now_triangle.get_interpolated_world_position();
                     shader.tex_coords = now_triangle.get_interpolated_tex_coords();
 
                     if (diffuse_mapping) {
-                        shader.color = texture.get_bilinear(shader.tex_coords);
+                        shader.color = m_texture.get_bilinear(shader.tex_coords);
                     } else {
                         shader.color = {0.5, 0.5, 0.5};
                     }
 
                     if (normal_type == GLOBAL) {
-                        shader.normal = normal_map.get_bilinear(shader.tex_coords) * 2 - vec3{1, 1, 1};
+                        shader.normal = m_normalMap.get_bilinear(shader.tex_coords) * 2 - vec3{1, 1, 1};
                     } else if (shade_frequency == PER_FRAGMENT) {
                         shader.normal = now_triangle.get_interpolated_normal();
                     } else {
@@ -169,11 +169,11 @@ void Rasterizer::Phong(const Model& model) {
                             vec3 n = shader.normal;
                             mat<3, 3> TBN{{{t.x, b.x, n.x}, {t.y, b.y, n.y}, {t.z, b.z, n.z}}};
                             shader.normal = normalize(
-                                TBN * (normal_map.get_bilinear(shader.tex_coords) * 2 - vec3{1, 1, 1}));
+                                TBN * (m_normalMap.get_bilinear(shader.tex_coords) * 2 - vec3{1, 1, 1}));
                         }
                     }
 
-                    framebuffer[get_index(x, y)] = shader.shade();
+                    m_frameBuffer[get_index(x, y)] = shader.shade();
                 }
             }
         }
@@ -181,23 +181,23 @@ void Rasterizer::Phong(const Model& model) {
 }
 
 void Rasterizer::Ztest(const Model& model) {
-#pragma omp parallel for default(none) shared(model, mvpv, mv, width, height, z_buffer, tile_locks)
+#pragma omp parallel for default(none) shared(model, m_MVPV, m_MV, m_width, m_height, m_zBuffer, m_tileLocks)
     for (auto now_triangle : model.triangles) {
-        now_triangle.get_vertices(mvpv, mv);
+        now_triangle.get_vertices(m_MVPV, m_MV);
         if (now_triangle.is_backface())
             continue;
 
-        auto [x_min, x_max, y_min, y_max] = now_triangle.find_bounding_box_int(width, height);
+        auto [x_min, x_max, y_min, y_max] = now_triangle.find_bounding_box_int(m_width, m_height);
         for (int x = x_min; x <= x_max; x++) {
             for (int y = y_min; y <= y_max; y++) {
                 now_triangle.get_barycentric(x + .5, y + .5);
                 if (now_triangle.is_invalid())
                     continue;
 
-                std::lock_guard guard(tile_locks[get_tile_lock(x, y)]);
+                std::lock_guard guard(m_tileLocks[get_tile_lock(x, y)]);
                 double z = now_triangle.get_interpolated_z();
-                if (z >= z_buffer[get_index(x, y)]) {
-                    z_buffer[get_index(x, y)] = z;
+                if (z >= m_zBuffer[get_index(x, y)]) {
+                    m_zBuffer[get_index(x, y)] = z;
                 }
             }
         }
@@ -205,17 +205,17 @@ void Rasterizer::Ztest(const Model& model) {
 }
 
 void Rasterizer::framebuffer_to_TGA(TGAImage& framebuffer_) {
-    for (int y = 0; y < height; y++) {
-        for (int x = 0; x < width; x++) {
-            framebuffer_.set(x, y, TGAColor(framebuffer[get_index(x, y)]));
+    for (int y = 0; y < m_height; y++) {
+        for (int x = 0; x < m_width; x++) {
+            framebuffer_.set(x, y, TGAColor(m_frameBuffer[get_index(x, y)]));
         }
     }
 }
 
 void Rasterizer::zbuffer_to_TGA(TGAImage& framebuffer_) {
-    for (int y = 0; y < height; y++) {
-        for (int x = 0; x < width; x++) {
-            framebuffer_.set(x, y, TGAColor(z_buffer[get_index(x, y)]));
+    for (int y = 0; y < m_height; y++) {
+        for (int x = 0; x < m_width; x++) {
+            framebuffer_.set(x, y, TGAColor(m_zBuffer[get_index(x, y)]));
         }
     }
 }

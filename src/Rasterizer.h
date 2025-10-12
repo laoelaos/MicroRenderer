@@ -23,7 +23,7 @@ public:
     void build_buffer();
 
     void set_msaa(int MSAA);
-    void set_mode(RasterizerMode mode) { this->mode = mode; }
+    void set_mode(RasterizerMode mode) { this->m_mode = mode; }
 
     void rasterize(Scene& scene);
 
@@ -35,32 +35,32 @@ private:
     void Ztest(const Model& model);
     void Phong(const Model& model);
 
-    int get_index(int x, int y) const { return x + y * width; }
+    int get_index(int x, int y) const { return x + y * m_width; }
     int get_tile_lock(int x, int y) const {
-        int tile_x = x / (width / tile_cols);
-        int tile_y = y / (height / tile_rows);
-        return tile_x + tile_y * tile_cols;
+        int tile_x = x / (m_width / m_tileCols);
+        int tile_y = y / (m_height / m_tileRows);
+        return tile_x + tile_y * m_tileCols;
     }
 
     //basic
-    int width, height;
-    std::vector<double> z_buffer;
-    std::vector<vec3> framebuffer;
+    int m_width, m_height;
+    std::vector<double> m_zBuffer;
+    std::vector<vec3> m_frameBuffer;
 
     //options
-    int MSAA = 1;
-    RasterizerMode mode;
+    int m_MSAA = 1;
+    RasterizerMode m_mode;
 
     //lock
-    int tile_rows = 20;
-    int tile_cols = 20;
-    std::vector<std::mutex> tile_locks = std::vector<std::mutex>(tile_rows * tile_cols);
+    int m_tileRows = 20;
+    int m_tileCols = 20;
+    std::vector<std::mutex> m_tileLocks = std::vector<std::mutex>(m_tileRows * m_tileCols);
 
     //helper
-    TGAImage texture, normal_map;
-    std::vector<Light> lights;
-    mat4 model, view, projection, viewport;
-    mat4 mvpv, mv, mvit, mvpvi;
+    TGAImage m_texture, m_normalMap;
+    std::vector<Light> m_lights;
+    mat4 m_model, m_view, m_projection, m_viewport;
+    mat4 m_MVPV, m_MV, m_MVit, m_MVPVi;
 };
 
 #endif //RASTERIZER_H
