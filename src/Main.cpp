@@ -145,7 +145,7 @@ void control_gui() {
                 if (ImGui::InputFloat3("位置", light_position.data(), "%.1f")) {
                     g_scene.lights[i].setPosition(float_array_to_vec(light_position));
                     if (g_scene.lights[i].getType() == DIRECTIONAL_LIGHT) {
-                        g_scene.lights[i].lightMove = true;
+                        g_scene.lights[i].dirInfo->lightMove = true;
                     }
                 }
                 if (ImGui::ColorEdit3("颜色", light_color.data()))

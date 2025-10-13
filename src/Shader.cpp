@@ -21,10 +21,10 @@ vec3 Phong_Shadow_Shader::shade() {
         vec3 half_vec = normalize(light_dir + view_dir);
 
         double visibility = 1.0;
-        if (light.getType() == DIRECTIONAL_LIGHT && light.LightCamera.has_value() && light.haveShadow) {
-            vec3 light_space_pos = (light.LightN * s_mainCameraM * position.to_vec4(1.0)).to_vec3_point();
+        if (light.getType() == DIRECTIONAL_LIGHT && light.dirInfo->haveShadow) {
+            vec3 light_space_pos = (light.dirInfo->LightN * s_mainCameraM * position.to_vec4(1.0)).to_vec3_point();
             double z = light_space_pos.z;
-            if (light.shadowMap.get(static_cast<int>(light_space_pos.x), static_cast<int>(light_space_pos.y)).to_double() > z + bias) {
+            if (light.dirInfo->shadowMap.get(static_cast<int>(light_space_pos.x), static_cast<int>(light_space_pos.y)).to_double() > z + bias) {
                 visibility = 0.0;
             } else {
                 visibility = 1.0;

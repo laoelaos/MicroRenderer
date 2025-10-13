@@ -16,32 +16,34 @@ enum LIGHT_TYPE {
     DIRECTIONAL_LIGHT
 };
 
+struct DirectionalLightInfo {
+    bool haveShadow = true;
+    bool lightMove = true;
+
+    Camera LightCamera;
+    TGAImage shadowMap;
+    mat4 LightN;
+};
+
 class Light {
+    LIGHT_TYPE m_type = POINT_LIGHT;
 public:
     // basic
     vec3 color = {1.0, 1.0, 1.0};
     vec3 position = {20.0, 20.0, 20.0};
     double intensity = 2000.0;
 
-    // kind
-    LIGHT_TYPE type = POINT_LIGHT;
-
     // shadow / light-camera (for directional light)
-    std::optional<Camera> LightCamera = std::nullopt;
-    bool haveShadow = true;
-    bool lightMove = true;
-    TGAImage shadowMap;
-    mat4 LightN;
+    std::optional<DirectionalLightInfo> dirInfo;
 
     Light() = default;
     Light(const vec3& color_, const vec3& position_, double intensity_);
-    virtual ~Light() = default;
+    Light(const vec3& color_, const vec3& position_, double intensity_, Camera& lightCamera);
 
-    void init_directional_with_camera(const Camera& camera_);
+    void setPosition(const vec3& position_);
 
-    virtual void setPosition(const vec3& position_) { position = position_; }
-
-    [[nodiscard]] virtual LIGHT_TYPE getType() const { return type; }
+    [[nodiscard]] LIGHT_TYPE getType() const { return m_type; }
+    void setType(LIGHT_TYPE t);
 
     /** @brief 计算光源在某点的照明强度，遵循反平方衰减定律 */
     [[nodiscard]] vec3 get_illumination_at(const vec3& point) const;

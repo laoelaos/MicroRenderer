@@ -44,7 +44,7 @@ Scene::Scene(const std::string &filename) {
         else if (section == "POINT_LIGHT") {
             if (key == "color") {
                 light = {};
-                light.type = POINT_LIGHT;
+                light.setType(POINT_LIGHT);
                 iss >> light.color.x >> light.color.y >> light.color.z;
             }
             else if (key == "position") iss >> light.position.x >> light.position.y >> light.position.z;
@@ -54,19 +54,18 @@ Scene::Scene(const std::string &filename) {
         else if (section == "DIRECTIONAL_LIGHT") {
             if (key == "color") {
                 light = {};
-                light.type = DIRECTIONAL_LIGHT;
-                light.LightCamera.emplace(); // 实例化LightCamera
+                light.setType(DIRECTIONAL_LIGHT); // 确保 dirInfo 存在
                 iss >> light.color.x >> light.color.y >> light.color.z;
             }
             else if (key == "position") iss >> light.position.x >> light.position.y >> light.position.z;
             else if (key == "intensity") iss >> light.intensity;
-            else if (key == "eye") iss >> light.LightCamera->eye.x >> light.LightCamera->eye.y >> light.LightCamera->eye.z;
-            else if (key == "center") iss >> light.LightCamera->center.x >> light.LightCamera->center.y >> light.LightCamera->center.z;
-            else if (key == "up") iss >> light.LightCamera->up.x >> light.LightCamera->up.y >> light.LightCamera->up.z;
-            else if (key == "size") iss >> light.LightCamera->width >> light.LightCamera->height;
-            else if (key == "fov") iss >> light.LightCamera->fov;
-            else if (key == "near_far") iss >> light.LightCamera->near_ >> light.LightCamera->far_;
-            else if (key == "yaw_pitch_roll") iss >> light.LightCamera->yaw >> light.LightCamera->pitch >> light.LightCamera->roll;
+            else if (key == "eye" && light.dirInfo) iss >> light.dirInfo->LightCamera.eye.x >> light.dirInfo->LightCamera.eye.y >> light.dirInfo->LightCamera.eye.z;
+            else if (key == "center" && light.dirInfo) iss >> light.dirInfo->LightCamera.center.x >> light.dirInfo->LightCamera.center.y >> light.dirInfo->LightCamera.center.z;
+            else if (key == "up" && light.dirInfo) iss >> light.dirInfo->LightCamera.up.x >> light.dirInfo->LightCamera.up.y >> light.dirInfo->LightCamera.up.z;
+            else if (key == "size" && light.dirInfo) iss >> light.dirInfo->LightCamera.width >> light.dirInfo->LightCamera.height;
+            else if (key == "fov" && light.dirInfo) iss >> light.dirInfo->LightCamera.fov;
+            else if (key == "near_far" && light.dirInfo) iss >> light.dirInfo->LightCamera.near_ >> light.dirInfo->LightCamera.far_;
+            else if (key == "yaw_pitch_roll" && light.dirInfo) iss >> light.dirInfo->LightCamera.yaw >> light.dirInfo->LightCamera.pitch >> light.dirInfo->LightCamera.roll;
             else if (key == "end") lights.push_back(light);
         }
         else if (section == "Model") {
@@ -162,12 +161,14 @@ void Scene::save_path_file(const std::string &filename) const {
             file << "color " << light.color.x << " " << light.color.y << " " << light.color.z << "\n";
             file << "position " << light.position.x << " " << light.position.y << " " << light.position.z << "\n";
             file << "intensity " << light.intensity << "\n";
-        } else if (light.getType() == DIRECTIONAL_LIGHT && light.LightCamera.has_value()) {
+        } else if (light.getType() == DIRECTIONAL_LIGHT) {
+            // 若缺少 dirInfo，跳过该光（避免解引用空 optional）
+            if (!light.dirInfo) continue;
             file << "[DIRECTIONAL_LIGHT]\n";
             file << "color " << light.color.x << " " << light.color.y << " " << light.color.z << "\n";
             file << "position " << light.position.x << " " << light.position.y << " " << light.position.z << "\n";
             file << "intensity " << light.intensity << "\n";
-            const Camera& lc = light.LightCamera.value();
+            const Camera& lc = light.dirInfo->LightCamera;
             file << "eye " << lc.eye.x << " " << lc.eye.y << " " << lc.eye.z << "\n";
             file << "center " << lc.center.x << " " << lc.center.y << " " << lc.center.z << "\n";
             file << "up " << lc.up.x << " " << lc.up.y << " " << lc.up.z << "\n";

@@ -204,24 +204,24 @@ void Rasterizer::processLight(Scene& scene, std::vector<Light>& lights) {
             case POINT_LIGHT:
                 break;
             case DIRECTIONAL_LIGHT:
-                if (light.LightCamera.has_value()) {
-                    if (light.lightMove) {
-                        // Prepare shadow map size if not matching
-                        int lw = light.LightCamera->width;
-                        int lh = light.LightCamera->height;
-                        if (light.shadowMap.width() != lw || light.shadowMap.height() != lh) {
-                            light.shadowMap = TGAImage(lw, lh, TGAImage::RGB);
-                        }
-
-                        Camera tmp = scene.camera;
-                        scene.camera = light.LightCamera.value();
-                        pass(scene, ZTEST);
-                        scene.camera = tmp;
-
-                        zBuffer_to_TGA(light.shadowMap);
-                        light.LightN = light.LightCamera->get_viewport_matrix() * light.LightCamera->get_projection_matrix() * light.LightCamera->get_view_matrix();
-                        light.lightMove = false;
+                if (light.dirInfo->lightMove) {
+                    // Prepare shadow map size if not matching
+                    int lw = light.dirInfo->LightCamera.width;
+                    int lh = light.dirInfo->LightCamera.height;
+                    if (light.dirInfo->shadowMap.width() != lw || light.dirInfo->shadowMap.height() != lh) {
+                        light.dirInfo->shadowMap = TGAImage(lw, lh, TGAImage::RGB);
                     }
+
+                    Camera tmp = scene.camera;
+                    scene.camera = light.dirInfo->LightCamera;
+                    pass(scene, ZTEST);
+                    scene.camera = tmp;
+
+                    zBuffer_to_TGA(light.dirInfo->shadowMap);
+                    light.dirInfo->LightN = light.dirInfo->LightCamera.get_viewport_matrix()
+                                                        * light.dirInfo->LightCamera.get_projection_matrix()
+                                                        * light.dirInfo->LightCamera.get_view_matrix();
+                    light.dirInfo->lightMove = false;
                 }
                 break;
         }
