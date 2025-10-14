@@ -5,15 +5,39 @@
 #ifndef MICRORENDERER_CONFIGGUI_H
 #define MICRORENDERER_CONFIGGUI_H
 
-#include "imgui.h"
-#include "imgui_stdlib.h"
-#include "imgui_impl_glfw.h"
-#include "imgui_impl_opengl3.h"
 #include "Scene.h"
 
+struct RenderContext {
+    int msaa_level = 1;
+
+    bool use_euler_angles = false;
+
+    int selected_model = 0;
+
+    // 渲染选项
+    bool real_time_rendering = true;    // 是否启用实时渲染
+    bool auto_rotate = false;           // 是否自动旋转模型
+    float rotation_speed = 1.0f;        // 旋转速度
+    double current_rotation = 0.0;      // 当前旋转角度
+
+    // 性能监控
+    float target_fps = 60.0f;           // 目标帧率
+    float current_fps = 0.0f;           // 当前帧率
+    long long avg_render_time = 0;     // 上次渲染耗时(ms)
+    long long refresh_interval = 500;  // 刷新间隔(ms)
+
+    // 控制标志
+    bool force_render = true;
+};
+
 class ConfigGui {
+    RenderContext m_RenderContext;
+    ConfigGui() = default;
 public:
-    static void ConfigLight(Light& light);
+    static ConfigGui& get();
+    void Launch(Scene &scene);
+private:
+    void ConfigLight(Light& light);
 };
 
 
