@@ -119,6 +119,7 @@ bool ConfigGui::ConfigCamera(Camera& camera) {
         auto yaw = static_cast<float>(camera.m_yaw);
         auto pitch = static_cast<float>(camera.m_pitch);
         auto roll = static_cast<float>(camera.m_roll);
+        auto length = static_cast<float>(norm(camera.m_eye - camera.m_center));
 
         if (ImGui::IsItemHovered())
             ImGui::SetTooltip("远平面应大于近平面");
@@ -146,6 +147,10 @@ bool ConfigGui::ConfigCamera(Camera& camera) {
             camera.m_near = near_plane;
         if (ImGui::InputFloat("远平面", &far_plane, 0.1f, 0.5f, "%.2f"))
             camera.m_far = far_plane;
+        if (ImGui::InputFloat("相机与目标点距离", &length, 0.1f, 0.5f, "%.2f")) {
+            vec3 direction = normalize(camera.m_eye - camera.m_center);
+            camera.m_center = camera.m_eye + direction * length;
+        }
 
         if (ImGui::Button("重置相机"))
             camera = {};

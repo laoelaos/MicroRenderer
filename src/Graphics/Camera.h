@@ -7,11 +7,10 @@
 
 #include "Geometry.h"
 
-//TODO: 使欧拉角主导, vec3只在内部使用
 //目前eye与center的关系可能相反
 class Camera {
     vec3 m_eye = {0, 0, 0}; // 观察点位置, 目标位置
-    vec3 m_center = {0, 0, 2}; // 相机位置
+    vec3 m_center = {0, 0, 3}; // 相机位置
     vec3 m_up = {0, 1, 0};
 
     int m_width = 600;
@@ -36,11 +35,11 @@ public:
     vec3& getEye() { return m_eye; }
 
     void updateRotate();
+    void updateEuler();
     [[nodiscard]] mat4 get_view_matrix() const;
     [[nodiscard]] mat4 get_projection_matrix() const;
     [[nodiscard]] mat4 get_viewport_matrix() const;
 
-    //TODO: 欧拉角旋转好像有点问题
     /**
      *  @brief 设置相机朝向，基于相机位置旋转，顺时针旋转
      *  @param yaw 水平旋转角度，单位度

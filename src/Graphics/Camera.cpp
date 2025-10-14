@@ -76,11 +76,10 @@ mat4 Camera::get_viewport_matrix() const {
 }
 
 void Camera::updateRotate() {
+    updateEuler();
     double yaw_rad = m_yaw * M_PI / 180.0;
     double pitch_rad = m_pitch * M_PI / 180.0;
     double roll_rad = m_roll * M_PI / 180.0;
-
-    pitch_rad = std::clamp(pitch_rad, -M_PI/2.0 + 0.001, M_PI/2.0 - 0.001);
 
     double x = cos(yaw_rad) * cos(pitch_rad);
     double y = sin(pitch_rad);
@@ -101,6 +100,15 @@ void Camera::updateRotate() {
     m_aspect = static_cast<double>(m_width) / m_height;
 }
 
+void Camera::updateEuler() {
+    while (m_yaw < -180.0) m_yaw += 360.0;
+    while (m_yaw > 180.0) m_yaw -= 360.0;
+    while (m_pitch < -90) m_pitch += 180.0;
+    while (m_pitch > 90) m_pitch -= 180.0;
+    while (m_roll < -180.0) m_roll += 360.0;
+    while (m_roll > 180.0) m_roll -= 360.0;
+}
+
 void Camera::set_toward_from_center(double yaw, double pitch, double roll) {
     this->m_yaw = yaw;
     this->m_pitch = pitch;
@@ -109,9 +117,7 @@ void Camera::set_toward_from_center(double yaw, double pitch, double roll) {
 }
 
 void Camera::set_toward_from_point(vec3 point, double yaw, double pitch, double roll) {
-    std::swap(point, m_center);
-    set_toward_from_center(yaw, pitch, roll);
-    std::swap(point, m_center);
+
 }
 
 void Camera::rotate_around_center(double yaw, double pitch, double roll) {
@@ -122,7 +128,16 @@ void Camera::rotate_around_center(double yaw, double pitch, double roll) {
 }
 
 void Camera::rotate_around_point(vec3 point, double yaw, double pitch, double roll) {
-    std::swap(point, m_center);
+    m_yaw += 180.0;
+    m_pitch += 180.0;
+
+    m_eye = m_center;
+    m_center = point;
     rotate_around_center(yaw, pitch, roll);
-    std::swap(point, m_center);
+    m_center = m_eye;
+    m_eye = point;
+
+    m_yaw -= 180.0;
+    m_pitch -= 180.0;
+    updateEuler();
 }
