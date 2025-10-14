@@ -6,7 +6,6 @@
 
 #include <sstream>
 
-//TODO: 是否有些繁琐，是否应当将输出方法迁移到各个类
 Scene::Scene(const std::string &filename) {
     std::ifstream file(filename);
     if (!file.is_open()) {
@@ -15,10 +14,7 @@ Scene::Scene(const std::string &filename) {
 
     this->filename = filename;
     std::string line, section;
-    std::string model_filename;
 
-    camera = Camera();
-    Light light; // 当前在解析的光
     while (std::getline(file, line)) {
         std::istringstream iss(line);
         std::string key;
@@ -27,19 +23,10 @@ Scene::Scene(const std::string &filename) {
 
         if (line[0] == '[' && line.back() == ']') {
             section = line.substr(1, line.size() - 2);
-            continue;
         }
 
-        iss >> key;
-
         if (section == "Camera") {
-            if (key == "eye") iss >> camera.eye.x >> camera.eye.y >> camera.eye.z;
-            else if (key == "center") iss >> camera.center.x >> camera.center.y >> camera.center.z;
-            else if (key == "up") iss >> camera.up.x >> camera.up.y >> camera.up.z;
-            else if (key == "size") iss >> camera.width >> camera.height;
-            else if (key == "fov") iss >> camera.fov;
-            else if (key == "near_far") iss >> camera.near_ >> camera.far_;
-            else if (key == "yaw_pitch_roll") iss >> camera.yaw >> camera.pitch >> camera.roll;
+            LoadCamera(file);
         }
         else if (section == "POINT_LIGHT") {
             LoadLight(file, POINT_LIGHT);
@@ -48,67 +35,7 @@ Scene::Scene(const std::string &filename) {
             LoadLight(file, DIRECTIONAL_LIGHT);
         }
         else if (section == "Model") {
-            if (key == "path") {
-                iss >> model_filename;
-                models.emplace_back(model_filename);
-                models.back().model_path = model_filename;
-            }
-            else if (key == "name") {
-                std::string name;
-                iss >> name;
-                if (!models.empty()) models.back().name = name;
-            }
-            else if (key == "enable") {
-                bool enable;
-                iss >> enable;
-                if (!models.empty()) models.back().enable = enable;
-            }
-            else if (key == "translation") {
-                if (!models.empty()) iss >> models.back().translation.x >> models.back().translation.y >> models.back().translation.z;
-            }
-            else if (key == "rotation") {
-                if (!models.empty()) iss >> models.back().rotation.x >> models.back().rotation.y >> models.back().rotation.z;
-            }
-            else if (key == "scale") {
-                if (!models.empty()) iss >> models.back().scale.x >> models.back().scale.y >> models.back().scale.z;
-            }
-            else if (key == "texture") {
-                std::string texture_path;
-                iss >> texture_path;
-                if (!models.empty() && !texture_path.empty()) {
-                    models.back().material.load_texture(texture_path);
-                }
-            }
-            else if (key == "normal_map") {
-                std::string normal_map_path;
-                iss >> normal_map_path;
-                if (!models.empty() && !normal_map_path.empty()) {
-                    models.back().material.load_normal_map(normal_map_path);
-                }
-            }
-            else if (key == "diffuse_mapping") {
-                bool diffuse_mapping;
-                iss >> diffuse_mapping;
-                if (!models.empty()) models.back().material.diffuse_mapping = diffuse_mapping;
-            }
-            else if (key == "normal_type") {
-                int normal_type;
-                iss >> normal_type;
-                if (!models.empty()) models.back().material.normal_type = static_cast<NormalType>(normal_type);
-            }
-            else if (key == "shade_frequency") {
-                int shade_freq;
-                iss >> shade_freq;
-                if (!models.empty()) models.back().material.shade_frequency = static_cast<ShadeFrequency>(shade_freq);
-            }
-            else if (key == "phong") {
-                if (!models.empty()) {
-                    iss >> models.back().material.properties.k_diffuse
-                        >> models.back().material.properties.k_specular
-                        >> models.back().material.properties.k_ambient
-                        >> models.back().material.properties.p;
-                }
-            }
+            LoadModel(file);
         }
     }
 }
@@ -125,60 +52,151 @@ void Scene::save_path_file(const std::string &filename) const {
 
     file << "# MicroRenderer Scene File\n\n";
 
-    file << "[Camera]\n";
-    file << "eye " << camera.eye.x << " " << camera.eye.y << " " << camera.eye.z << "\n";
-    file << "center " << camera.center.x << " " << camera.center.y << " " << camera.center.z << "\n";
-    file << "up " << camera.up.x << " " << camera.up.y << " " << camera.up.z << "\n";
-    file << "size " << camera.width << " " << camera.height << "\n";
-    file << "fov " << camera.fov << "\n";
-    file << "near_far " << camera.near_ << " " << camera.far_ << "\n";
-    file << "yaw_pitch_roll " << camera.yaw << " " << camera.pitch << " " << camera.roll << "\n\n";
+    SaveCamera(file);
 
     for (const auto& light : lights) {
         SaveLight(file, light);
     }
 
     for (const auto& model : models) {
-        file << "[Model]\n";
-        file << "path " << model.model_path << "\n";
-        file << "name " << model.name << "\n";
-        file << "enable " << model.enable << "\n";
-        file << "translation " << model.translation.x << " " << model.translation.y << " " << model.translation.z << "\n";
-        file << "rotation " << model.rotation.x << " " << model.rotation.y << " " << model.rotation.z << "\n";
-        file << "scale " << model.scale.x << " " << model.scale.y << " " << model.scale.z << "\n";
-
-        if (!model.material.texture_path.empty()) {
-            file << "texture " << model.material.texture_path << "\n";
-        }
-
-        if (!model.material.normal_map_path.empty()) {
-            file << "normal_map " << model.material.normal_map_path << "\n";
-        }
-
-        file << "diffuse_mapping " << model.material.diffuse_mapping << "\n";
-        file << "normal_type " << static_cast<int>(model.material.normal_type) << "\n";
-        file << "shade_frequency " << static_cast<int>(model.material.shade_frequency) << "\n";
-        file << "phong "
-             << model.material.properties.k_diffuse << " "
-             << model.material.properties.k_specular << " "
-             << model.material.properties.k_ambient << " "
-             << model.material.properties.p << "\n\n";
+        SaveModel(file, model);
     }
 
     file.close();
 }
 
 void Scene::SaveModel(std::ofstream& file, const Model &model) const {
+    file << "[Model]\n";
+    file << "path " << model.model_path << "\n";
+    file << "name " << model.name << "\n";
+    file << "enable " << model.enable << "\n";
+    file << "translation " << model.translation.x << " " << model.translation.y << " " << model.translation.z << "\n";
+    file << "rotation " << model.rotation.x << " " << model.rotation.y << " " << model.rotation.z << "\n";
+    file << "scale " << model.scale.x << " " << model.scale.y << " " << model.scale.z << "\n";
+
+    if (!model.material.texture_path.empty()) {
+        file << "texture " << model.material.texture_path << "\n";
+    }
+
+    if (!model.material.normal_map_path.empty()) {
+        file << "normal_map " << model.material.normal_map_path << "\n";
+    }
+
+    file << "diffuse_mapping " << model.material.diffuse_mapping << "\n";
+    file << "normal_type " << static_cast<int>(model.material.normal_type) << "\n";
+    file << "shade_frequency " << static_cast<int>(model.material.shade_frequency) << "\n";
+    file << "phong "
+         << model.material.properties.k_diffuse << " "
+         << model.material.properties.k_specular << " "
+         << model.material.properties.k_ambient << " "
+         << model.material.properties.p << "\n\n";
+    file << "end\n\n";
 }
 
 void Scene::LoadModel(std::ifstream& file) {
+    std::string line;
+    while (std::getline(file, line)) {
+        std::istringstream iss(line);
+        std::string key, model_filename;
+        iss >> key;
+
+        if (line.empty() || line[0] == '#') continue;
+        if (line[0] == '[' && line.back() == ']') throw std::runtime_error("wrong camera format");
+
+        if (key == "path") {
+            iss >> model_filename;
+            models.emplace_back(model_filename);
+            models.back().model_path = model_filename;
+        }
+        else if (key == "name") {
+            std::string name;
+            iss >> name;
+            if (!models.empty()) models.back().name = name;
+        }
+        else if (key == "enable") {
+            bool enable;
+            iss >> enable;
+            if (!models.empty()) models.back().enable = enable;
+        }
+        else if (key == "translation") {
+            if (!models.empty()) iss >> models.back().translation.x >> models.back().translation.y >> models.back().translation.z;
+        }
+        else if (key == "rotation") {
+            if (!models.empty()) iss >> models.back().rotation.x >> models.back().rotation.y >> models.back().rotation.z;
+        }
+        else if (key == "scale") {
+            if (!models.empty()) iss >> models.back().scale.x >> models.back().scale.y >> models.back().scale.z;
+        }
+        else if (key == "texture") {
+            std::string texture_path;
+            iss >> texture_path;
+            if (!models.empty() && !texture_path.empty()) {
+                models.back().material.load_texture(texture_path);
+            }
+        }
+        else if (key == "normal_map") {
+            std::string normal_map_path;
+            iss >> normal_map_path;
+            if (!models.empty() && !normal_map_path.empty()) {
+                models.back().material.load_normal_map(normal_map_path);
+            }
+        }
+        else if (key == "diffuse_mapping") {
+            bool diffuse_mapping;
+            iss >> diffuse_mapping;
+            if (!models.empty()) models.back().material.diffuse_mapping = diffuse_mapping;
+        }
+        else if (key == "normal_type") {
+            int normal_type;
+            iss >> normal_type;
+            if (!models.empty()) models.back().material.normal_type = static_cast<NormalType>(normal_type);
+        }
+        else if (key == "shade_frequency") {
+            int shade_freq;
+            iss >> shade_freq;
+            if (!models.empty()) models.back().material.shade_frequency = static_cast<ShadeFrequency>(shade_freq);
+        }
+        else if (key == "phong") {
+            if (!models.empty()) {
+                iss >> models.back().material.properties.k_diffuse
+                    >> models.back().material.properties.k_specular
+                    >> models.back().material.properties.k_ambient
+                    >> models.back().material.properties.p;
+            }
+        }
+        if (key == "end") return;
+    }
 }
 
 void Scene::SaveCamera(std::ofstream& file) const {
+    file << "[Camera]\n";
+    file << "center " << camera.m_center.x << " " << camera.m_center.y << " " << camera.m_center.z << "\n";
+    file << "size " << camera.m_width << " " << camera.m_height << "\n";
+    file << "fov " << camera.m_fov << "\n";
+    file << "near_far " << camera.m_near << " " << camera.m_far << "\n";
+    file << "yaw_pitch_roll " << camera.m_yaw << " " << camera.m_pitch << " " << camera.m_roll << "\n";
+    file << "end\n\n";
 }
 
 void Scene::LoadCamera(std::ifstream& file) {
+    std::string line;
+    while (std::getline(file, line)) {
+        std::istringstream iss(line);
+        std::string key;
+        iss >> key;
 
+        if (line.empty() || line[0] == '#') continue;
+        if (line[0] == '[' && line.back() == ']') throw std::runtime_error("wrong camera format");
+
+        if (key == "eye") iss >> camera.m_eye.x >> camera.m_eye.y >> camera.m_eye.z;
+        else if (key == "center") iss >> camera.m_center.x >> camera.m_center.y >> camera.m_center.z;
+        else if (key == "up") iss >> camera.m_up.x >> camera.m_up.y >> camera.m_up.z;
+        else if (key == "size") iss >> camera.m_width >> camera.m_height;
+        else if (key == "fov") iss >> camera.m_fov;
+        else if (key == "near_far") iss >> camera.m_near >> camera.m_far;
+        else if (key == "yaw_pitch_roll") iss >> camera.m_yaw >> camera.m_pitch >> camera.m_roll;
+        if (key == "end") { camera.updateRotate(); return; }
+    }
 }
 
 void Scene::SaveLight(std::ofstream& file, const Light& light) const {
@@ -192,17 +210,17 @@ void Scene::SaveLight(std::ofstream& file, const Light& light) const {
     file << "position" << light.m_position.x << " " << light.m_position.y << " " << light.m_position.z << "\n";
     file << "intensity" << light.m_intensity << "\n";
     if (light.getType() == DIRECTIONAL_LIGHT) {
-        file << "eye" << light.m_dirInfo->LightCamera.eye.x << " " << light.m_dirInfo->LightCamera.eye.y << " " << light.m_dirInfo->LightCamera.eye.z << "\n";
-        file << "center" << light.m_dirInfo->LightCamera.center.x << " "<< light.m_dirInfo->LightCamera.center.y << " " << light.m_dirInfo->LightCamera.center.z << "\n";
-        file << "up" << light.m_dirInfo->LightCamera.up.x << " " << light.m_dirInfo->LightCamera.up.y << " " << light.m_dirInfo->LightCamera.up.z << "\n";
-        file << "size" << light.m_dirInfo->LightCamera.width << " " << light.m_dirInfo->LightCamera.height << "\n";
-        file << "fov" << light.m_dirInfo->LightCamera.fov << "\n";
-        file << "near_far" << light.m_dirInfo->LightCamera.near_ << " " << light.m_dirInfo->LightCamera.far_ << "\n";
-        file << "yaw_pitch_roll" << light.m_dirInfo->LightCamera.yaw << " " << light.m_dirInfo->LightCamera.pitch << " " << light.m_dirInfo->LightCamera.roll << "\n";
+        file << "eye" << light.m_dirInfo->LightCamera.m_eye.x << " " << light.m_dirInfo->LightCamera.m_eye.y << " " << light.m_dirInfo->LightCamera.m_eye.z << "\n";
+        file << "center" << light.m_dirInfo->LightCamera.m_center.x << " "<< light.m_dirInfo->LightCamera.m_center.y << " " << light.m_dirInfo->LightCamera.m_center.z << "\n";
+        file << "up" << light.m_dirInfo->LightCamera.m_up.x << " " << light.m_dirInfo->LightCamera.m_up.y << " " << light.m_dirInfo->LightCamera.m_up.z << "\n";
+        file << "size" << light.m_dirInfo->LightCamera.m_width << " " << light.m_dirInfo->LightCamera.m_height << "\n";
+        file << "fov" << light.m_dirInfo->LightCamera.m_fov << "\n";
+        file << "near_far" << light.m_dirInfo->LightCamera.m_near << " " << light.m_dirInfo->LightCamera.m_far << "\n";
+        file << "yaw_pitch_roll" << light.m_dirInfo->LightCamera.m_yaw << " " << light.m_dirInfo->LightCamera.m_pitch << " " << light.m_dirInfo->LightCamera.m_roll << "\n";
     }
     file << "end\n\n";
 }
-
+//TODO:改用LoadCamera
 void Scene::LoadLight(std::ifstream& file, LIGHT_TYPE type) {
     lights.emplace_back();
     Light& light = lights.back();
@@ -220,13 +238,13 @@ void Scene::LoadLight(std::ifstream& file, LIGHT_TYPE type) {
         if (key == "color") iss >> light.m_color.x >> light.m_color.y >> light.m_color.z;
         else if (key == "position") iss >> light.m_position.x >> light.m_position.y >> light.m_position.z;
         else if (key == "intensity") iss >> light.m_intensity;
-        else if (key == "eye" && light.m_dirInfo) iss >> light.m_dirInfo->LightCamera.eye.x >> light.m_dirInfo->LightCamera.eye.y >> light.m_dirInfo->LightCamera.eye.z;
-        else if (key == "center" && light.m_dirInfo) iss >> light.m_dirInfo->LightCamera.center.x >> light.m_dirInfo->LightCamera.center.y >> light.m_dirInfo->LightCamera.center.z;
-        else if (key == "up" && light.m_dirInfo) iss >> light.m_dirInfo->LightCamera.up.x >> light.m_dirInfo->LightCamera.up.y >> light.m_dirInfo->LightCamera.up.z;
-        else if (key == "size" && light.m_dirInfo) iss >> light.m_dirInfo->LightCamera.width >> light.m_dirInfo->LightCamera.height;
-        else if (key == "fov" && light.m_dirInfo) iss >> light.m_dirInfo->LightCamera.fov;
-        else if (key == "near_far" && light.m_dirInfo) iss >> light.m_dirInfo->LightCamera.near_ >> light.m_dirInfo->LightCamera.far_;
-        else if (key == "yaw_pitch_roll" && light.m_dirInfo) iss >> light.m_dirInfo->LightCamera.yaw >> light.m_dirInfo->LightCamera.pitch >> light.m_dirInfo->LightCamera.roll;
+        else if (key == "eye" && light.m_dirInfo) iss >> light.m_dirInfo->LightCamera.m_eye.x >> light.m_dirInfo->LightCamera.m_eye.y >> light.m_dirInfo->LightCamera.m_eye.z;
+        else if (key == "center" && light.m_dirInfo) iss >> light.m_dirInfo->LightCamera.m_center.x >> light.m_dirInfo->LightCamera.m_center.y >> light.m_dirInfo->LightCamera.m_center.z;
+        else if (key == "up" && light.m_dirInfo) iss >> light.m_dirInfo->LightCamera.m_up.x >> light.m_dirInfo->LightCamera.m_up.y >> light.m_dirInfo->LightCamera.m_up.z;
+        else if (key == "size" && light.m_dirInfo) iss >> light.m_dirInfo->LightCamera.m_width >> light.m_dirInfo->LightCamera.m_height;
+        else if (key == "fov" && light.m_dirInfo) iss >> light.m_dirInfo->LightCamera.m_fov;
+        else if (key == "near_far" && light.m_dirInfo) iss >> light.m_dirInfo->LightCamera.m_near >> light.m_dirInfo->LightCamera.m_far;
+        else if (key == "yaw_pitch_roll" && light.m_dirInfo) iss >> light.m_dirInfo->LightCamera.m_yaw >> light.m_dirInfo->LightCamera.m_pitch >> light.m_dirInfo->LightCamera.m_roll;
         else if (key == "end") return;
     }
 }

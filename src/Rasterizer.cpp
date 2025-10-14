@@ -52,9 +52,13 @@ void Rasterizer::rasterize(Scene &scene, RasterizerMode mode) {
     }
 }
 
+void Rasterizer::rasterize(Scene &scene) {
+    rasterize(scene, m_mode);
+}
+
 void Rasterizer::pass(const Scene& scene, RasterizerMode mode) {
-    m_width = scene.camera.width;
-    m_height = scene.camera.height;
+    m_width = scene.camera.getWidth();
+    m_height = scene.camera.getHeight();
     build_buffer();
     m_view = scene.camera.get_view_matrix();
     m_projection = scene.camera.get_projection_matrix();

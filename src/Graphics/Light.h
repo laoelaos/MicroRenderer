@@ -14,8 +14,8 @@
 class Scene;
 
 enum LIGHT_TYPE {
-    POINT_LIGHT,
-    DIRECTIONAL_LIGHT
+    POINT_LIGHT = 0,
+    DIRECTIONAL_LIGHT = 1
 };
 
 struct DirectionalLightInfo {

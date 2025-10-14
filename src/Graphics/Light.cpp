@@ -25,7 +25,7 @@ void Light::setPosition(const vec3 &position_) {
         m_position = position_;
     } else if (m_type == DIRECTIONAL_LIGHT) {
         m_position = position_;
-        m_dirInfo->LightCamera.center = position_;
+        m_dirInfo->LightCamera.getEye() = position_;
         m_dirInfo->lightMove = true;
     }
 }
@@ -42,8 +42,8 @@ void Light::setType(LIGHT_TYPE t) {
 void Light::ProcessShadowMapIfNeeded(Scene &scene) {
     if (m_type == DIRECTIONAL_LIGHT && m_dirInfo->lightMove) {
         // Prepare shadow map size if not matching
-        int lw = m_dirInfo->LightCamera.width;
-        int lh = m_dirInfo->LightCamera.height;
+        int lw = m_dirInfo->LightCamera.getWidth();
+        int lh = m_dirInfo->LightCamera.getHeight();
         if (m_dirInfo->shadowMap.width() != lw || m_dirInfo->shadowMap.height() != lh) {
             m_dirInfo->shadowMap = TGAImage(lw, lh, TGAImage::RGB);
         }

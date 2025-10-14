@@ -12,18 +12,20 @@
 #include "TGAImage.h"
 #include "Shader.h"
 
-enum RasterizerMode {ZTEST, PHONG, PHONG_WITH_SHADOW};
+enum RasterizerMode {ZTEST = 0, PHONG = 1, PHONG_WITH_SHADOW = 2};
 
 class Rasterizer {
 public:
     static Rasterizer& get();
 
-    void set_msaa(int MSAA);
-
     void rasterize(Scene& scene, RasterizerMode mode);
+    void rasterize(Scene& scene);
 
     void framebuffer_to_TGA(TGAImage& framebuffer);
     void zBuffer_to_TGA(TGAImage& framebuffer);
+
+    RasterizerMode& getType() { return m_mode; }
+    void set_msaa(int MSAA);
 private:
     Rasterizer();
 
@@ -46,6 +48,7 @@ private:
 
     //options
     int m_MSAA = 1;
+    RasterizerMode m_mode = PHONG_WITH_SHADOW;
 
     //lock
     int m_tileRows = 20;

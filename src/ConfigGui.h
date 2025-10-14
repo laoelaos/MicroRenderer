@@ -10,8 +10,6 @@
 struct RenderContext {
     int msaa_level = 1;
 
-    bool use_euler_angles = false;
-
     int selected_model = 0;
 
     // 渲染选项
@@ -35,9 +33,16 @@ class ConfigGui {
     ConfigGui() = default;
 public:
     static ConfigGui& get();
-    void Launch(Scene &scene);
+
+    RenderContext& getContext() { return m_RenderContext; }
+
+    void LaunchConfig(Scene &scene);
 private:
+    void ConfigBasic();
+    bool ConfigCamera(Camera& camera);
     void ConfigLight(Light& light);
+    void ConfigModel(Model& model);
+    void ConfigRenderSetting();
 };
 
 

@@ -8,12 +8,12 @@
 
 Camera::Camera(const vec3& eye_, const vec3& center_, const vec3& up_, int w, int h,
                double fov_, double near_, double far_)
-: eye(eye_), center(center_), up(up_), width(w), height(h),
-  fov(fov_), aspect(static_cast<double>(w)/h), near_(near_), far_(far_) {}
+: m_eye(eye_), m_center(center_), m_up(up_), m_width(w), m_height(h),
+  m_fov(fov_), m_aspect(static_cast<double>(w)/h), m_near(near_), m_far(far_) {}
 
 mat4 Camera::get_view_matrix() const {
-    vec3 z = normalize(eye - center);
-    vec3 x = normalize(z ^ up);
+    vec3 z = normalize(m_eye - m_center);
+    vec3 x = normalize(z ^ m_up);
     vec3 y = normalize(x ^ z);
     mat4 rotate{
         {
@@ -25,9 +25,9 @@ mat4 Camera::get_view_matrix() const {
     };
     mat4 translate{
         {
-            {1, 0, 0, -center.x},
-            {0, 1, 0, -center.y},
-            {0, 0, 1, -center.z},
+            {1, 0, 0, -m_center.x},
+            {0, 1, 0, -m_center.y},
+            {0, 0, 1, -m_center.z},
             {0, 0, 0, 1}
         }
     };
@@ -35,12 +35,12 @@ mat4 Camera::get_view_matrix() const {
 }
 
 mat4 Camera::get_projection_matrix() const {
-    double top = near_ * std::tan(fov * M_PI / 360.0);
+    double top = m_near * std::tan(m_fov * M_PI / 360.0);
     double bottom = -top;
-    double right = top * aspect;
+    double right = top * m_aspect;
     double left = -right;
-    double near_cp = -near_;
-    double far_cp = -far_;
+    double near_cp = -m_near;
+    double far_cp = -m_far;
     mat4 translate{
         {
             {1, 0, 0, -(left + right) / 2},
@@ -69,16 +69,16 @@ mat4 Camera::get_projection_matrix() const {
 }
 
 mat4 Camera::get_viewport_matrix() const {
-    return {{{width/2., 0, 0, width/2.},
-                        {0, height/2., 0, height/2.},
+    return {{{m_width/2., 0, 0, m_width/2.},
+                        {0, m_height/2., 0, m_height/2.},
                         {0, 0, 1, 0},
                         {0, 0, 0, 1}}};
 }
 
-void Camera::update() {
-    double yaw_rad = yaw * M_PI / 180.0;
-    double pitch_rad = pitch * M_PI / 180.0;
-    double roll_rad = roll * M_PI / 180.0;
+void Camera::updateRotate() {
+    double yaw_rad = m_yaw * M_PI / 180.0;
+    double pitch_rad = m_pitch * M_PI / 180.0;
+    double roll_rad = m_roll * M_PI / 180.0;
 
     pitch_rad = std::clamp(pitch_rad, -M_PI/2.0 + 0.001, M_PI/2.0 - 0.001);
 
@@ -86,9 +86,9 @@ void Camera::update() {
     double y = sin(pitch_rad);
     double z = sin(yaw_rad) * cos(pitch_rad);
 
-    eye = vec3{x, y, z} * norm(center - eye) + center;
+    m_eye = vec3{x, y, z} * norm(m_center - m_eye) + m_center;
 
-    vec3 forward = normalize(center - eye);
+    vec3 forward = normalize(m_center - m_eye);
     vec3 world_up{0, 1, 0};
     vec3 right = normalize(forward ^ world_up);
     if (norm(right) < 1e-6) {
@@ -96,33 +96,33 @@ void Camera::update() {
         right = normalize(forward ^ vec3{0, 0, 1});
     }
     vec3 up0 = normalize(right ^ forward);
-    up = up0 * cos(roll_rad) + right * sin(roll_rad);
+    m_up = up0 * cos(roll_rad) + right * sin(roll_rad);
 
-    aspect = static_cast<double>(width) / height;
+    m_aspect = static_cast<double>(m_width) / m_height;
 }
 
 void Camera::set_toward_from_center(double yaw, double pitch, double roll) {
-    this->yaw = yaw;
-    this->pitch = pitch;
-    this->roll = roll;
-    update();
+    this->m_yaw = yaw;
+    this->m_pitch = pitch;
+    this->m_roll = roll;
+    updateRotate();
 }
 
-void Camera::set_toward_from_eye(double yaw, double pitch, double roll) {
-    std::swap(eye, center);
+void Camera::set_toward_from_point(vec3 point, double yaw, double pitch, double roll) {
+    std::swap(point, m_center);
     set_toward_from_center(yaw, pitch, roll);
-    std::swap(eye, center);
+    std::swap(point, m_center);
 }
 
 void Camera::rotate_around_center(double yaw, double pitch, double roll) {
-    this->yaw += yaw;
-    this->pitch += pitch;
-    this->roll += roll;
-    update();
+    this->m_yaw += yaw;
+    this->m_pitch += pitch;
+    this->m_roll += roll;
+    updateRotate();
 }
 
-void Camera::rotate_around_eye(double yaw, double pitch, double roll) {
-    std::swap(eye, center);
+void Camera::rotate_around_point(vec3 point, double yaw, double pitch, double roll) {
+    std::swap(point, m_center);
     rotate_around_center(yaw, pitch, roll);
-    std::swap(eye, center);
+    std::swap(point, m_center);
 }

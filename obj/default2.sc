@@ -1,21 +1,18 @@
 # MicroRenderer Scene File
 
 [Camera]
-eye 0 0 0
 center 0 0 3
-up 0 1 0
 size 600 600
 fov 55
 near_far 0.1 3
 yaw_pitch_roll -90 0 0
+end
 
 [DIRECTIONAL_LIGHT]
 color 1 1 1
 position 2 2 2
 intensity 50
-eye 0 0 0
 center 2 2 2
-up 0 1 0
 size 600 600
 fov 90
 near_far 0.1 1000
@@ -35,6 +32,7 @@ diffuse_mapping 1
 normal_type 1
 shade_frequency 2
 phong 0.9 0.6 0.005 150
+end
 
 [Model]
 path ..\obj\floor.obj
@@ -49,4 +47,4 @@ diffuse_mapping 1
 normal_type 1
 shade_frequency 2
 phong 0.9 0.6 0.005 150
-
+end

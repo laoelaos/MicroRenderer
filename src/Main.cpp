@@ -34,19 +34,19 @@ void initTexture(int width, int height);
 void performRendering();
 void loadTextureToGl();
 
-
-static RenderContext g_renderContext;
+static RenderContext& g_renderContext = ConfigGui::get().getContext();
 static Scene g_scene("../obj/default2.sc");
 static Rasterizer& g_rasterizer = Rasterizer::get();
+static bool saveScene = false;
 
 static GLuint g_renderedTexture = 0;
 static std::vector<unsigned char> g_imageData;
-static TGAImage g_tgaImage(g_scene.camera.width, g_scene.camera.height, TGAImage::RGB);
+static TGAImage g_tgaImage(g_scene.camera.getWidth(), g_scene.camera.getHeight(), TGAImage::RGB);
 
 void MainLoop(GLFWwindow* window) {
     ImVec4 clear_color = ImVec4(0.15f, 0.15f, 0.15f, 1.00f);
 
-    initTexture(g_scene.camera.width, g_scene.camera.height);
+    initTexture(g_scene.camera.getWidth(), g_scene.camera.getWidth());
     g_rasterizer.set_msaa(1);
     while (!glfwWindowShouldClose(window))
     {
@@ -61,7 +61,7 @@ void MainLoop(GLFWwindow* window) {
         ImGui_ImplGlfw_NewFrame();
         ImGui::NewFrame();
 
-        ConfigGui::get().Launch(g_scene);
+        ConfigGui::get().LaunchConfig(g_scene);
         output_gui();
 
         // Rendering
@@ -76,7 +76,8 @@ void MainLoop(GLFWwindow* window) {
         glfwSwapBuffers(window);
     }
 
-    //scene.save_path_file();
+    if (saveScene)
+        g_scene.save_path_file();
 }
 
 void output_gui() {
@@ -98,7 +99,7 @@ void output_gui() {
     // 获取窗口内容区域大小以调整图像大小
     ImVec2 windowSize = ImGui::GetContentRegionAvail();
 
-    auto aspectRatio = static_cast<float>(g_scene.camera.aspect);
+    auto aspectRatio = static_cast<float>(g_scene.camera.getAspect());
 
     // 显示纹理，保持纵横比
     ImVec2 imageSize;
@@ -236,13 +237,12 @@ void initTexture(int width, int height) {
 void performRendering() {
     auto start_time = std::chrono::high_resolution_clock::now();
 
-
     if (g_renderContext.auto_rotate) {
         double delta_time = 1.0 / g_renderContext.target_fps; // 估算的时间间隔
-        g_scene.camera.rotate_around_eye(g_renderContext.rotation_speed * delta_time * 60.0, 0, 0);
+        g_scene.camera.rotate_around_point(vec3{0, 0, 0}, g_renderContext.rotation_speed * delta_time * 60.0, 0, 0);
     }
 
-    g_rasterizer.rasterize(g_scene, PHONG_WITH_SHADOW);
+    g_rasterizer.rasterize(g_scene);
     g_rasterizer.framebuffer_to_TGA(g_tgaImage);
 
 
