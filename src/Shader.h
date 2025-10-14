@@ -23,7 +23,7 @@ public:
 class Phong_Shadow_Shader : public Shader {
     const double bias = 1e-3; //阴影偏移
 public:
-    vec3 position;
+    vec3 viewWorldPos;
     vec3 normal;
     vec3 color;
     vec2 tex_coords;

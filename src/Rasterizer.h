@@ -10,13 +10,13 @@
 
 #include "Scene.h"
 #include "TGAImage.h"
+#include "Shader.h"
 
 enum RasterizerMode {ZTEST, PHONG, PHONG_WITH_SHADOW};
 
 class Rasterizer {
 public:
-    Rasterizer();
-
+    static Rasterizer& get();
 
     void set_msaa(int MSAA);
 
@@ -25,10 +25,9 @@ public:
     void framebuffer_to_TGA(TGAImage& framebuffer);
     void zBuffer_to_TGA(TGAImage& framebuffer);
 private:
-    void processLight(Scene& scene, std::vector<Light>& lights);
+    Rasterizer();
 
     void pass(const Scene& scene, RasterizerMode mode);
-
     void Ztest(const Model& model);
     void Phong(const Model& model);
     void build_buffer();

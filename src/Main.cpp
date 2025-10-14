@@ -10,6 +10,7 @@
 #include <vector>
 #include <GLFW/glfw3.h> // Will drag system OpenGL headers
 
+#include "ConfigGui.h"
 #include "Rasterizer.h"
 #include "TGAImage.h"
 #include <memory>
@@ -57,7 +58,7 @@ struct RenderContext {
 
 static RenderContext g_renderContext;
 static Scene g_scene("../obj/default2.sc");
-static Rasterizer g_rasterizer = {};
+static Rasterizer& g_rasterizer = Rasterizer::get();
 
 static GLuint g_renderedTexture = 0;
 static std::vector<unsigned char> g_imageData;
@@ -138,21 +139,7 @@ void control_gui() {
 
             std::string header = "光源 " + std::to_string(i + 1);
             if (ImGui::TreeNode(header.c_str())) {
-                std::array<float, 3> light_position = to_float_array(g_scene.lights[i].position);
-                std::array<float, 3> light_color = to_float_array(g_scene.lights[i].color);
-                auto light_intensity = static_cast<float>(g_scene.lights[i].intensity);
-
-                if (ImGui::InputFloat3("位置", light_position.data(), "%.1f")) {
-                    g_scene.lights[i].setPosition(float_array_to_vec(light_position));
-                    if (g_scene.lights[i].getType() == DIRECTIONAL_LIGHT) {
-                        g_scene.lights[i].dirInfo->lightMove = true;
-                    }
-                }
-                if (ImGui::ColorEdit3("颜色", light_color.data()))
-                    g_scene.lights[i].color = {light_color[0], light_color[1], light_color[2]};
-                if (ImGui::InputFloat("光强", &light_intensity, 10.0f, 100.0f, "%.1f"))
-                    g_scene.lights[i].intensity = std::max(0.0f, light_intensity);
-
+                ConfigGui::ConfigLight(g_scene.lights[i]);
                 if (g_scene.lights.size() > 1) {
                     ImGui::SameLine();
                     if (ImGui::Button("删除")) {

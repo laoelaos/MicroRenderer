@@ -42,31 +42,10 @@ Scene::Scene(const std::string &filename) {
             else if (key == "yaw_pitch_roll") iss >> camera.yaw >> camera.pitch >> camera.roll;
         }
         else if (section == "POINT_LIGHT") {
-            if (key == "color") {
-                light = {};
-                light.setType(POINT_LIGHT);
-                iss >> light.color.x >> light.color.y >> light.color.z;
-            }
-            else if (key == "position") iss >> light.position.x >> light.position.y >> light.position.z;
-            else if (key == "intensity") iss >> light.intensity;
-            else if (key == "end") lights.push_back(light);
+            LoadLight(file, POINT_LIGHT);
         }
         else if (section == "DIRECTIONAL_LIGHT") {
-            if (key == "color") {
-                light = {};
-                light.setType(DIRECTIONAL_LIGHT); // 确保 dirInfo 存在
-                iss >> light.color.x >> light.color.y >> light.color.z;
-            }
-            else if (key == "position") iss >> light.position.x >> light.position.y >> light.position.z;
-            else if (key == "intensity") iss >> light.intensity;
-            else if (key == "eye" && light.dirInfo) iss >> light.dirInfo->LightCamera.eye.x >> light.dirInfo->LightCamera.eye.y >> light.dirInfo->LightCamera.eye.z;
-            else if (key == "center" && light.dirInfo) iss >> light.dirInfo->LightCamera.center.x >> light.dirInfo->LightCamera.center.y >> light.dirInfo->LightCamera.center.z;
-            else if (key == "up" && light.dirInfo) iss >> light.dirInfo->LightCamera.up.x >> light.dirInfo->LightCamera.up.y >> light.dirInfo->LightCamera.up.z;
-            else if (key == "size" && light.dirInfo) iss >> light.dirInfo->LightCamera.width >> light.dirInfo->LightCamera.height;
-            else if (key == "fov" && light.dirInfo) iss >> light.dirInfo->LightCamera.fov;
-            else if (key == "near_far" && light.dirInfo) iss >> light.dirInfo->LightCamera.near_ >> light.dirInfo->LightCamera.far_;
-            else if (key == "yaw_pitch_roll" && light.dirInfo) iss >> light.dirInfo->LightCamera.yaw >> light.dirInfo->LightCamera.pitch >> light.dirInfo->LightCamera.roll;
-            else if (key == "end") lights.push_back(light);
+            LoadLight(file, DIRECTIONAL_LIGHT);
         }
         else if (section == "Model") {
             if (key == "path") {
@@ -156,28 +135,7 @@ void Scene::save_path_file(const std::string &filename) const {
     file << "yaw_pitch_roll " << camera.yaw << " " << camera.pitch << " " << camera.roll << "\n\n";
 
     for (const auto& light : lights) {
-        if (light.getType() == POINT_LIGHT) {
-            file << "[POINT_LIGHT]\n";
-            file << "color " << light.color.x << " " << light.color.y << " " << light.color.z << "\n";
-            file << "position " << light.position.x << " " << light.position.y << " " << light.position.z << "\n";
-            file << "intensity " << light.intensity << "\n";
-        } else if (light.getType() == DIRECTIONAL_LIGHT) {
-            // 若缺少 dirInfo，跳过该光（避免解引用空 optional）
-            if (!light.dirInfo) continue;
-            file << "[DIRECTIONAL_LIGHT]\n";
-            file << "color " << light.color.x << " " << light.color.y << " " << light.color.z << "\n";
-            file << "position " << light.position.x << " " << light.position.y << " " << light.position.z << "\n";
-            file << "intensity " << light.intensity << "\n";
-            const Camera& lc = light.dirInfo->LightCamera;
-            file << "eye " << lc.eye.x << " " << lc.eye.y << " " << lc.eye.z << "\n";
-            file << "center " << lc.center.x << " " << lc.center.y << " " << lc.center.z << "\n";
-            file << "up " << lc.up.x << " " << lc.up.y << " " << lc.up.z << "\n";
-            file << "size " << lc.width << " " << lc.height << "\n";
-            file << "fov " << lc.fov << "\n";
-            file << "near_far " << lc.near_ << " " << lc.far_ << "\n";
-            file << "yaw_pitch_roll " << lc.yaw << " " << lc.pitch << " " << lc.roll << "\n";
-        }
-        file << "end\n\n";
+        SaveLight(file, light);
     }
 
     for (const auto& model : models) {
@@ -208,4 +166,67 @@ void Scene::save_path_file(const std::string &filename) const {
     }
 
     file.close();
+}
+
+void Scene::SaveModel(std::ofstream& file, const Model &model) const {
+}
+
+void Scene::LoadModel(std::ifstream& file) {
+}
+
+void Scene::SaveCamera(std::ofstream& file) const {
+}
+
+void Scene::LoadCamera(std::ifstream& file) {
+
+}
+
+void Scene::SaveLight(std::ofstream& file, const Light& light) const {
+    if (light.getType() == POINT_LIGHT) {
+        file << "[POINT_LIGHT]\n";
+    } else if (light.getType() == DIRECTIONAL_LIGHT) {
+        file << "[DIRECTIONAL_LIGHT]\n";
+    }
+
+    file << "color" << light.m_color.x << " " << light.m_color.y << " " << light.m_color.z << "\n";
+    file << "position" << light.m_position.x << " " << light.m_position.y << " " << light.m_position.z << "\n";
+    file << "intensity" << light.m_intensity << "\n";
+    if (light.getType() == DIRECTIONAL_LIGHT) {
+        file << "eye" << light.m_dirInfo->LightCamera.eye.x << " " << light.m_dirInfo->LightCamera.eye.y << " " << light.m_dirInfo->LightCamera.eye.z << "\n";
+        file << "center" << light.m_dirInfo->LightCamera.center.x << " "<< light.m_dirInfo->LightCamera.center.y << " " << light.m_dirInfo->LightCamera.center.z << "\n";
+        file << "up" << light.m_dirInfo->LightCamera.up.x << " " << light.m_dirInfo->LightCamera.up.y << " " << light.m_dirInfo->LightCamera.up.z << "\n";
+        file << "size" << light.m_dirInfo->LightCamera.width << " " << light.m_dirInfo->LightCamera.height << "\n";
+        file << "fov" << light.m_dirInfo->LightCamera.fov << "\n";
+        file << "near_far" << light.m_dirInfo->LightCamera.near_ << " " << light.m_dirInfo->LightCamera.far_ << "\n";
+        file << "yaw_pitch_roll" << light.m_dirInfo->LightCamera.yaw << " " << light.m_dirInfo->LightCamera.pitch << " " << light.m_dirInfo->LightCamera.roll << "\n";
+    }
+    file << "end\n\n";
+}
+
+void Scene::LoadLight(std::ifstream& file, LIGHT_TYPE type) {
+    lights.emplace_back();
+    Light& light = lights.back();
+    light.setType(type);
+
+    std::string line;
+    while (std::getline(file, line)) {
+        std::istringstream iss(line);
+        std::string key;
+        iss >> key;
+
+        if (line.empty() || line[0] == '#') continue;
+        if (line[0] == '[' && line.back() == ']') throw std::runtime_error("wrong light format");
+
+        if (key == "color") iss >> light.m_color.x >> light.m_color.y >> light.m_color.z;
+        else if (key == "position") iss >> light.m_position.x >> light.m_position.y >> light.m_position.z;
+        else if (key == "intensity") iss >> light.m_intensity;
+        else if (key == "eye" && light.m_dirInfo) iss >> light.m_dirInfo->LightCamera.eye.x >> light.m_dirInfo->LightCamera.eye.y >> light.m_dirInfo->LightCamera.eye.z;
+        else if (key == "center" && light.m_dirInfo) iss >> light.m_dirInfo->LightCamera.center.x >> light.m_dirInfo->LightCamera.center.y >> light.m_dirInfo->LightCamera.center.z;
+        else if (key == "up" && light.m_dirInfo) iss >> light.m_dirInfo->LightCamera.up.x >> light.m_dirInfo->LightCamera.up.y >> light.m_dirInfo->LightCamera.up.z;
+        else if (key == "size" && light.m_dirInfo) iss >> light.m_dirInfo->LightCamera.width >> light.m_dirInfo->LightCamera.height;
+        else if (key == "fov" && light.m_dirInfo) iss >> light.m_dirInfo->LightCamera.fov;
+        else if (key == "near_far" && light.m_dirInfo) iss >> light.m_dirInfo->LightCamera.near_ >> light.m_dirInfo->LightCamera.far_;
+        else if (key == "yaw_pitch_roll" && light.m_dirInfo) iss >> light.m_dirInfo->LightCamera.yaw >> light.m_dirInfo->LightCamera.pitch >> light.m_dirInfo->LightCamera.roll;
+        else if (key == "end") return;
+    }
 }

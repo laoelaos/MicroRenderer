@@ -15,21 +15,12 @@ vec3 Phong_Shadow_Shader::shade() {
     for (int i = 0; i < static_cast<int>(s_lightInfo->size()); i++) {
         const Light& light = (*s_lightInfo)[i];
 
-        vec3 light_color = light.get_illumination_at(position);
-        vec3 light_dir = normalize(s_lightPos[i] - position);
-        vec3 view_dir = normalize(vec3{0, 0, 0} - position);
+        vec3 light_color = light.get_illumination_at(viewWorldPos);
+        vec3 light_dir = normalize(s_lightPos[i] - viewWorldPos);
+        vec3 view_dir = normalize(vec3{0, 0, 0} - viewWorldPos);
         vec3 half_vec = normalize(light_dir + view_dir);
 
-        double visibility = 1.0;
-        if (light.getType() == DIRECTIONAL_LIGHT && light.dirInfo->haveShadow) {
-            vec3 light_space_pos = (light.dirInfo->LightN * s_mainCameraM * position.to_vec4(1.0)).to_vec3_point();
-            double z = light_space_pos.z;
-            if (light.dirInfo->shadowMap.get(static_cast<int>(light_space_pos.x), static_cast<int>(light_space_pos.y)).to_double() > z + bias) {
-                visibility = 0.0;
-            } else {
-                visibility = 1.0;
-            }
-        }
+        double visibility = light.getVisibility((s_mainCameraM * viewWorldPos.to_vec4(1.0)));
 
         //ambient
         result += properties->k_ambient * vec3{10, 10, 10};

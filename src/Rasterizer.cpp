@@ -6,7 +6,7 @@
 #include <iostream>
 
 #include "Rasterizer.h"
-#include "Shader.h"
+
 
 Rasterizer::Rasterizer() {
     m_width = 1;
@@ -18,6 +18,11 @@ Rasterizer::Rasterizer() {
     m_texture = {};
     m_normalMap = {};
     build_buffer();
+}
+
+Rasterizer& Rasterizer::get() {
+    static Rasterizer instance;
+    return instance;
 }
 
 //TODO: 暂时禁用MSAA, 目前实现方式不好
@@ -40,16 +45,11 @@ void Rasterizer::rasterize(Scene &scene, RasterizerMode mode) {
     } else if (mode == PHONG) {
         pass(scene, PHONG);
     } else if (mode == PHONG_WITH_SHADOW) {
-        processLight(scene, scene.lights);
+        for (Light& light : scene.lights) {
+            light.ProcessShadowMapIfNeeded(scene);
+        }
         pass(scene, PHONG_WITH_SHADOW);
     }
-}
-
-void Rasterizer::build_buffer() {
-    m_zBuffer.resize(m_width * m_height);
-    m_frameBuffer.resize(m_width * m_height);
-    std::ranges::fill(m_frameBuffer, vec3());
-    std::ranges::fill(m_zBuffer, -std::numeric_limits<double>::infinity());
 }
 
 void Rasterizer::pass(const Scene& scene, RasterizerMode mode) {
@@ -76,7 +76,7 @@ void Rasterizer::pass(const Scene& scene, RasterizerMode mode) {
             Phong_Shadow_Shader::s_lightInfo = &scene.lights;
             Phong_Shadow_Shader::s_lightPos = {};
             for (const Light& light : scene.lights) {
-                Phong_Shadow_Shader::s_lightPos.push_back((m_MV * light.position.to_vec4(1.0)).to_vec3_point());
+                Phong_Shadow_Shader::s_lightPos.push_back((m_MV * light.getPosition().to_vec4(1.0)).to_vec3_point());
             }
             Phong_Shadow_Shader::s_mainCameraM = m_view.invert();
             Ztest(obj_model);
@@ -116,7 +116,7 @@ void Rasterizer::Phong(const Model& model) {
                 if (z >= m_zBuffer[get_index(x, y)]) {
                     m_zBuffer[get_index(x, y)] = z;
 
-                    shader.position = now_triangle.get_interpolated_world_position();
+                    shader.viewWorldPos = now_triangle.get_interpolated_world_position();
                     shader.tex_coords = now_triangle.get_interpolated_tex_coords();
 
                     if (diffuse_mapping) {
@@ -182,6 +182,13 @@ void Rasterizer::Ztest(const Model& model) {
     }
 }
 
+void Rasterizer::build_buffer() {
+    m_zBuffer.resize(m_width * m_height);
+    m_frameBuffer.resize(m_width * m_height);
+    std::ranges::fill(m_frameBuffer, vec3());
+    std::ranges::fill(m_zBuffer, -std::numeric_limits<double>::infinity());
+}
+
 void Rasterizer::framebuffer_to_TGA(TGAImage& framebuffer_) {
     for (int y = 0; y < m_height; y++) {
         for (int x = 0; x < m_width; x++) {
@@ -194,36 +201,6 @@ void Rasterizer::zBuffer_to_TGA(TGAImage& framebuffer_) {
     for (int y = 0; y < m_height; y++) {
         for (int x = 0; x < m_width; x++) {
             framebuffer_.set(x, y, TGAColor(m_zBuffer[get_index(x, y)]));
-        }
-    }
-}
-
-void Rasterizer::processLight(Scene& scene, std::vector<Light>& lights) {
-    for (Light& light : lights) {
-        switch (light.getType()) {
-            case POINT_LIGHT:
-                break;
-            case DIRECTIONAL_LIGHT:
-                if (light.dirInfo->lightMove) {
-                    // Prepare shadow map size if not matching
-                    int lw = light.dirInfo->LightCamera.width;
-                    int lh = light.dirInfo->LightCamera.height;
-                    if (light.dirInfo->shadowMap.width() != lw || light.dirInfo->shadowMap.height() != lh) {
-                        light.dirInfo->shadowMap = TGAImage(lw, lh, TGAImage::RGB);
-                    }
-
-                    Camera tmp = scene.camera;
-                    scene.camera = light.dirInfo->LightCamera;
-                    pass(scene, ZTEST);
-                    scene.camera = tmp;
-
-                    zBuffer_to_TGA(light.dirInfo->shadowMap);
-                    light.dirInfo->LightN = light.dirInfo->LightCamera.get_viewport_matrix()
-                                                        * light.dirInfo->LightCamera.get_projection_matrix()
-                                                        * light.dirInfo->LightCamera.get_view_matrix();
-                    light.dirInfo->lightMove = false;
-                }
-                break;
         }
     }
 }
