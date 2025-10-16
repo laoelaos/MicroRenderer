@@ -70,9 +70,9 @@ void Scene::SaveModel(std::ofstream& file, const Model &model) const {
     file << "path " << model.model_path << "\n";
     file << "name " << model.name << "\n";
     file << "enable " << model.enable << "\n";
-    file << "translation " << model.translation.x << " " << model.translation.y << " " << model.translation.z << "\n";
-    file << "rotation " << model.rotation.x << " " << model.rotation.y << " " << model.rotation.z << "\n";
-    file << "scale " << model.scale.x << " " << model.scale.y << " " << model.scale.z << "\n";
+    file << "translation " << model.mesh.translation.x << " " << model.mesh.translation.y << " " << model.mesh.translation.z << "\n";
+    file << "rotation " << model.mesh.rotation.x << " " << model.mesh.rotation.y << " " << model.mesh.rotation.z << "\n";
+    file << "scale " << model.mesh.scale.x << " " << model.mesh.scale.y << " " << model.mesh.scale.z << "\n";
 
     if (!model.material.texture_path.empty()) {
         file << "texture " << model.material.texture_path << "\n";
@@ -119,13 +119,13 @@ void Scene::LoadModel(std::ifstream& file) {
             if (!models.empty()) models.back().enable = enable;
         }
         else if (key == "translation") {
-            if (!models.empty()) iss >> models.back().translation.x >> models.back().translation.y >> models.back().translation.z;
+            if (!models.empty()) iss >> models.back().mesh.translation.x >> models.back().mesh.translation.y >> models.back().mesh.translation.z;
         }
         else if (key == "rotation") {
-            if (!models.empty()) iss >> models.back().rotation.x >> models.back().rotation.y >> models.back().rotation.z;
+            if (!models.empty()) iss >> models.back().mesh.rotation.x >> models.back().mesh.rotation.y >> models.back().mesh.rotation.z;
         }
         else if (key == "scale") {
-            if (!models.empty()) iss >> models.back().scale.x >> models.back().scale.y >> models.back().scale.z;
+            if (!models.empty()) iss >> models.back().mesh.scale.x >> models.back().mesh.scale.y >> models.back().mesh.scale.z;
         }
         else if (key == "texture") {
             std::string texture_path;

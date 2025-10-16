@@ -20,6 +20,7 @@ public:
 
     void rasterize(Scene& scene, RasterizerMode mode);
     void rasterize(Scene& scene);
+    void pass(const Scene& scene, RasterizerMode mode);
 
     void framebuffer_to_TGA(TGAImage& framebuffer);
     void zBuffer_to_TGA(TGAImage& framebuffer);
@@ -29,7 +30,6 @@ public:
 private:
     Rasterizer();
 
-    void pass(const Scene& scene, RasterizerMode mode);
     void Ztest(const Model& model);
     void Phong(const Model& model);
     void build_buffer();
@@ -57,8 +57,8 @@ private:
 
     //helper
     TGAImage m_texture, m_normalMap;
-    mat4 m_model, m_view, m_projection, m_viewport;
-    mat4 m_MVPV, m_MV, m_MVit, m_MVPVi;
+    mat4 m_model, m_view, m_projection, m_Viewport;
+    mat4 m_MVP, m_MV, m_MVit, m_MVPVi;
 };
 
 #endif //RASTERIZER_H

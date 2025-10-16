@@ -14,7 +14,7 @@ Rasterizer::Rasterizer() {
     m_model = identity_matrix<4>();
     m_view = identity_matrix<4>();
     m_projection = identity_matrix<4>();
-    m_viewport = identity_matrix<4>();
+    m_Viewport = identity_matrix<4>();
     m_texture = {};
     m_normalMap = {};
     build_buffer();
@@ -62,10 +62,10 @@ void Rasterizer::pass(const Scene& scene, RasterizerMode mode) {
     build_buffer();
     m_view = scene.camera.get_view_matrix();
     m_projection = scene.camera.get_projection_matrix();
-    m_viewport = scene.camera.get_viewport_matrix();
+    m_Viewport = scene.camera.get_viewport_matrix();
     for (const Model& obj_model: scene.models) {
-        m_model = obj_model.get_transform_matrix();
-        m_MVPV = m_viewport * m_projection * m_view * m_model;
+        m_model = obj_model.mesh.GetTransformMatrix();
+        m_MVP = m_projection * m_view * m_model;
         m_MV = m_view * m_model;
         m_MVit = (m_view * m_model).invert().transpose();
 
@@ -96,32 +96,37 @@ void Rasterizer::Phong(const Model& model) {
     NormalType normal_type = model.material.normal_type;
     ShadeFrequency shade_frequency = model.material.shade_frequency;
 
-    size_t tri_count = model.triangles.size();
-#pragma omp parallel for default(none) shared(model, tri_count, diffuse_mapping, normal_type, shade_frequency, m_MVit, m_MVPV, m_MV, m_width, m_height, m_frameBuffer, m_zBuffer, m_texture, m_normalMap)
+    Mesh mesh = model.mesh;
+    mesh.ProcessTransform(m_MVP, m_MV, m_MVit);
+    mesh.ProcessClipping();
+    mesh.ProcessViewport(m_Viewport);
+    mesh.ProcessFaceCulling();
+
+    size_t tri_count = mesh.triangles.size();
+#pragma omp parallel for default(none) shared(model, mesh, diffuse_mapping, normal_type, shade_frequency, tri_count, m_MVit, m_MVP, m_MV, m_width, m_height, m_frameBuffer, m_zBuffer, m_texture, m_normalMap)
     for (size_t idx = 0; idx < tri_count; ++idx) {
+        Triangle& tri = mesh.triangles[idx];
+        if (tri.discard)
+            continue;
+
         Phong_Shadow_Shader shader;
         shader.properties = &model.material.properties;
 
-        Triangle now_triangle = model.triangles[idx];
-        now_triangle.get_vertices(m_MVPV, m_MV);
-        now_triangle.get_normal(m_MVit);
-        if (now_triangle.is_backface())
-             continue;
 
-        auto [x_min, x_max, y_min, y_max] = now_triangle.find_bounding_box_int(m_width, m_height);
+        auto [x_min, x_max, y_min, y_max] = tri.find_bounding_box_int(m_width, m_height);
         for (int x = x_min; x <= x_max; x++) {
             for (int y = y_min; y <= y_max; y++) {
-                now_triangle.get_barycentric_correct(x + .5, y + .5);
-                if (now_triangle.is_invalid())
+                tri.get_barycentric_correct(x + .5, y + .5);
+                if (tri.is_invalid())
                      continue;
 
                 std::lock_guard guard(m_tileLocks[get_tile_lock(x, y)]);
-                double z = now_triangle.get_interpolated_z();
+                double z = tri.get_interpolated_z();
                 if (z >= m_zBuffer[get_index(x, y)]) {
                     m_zBuffer[get_index(x, y)] = z;
 
-                    shader.viewWorldPos = now_triangle.get_interpolated_world_position();
-                    shader.tex_coords = now_triangle.get_interpolated_tex_coords();
+                    shader.viewWorldPos = tri.get_interpolated_world_position();
+                    shader.tex_coords = tri.get_interpolated_tex_coords();
 
                     if (diffuse_mapping) {
                         shader.color = m_texture.get_bilinear(shader.tex_coords);
@@ -132,16 +137,16 @@ void Rasterizer::Phong(const Model& model) {
                     if (normal_type == GLOBAL) {
                         shader.normal = m_normalMap.get_bilinear(shader.tex_coords) * 2 - vec3{1, 1, 1};
                     } else if (shade_frequency == PER_FRAGMENT) {
-                        shader.normal = now_triangle.get_interpolated_normal();
+                        shader.normal = tri.get_interpolated_normal();
                     } else {
-                        shader.normal = normalize((now_triangle.world_vertices[1] - now_triangle.world_vertices[0]) ^
-                                                   (now_triangle.world_vertices[2] - now_triangle.world_vertices[1]));
+                        shader.normal = normalize((tri.world_vertices[1] - tri.world_vertices[0]) ^
+                                                   (tri.world_vertices[2] - tri.world_vertices[1]));
                     }
                     if (normal_type == TANGENT) {
-                        vec3 e1 = now_triangle.world_vertices[1] - now_triangle.world_vertices[0];
-                        vec3 e2 = now_triangle.world_vertices[2] - now_triangle.world_vertices[0];
-                        vec2 delta_uv1 = now_triangle.tex_coords[1] - now_triangle.tex_coords[0];
-                        vec2 delta_uv2 = now_triangle.tex_coords[2] - now_triangle.tex_coords[0];
+                        vec3 e1 = tri.world_vertices[1] - tri.world_vertices[0];
+                        vec3 e2 = tri.world_vertices[2] - tri.world_vertices[0];
+                        vec2 delta_uv1 = tri.tex_coords[1] - tri.tex_coords[0];
+                        vec2 delta_uv2 = tri.tex_coords[2] - tri.tex_coords[0];
                         mat<2, 2> uv_matrix{{{delta_uv1.x, delta_uv2.x}, {delta_uv1.y, delta_uv2.y}}};
                         mat<3, 2> edge_matrix{{{e1.x, e2.x}, {e1.y, e2.y}, {e1.z, e2.z}}};
                         if (std::abs(determinant(uv_matrix)) > 1e-8) {
@@ -163,21 +168,28 @@ void Rasterizer::Phong(const Model& model) {
 }
 
 void Rasterizer::Ztest(const Model& model) {
-#pragma omp parallel for default(none) shared(model, m_MVPV, m_MV, m_width, m_height, m_zBuffer, m_tileLocks)
-    for (auto now_triangle : model.triangles) {
-        now_triangle.get_vertices(m_MVPV, m_MV);
-        if (now_triangle.is_backface())
+    Mesh mesh = model.mesh;
+    mesh.ProcessTransform(m_MVP, m_MV, m_MVit);
+    mesh.ProcessClipping();
+    mesh.ProcessViewport(m_Viewport);
+    mesh.ProcessFaceCulling();
+
+    size_t tri_count = mesh.triangles.size();
+#pragma omp parallel for default(none) shared(mesh, tri_count, m_width, m_height, m_zBuffer, m_tileLocks)
+    for (size_t idx = 0; idx < tri_count; ++idx) {
+        Triangle& tri = mesh.triangles[idx];
+        if (tri.discard)
             continue;
 
-        auto [x_min, x_max, y_min, y_max] = now_triangle.find_bounding_box_int(m_width, m_height);
+        auto [x_min, x_max, y_min, y_max] = tri.find_bounding_box_int(m_width, m_height);
         for (int x = x_min; x <= x_max; x++) {
             for (int y = y_min; y <= y_max; y++) {
-                now_triangle.get_barycentric(x + .5, y + .5);
-                if (now_triangle.is_invalid())
+                tri.get_barycentric(x + .5, y + .5);
+                if (tri.is_invalid())
                     continue;
 
                 std::lock_guard guard(m_tileLocks[get_tile_lock(x, y)]);
-                double z = now_triangle.get_interpolated_z();
+                double z = tri.get_interpolated_z();
                 if (z >= m_zBuffer[get_index(x, y)]) {
                     m_zBuffer[get_index(x, y)] = z;
                 }

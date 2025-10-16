@@ -4,7 +4,7 @@
 center 0 0 3
 size 600 600
 fov 55
-near_far 2 3
+near_far 0.1 100
 yaw_pitch_roll -90 0 0
 end
 

@@ -216,8 +216,8 @@ void ConfigGui::ConfigModel(Model& model) {
         ImGui::Checkbox("启用模型", &model.enable);
 
         ImGui::InputText("模型名称", &model.name);
-        if (ImGui::InputText("模型文件路径", &model.name))
-            model.load_obj();
+        if (ImGui::InputText("模型文件路径", &model.model_path))
+            model.mesh.LoadFromFile(model.model_path);
         if (ImGui::InputText("漫反射贴图路径", &model.material.normal_map_path))
             model.material.load_normal_map();
         if (ImGui::InputText("法线贴图路径", &model.material.texture_path))
@@ -254,21 +254,21 @@ void ConfigGui::ConfigModel(Model& model) {
     }
 
     if (ImGui::TreeNode("模型变换")) {
-        std::array<float, 3> translation = to_float_array(model.translation);
+        std::array<float, 3> translation = to_float_array(model.mesh.translation);
         if (ImGui::InputFloat3("位移", translation.data(), "%.2f"))
-            model.translation = float_array_to_vec(translation);
+            model.mesh.translation = float_array_to_vec(translation);
 
-        std::array<float, 3> rotation_degrees = to_float_array(model.rotation); //角度制
+        std::array<float, 3> rotation_degrees = to_float_array(model.mesh.rotation); //角度制
         if (ImGui::SliderFloat("X轴旋转", &rotation_degrees[0], -180.0f, 180.0f, "%.1f°"))
-            model.rotation = float_array_to_vec(rotation_degrees);
+            model.mesh.rotation = float_array_to_vec(rotation_degrees);
         if (ImGui::SliderFloat("Y轴旋转", &rotation_degrees[1], -180.0f, 180.0f, "%.1f°"))
-            model.rotation = float_array_to_vec(rotation_degrees);
+            model.mesh.rotation = float_array_to_vec(rotation_degrees);
         if (ImGui::SliderFloat("Z轴旋转", &rotation_degrees[2], -180.0f, 180.0f, "%.1f°"))
-            model.rotation = float_array_to_vec(rotation_degrees);
+            model.mesh.rotation = float_array_to_vec(rotation_degrees);
 
-        std::array<float, 3> scale = to_float_array(model.scale);
+        std::array<float, 3> scale = to_float_array(model.mesh.scale);
         if (ImGui::InputFloat3("缩放", scale.data(), "%.2f"))
-            model.scale = {
+            model.mesh.scale = {
                 std::max(0.01, static_cast<double>(scale[0])),
                 std::max(0.01, static_cast<double>(scale[1])),
                 std::max(0.01, static_cast<double>(scale[2]))
@@ -280,12 +280,12 @@ void ConfigGui::ConfigModel(Model& model) {
         ImGui::SliderFloat("统一缩放", &uniform_scale, 0.1f, 5.0f, "%.2f");
         ImGui::SameLine();
         if (ImGui::Button("应用统一缩放"))
-            model.scale = {uniform_scale, uniform_scale, uniform_scale};
+            model.mesh.scale = {uniform_scale, uniform_scale, uniform_scale};
 
         if (ImGui::Button("重置所有变换")) {
-            model.translation = {0, 0, 0};
-            model.rotation = {0, 0, 0};
-            model.scale = {1, 1, 1};
+            model.mesh.translation = {0, 0, 0};
+            model.mesh.rotation = {0, 0, 0};
+            model.mesh.scale = {1, 1, 1};
             uniform_scale = 1.0f;
         }
 

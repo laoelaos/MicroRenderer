@@ -50,16 +50,44 @@ struct Material {
     void load_normal_map(const std::string& normal_map_path);
 };
 
+// struct Vertex {
+//     bool discard = false;
+//     vec3 world_pos;
+//     vec3 screen_pos;
+//     vec3 normal;
+//     vec2 tex_coords;
+//
+//     Vertex() = default;
+//     Vertex(const vec3& pos, const vec3& normal, const vec2& tex_coords)
+//         : world_pos(pos), normal(normal), tex_coords(tex_coords) {}
+// };
+//
+// struct Primitive {
+//     bool discard = false;
+//     bool frontFacing = true;
+//     size_t indices[3] = {0, 0, 0};
+// };
+
+enum DefaultMesh {CUBE, SPHERE, PLANE};
+
 struct Triangle {
+    bool discard = false;
     std::array<vec3, 3> world_vertices;
+    std::array<vec4, 3> clip_vertices;   // clip-space positions (before perspective divide)
     std::array<vec3, 3> screen_vertices;
     std::array<vec3, 3> normals;
     std::array<vec2, 3> tex_coords;
 
-    void get_vertices(const mat4& mvpv, const mat4& mv);
-    void get_normal(const mat4& mvit);
+    Triangle() = default;
+    Triangle(const std::array<vec3, 3>& vertices,
+             const std::array<vec3, 3>& normals,
+             const std::array<vec2, 3>& tex_coords)
+        : world_vertices(vertices), normals(normals), tex_coords(tex_coords) {}
 
-    bool is_backface() const;
+    void ProcessVertices(const mat4& MVP, const mat4& MV, const mat4& MVit);
+    void ProcessViewport(const mat4& Viewport);
+
+    void set_backface();
     bool is_invalid() const;
 
     void get_barycentric(double x, double y);
@@ -76,25 +104,38 @@ private:
     double c_alpha = 0, c_beta = 0, c_gamma = 0;
 };
 
-class Model {
+class Mesh {
 public:
-    std::string name = "newObj";
-    bool enable = false;
-
-    std::string model_path;
     std::vector<Triangle> triangles = {};
-
-    Material material;
     vec3 translation = {0, 0, 0};
     vec3 rotation = {0, 0, 0};
     vec3 scale = {1, 1, 1};
 
+    Mesh() = default;
+    explicit Mesh( DefaultMesh type);
+    explicit Mesh( const std::string& filename );
+
+    void LoadFromFile(const std::string& filename);
+
+    [[nodiscard]] mat4 GetTransformMatrix() const;
+
+    void ProcessTransform(const mat4& MVP, const mat4& MV, const mat4& MVit);
+    void ProcessClipping();
+    void ProcessViewport(const mat4& Viewport);
+    void ProcessFaceCulling();
+};
+
+class Model {
+public:
+    std::string name = "newObj";
+    bool enable = false;
+    std::string model_path;
+
+    Material material;
+    Mesh mesh;
+
     Model() = default;
     explicit Model( const std::string& filename );
-
-    void load_obj();
-    void load_obj(const std::string& filename);
-    [[nodiscard]] mat4 get_transform_matrix() const;
 };
 
 #endif //MODEL_H
