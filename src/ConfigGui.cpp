@@ -69,6 +69,18 @@ void ConfigGui::LaunchConfig(Scene &scene) {
             if (m_SelectedModel >= 0 && m_SelectedModel < static_cast<int>(scene.models.size())) {
                 Model& model = scene.models[m_SelectedModel];
 
+                const char* default_mesh[] = {"正方体", "球体", "平面", "取消"};
+                ImGui::Combo("使用默认模型", &m_DefaultModel, default_mesh, IM_ARRAYSIZE(default_mesh));
+                ImGui::SameLine();
+                if (ImGui::Button("应用")) {
+                    if (m_DefaultModel < 3) {
+                        model.mesh = Mesh(static_cast<DefaultMesh>(m_DefaultModel));
+                    } else if (m_DefaultModel == 3) {
+                        model.mesh.LoadFromFile(model.model_path);
+                    }
+                    m_DefaultModel = -1; // 重置选择
+                }
+
                 ConfigModel(model);
 
                 ImGui::Separator();

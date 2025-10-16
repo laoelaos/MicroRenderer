@@ -44,7 +44,7 @@ Mesh::Mesh(const DefaultMesh type) {
             // Bottom (-Y)
             addQuad({-1,-1,-1}, { 1,-1,-1}, { 1,-1, 1}, {-1,-1, 1}, {0,-1,0});
             break;
-        }
+        } //TODO: 球体生成似乎有误
         case SPHERE: {
             const int sectorCount = 36;   // longitude slices
             const int stackCount  = 18;   // latitude stacks
@@ -112,6 +112,8 @@ Mesh::Mesh(const std::string &filename) {
 }
 
 void Mesh::LoadFromFile(const std::string &filename) {
+    triangles = {};
+
     std::ifstream file(filename);
     if (!file.is_open()) {
         throw std::runtime_error("Could not open file: " + filename);

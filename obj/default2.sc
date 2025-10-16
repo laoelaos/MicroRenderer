@@ -21,7 +21,7 @@ end
 
 [Model]
 path ..\obj\diablo3_pose\diablo3_pose.obj
-name newObj
+name diablo3_pose
 enable 0
 translation 0 0 0
 rotation 0 0 0
@@ -36,7 +36,7 @@ end
 
 [Model]
 path ..\obj\floor.obj
-name newObj
+name floor
 enable 0
 translation 0 0 0
 rotation 0 0 0
