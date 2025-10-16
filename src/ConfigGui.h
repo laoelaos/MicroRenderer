@@ -38,11 +38,9 @@ public:
 
     void LaunchConfig(Scene &scene);
 private:
-    void ConfigBasic();
     bool ConfigCamera(Camera& camera);
     void ConfigLight(Light& light);
     void ConfigModel(Model& model);
-    void ConfigRenderSetting();
 };
 
 

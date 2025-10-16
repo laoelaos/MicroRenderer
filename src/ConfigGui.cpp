@@ -20,7 +20,6 @@ ConfigGui& ConfigGui::get() {
 void ConfigGui::LaunchConfig(Scene &scene) {
     ImGui::Begin("渲染控制面板");
 
-    ConfigBasic();
     ConfigCamera(scene.camera);
 
     //TODO: LightCamera管理
@@ -85,27 +84,11 @@ void ConfigGui::LaunchConfig(Scene &scene) {
         }
     }
 
-    ConfigRenderSetting();
-
     if (ImGui::Button("强制重新渲染")) {
         m_RenderContext.force_render = true;
     }
 
     ImGui::End();
-}
-
-void ConfigGui::ConfigBasic() {
-    if (ImGui::CollapsingHeader("基本设置")) {
-        const char* items[] = { "仅Z测试", "Phong光照", "Phong光照+阴影" };
-        int current_mode = Rasterizer::get().getType();
-        if (ImGui::Combo("渲染模式", &current_mode, items, IM_ARRAYSIZE(items))) {
-            Rasterizer::get().getType() = static_cast<RasterizerMode>(current_mode);
-        }
-
-        if (ImGui::InputInt("MSAA级别", &m_RenderContext.msaa_level, 1, 1)) {
-            Rasterizer::get().set_msaa(std::clamp(m_RenderContext.msaa_level, 1, 10));
-        }
-    }
 }
 
 bool ConfigGui::ConfigCamera(Camera& camera) {
@@ -293,20 +276,3 @@ void ConfigGui::ConfigModel(Model& model) {
     }
 }
 
-void ConfigGui::ConfigRenderSetting() {
-    if (ImGui::CollapsingHeader("实时渲染设置", ImGuiTreeNodeFlags_DefaultOpen)) {
-        ImGui::Checkbox("启用实时渲染", &m_RenderContext.real_time_rendering);
-        ImGui::Checkbox("自动旋转模型", &m_RenderContext.auto_rotate);
-
-        if (m_RenderContext.auto_rotate) {
-            ImGui::SliderFloat("旋转速度", &m_RenderContext.rotation_speed, 0.1f, 5.0f, "%.1f");
-        }
-
-        // 目标帧率设置
-        ImGui::SliderFloat("目标帧率", &m_RenderContext.target_fps, 10.0f, 120.0f, "%.1f");
-
-        int refresh_interval = static_cast<int>(m_RenderContext.refresh_interval);
-        ImGui::InputInt("信息刷新间隔(ms)", &refresh_interval);
-        m_RenderContext.refresh_interval = std::max(100, refresh_interval);
-    }
-}
