@@ -18,7 +18,7 @@ public:
 private:
     bool ConfigCamera(Camera& camera);
     void ConfigLight(Light& light);
-    void ConfigModel(Model& model);
+    bool ConfigModel(Model& model);
 };
 
 

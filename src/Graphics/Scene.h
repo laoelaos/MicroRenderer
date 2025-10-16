@@ -23,6 +23,8 @@ public:
     Scene() = default;
     explicit Scene(const std::string& filename);
 
+    void SetMove();
+
     void save_path_file() const;
     void save_path_file(const std::string& filename) const;
 private:

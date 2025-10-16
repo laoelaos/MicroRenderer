@@ -73,6 +73,7 @@ void ConfigGui::LaunchConfig(Scene &scene) {
                 ImGui::Combo("使用默认模型", &m_DefaultModel, default_mesh, IM_ARRAYSIZE(default_mesh));
                 ImGui::SameLine();
                 if (ImGui::Button("应用")) {
+                    scene.SetMove();
                     if (m_DefaultModel < 3) {
                         model.mesh = Mesh(static_cast<DefaultMesh>(m_DefaultModel));
                     } else if (m_DefaultModel == 3) {
@@ -81,7 +82,9 @@ void ConfigGui::LaunchConfig(Scene &scene) {
                     m_DefaultModel = -1; // 重置选择
                 }
 
-                ConfigModel(model);
+                if (ConfigModel(model)) {
+                    scene.SetMove();
+                }
 
                 ImGui::Separator();
                 if (scene.models.size() > 1) {  // 至少保留一个模型
@@ -200,7 +203,7 @@ void ConfigGui::ConfigLight(Light& light) {
     }
 }
 
-void ConfigGui::ConfigModel(Model& model) {
+bool ConfigGui::ConfigModel(Model& model) {
     if (ImGui::TreeNode("模型基础设置")) {
         ImGui::Checkbox("启用模型", &model.enable);
 
@@ -243,35 +246,49 @@ void ConfigGui::ConfigModel(Model& model) {
     }
 
     if (ImGui::TreeNode("模型变换")) {
+        bool changed = false;
         std::array<float, 3> translation = to_float_array(model.mesh.translation);
-        if (ImGui::InputFloat3("位移", translation.data(), "%.2f"))
+        if (ImGui::InputFloat3("位移", translation.data(), "%.2f")) {
+            changed = true;
             model.mesh.translation = float_array_to_vec(translation);
+        }
 
         std::array<float, 3> rotation_degrees = to_float_array(model.mesh.rotation); //角度制
-        if (ImGui::SliderFloat("X轴旋转", &rotation_degrees[0], -180.0f, 180.0f, "%.1f°"))
+        if (ImGui::SliderFloat("X轴旋转", &rotation_degrees[0], -180.0f, 180.0f, "%.1f°")) {
+            changed = true;
             model.mesh.rotation = float_array_to_vec(rotation_degrees);
-        if (ImGui::SliderFloat("Y轴旋转", &rotation_degrees[1], -180.0f, 180.0f, "%.1f°"))
+        }
+        if (ImGui::SliderFloat("Y轴旋转", &rotation_degrees[1], -180.0f, 180.0f, "%.1f°")) {
+            changed = true;
             model.mesh.rotation = float_array_to_vec(rotation_degrees);
-        if (ImGui::SliderFloat("Z轴旋转", &rotation_degrees[2], -180.0f, 180.0f, "%.1f°"))
+        }
+        if (ImGui::SliderFloat("Z轴旋转", &rotation_degrees[2], -180.0f, 180.0f, "%.1f°")) {
+            changed = true;
             model.mesh.rotation = float_array_to_vec(rotation_degrees);
+        }
 
         std::array<float, 3> scale = to_float_array(model.mesh.scale);
-        if (ImGui::InputFloat3("缩放", scale.data(), "%.2f"))
+        if (ImGui::InputFloat3("缩放", scale.data(), "%.2f")) {
+            changed = true;
             model.mesh.scale = {
                 std::max(0.01, static_cast<double>(scale[0])),
                 std::max(0.01, static_cast<double>(scale[1])),
                 std::max(0.01, static_cast<double>(scale[2]))
             };
+        }
 
         ImGui::Separator();
 
         static float uniform_scale = 1.0f;
         ImGui::SliderFloat("统一缩放", &uniform_scale, 0.1f, 5.0f, "%.2f");
         ImGui::SameLine();
-        if (ImGui::Button("应用统一缩放"))
+        if (ImGui::Button("应用统一缩放")) {
+            changed = true;
             model.mesh.scale = {uniform_scale, uniform_scale, uniform_scale};
+        }
 
         if (ImGui::Button("重置所有变换")) {
+            changed = true;
             model.mesh.translation = {0, 0, 0};
             model.mesh.rotation = {0, 0, 0};
             model.mesh.scale = {1, 1, 1};
@@ -279,6 +296,8 @@ void ConfigGui::ConfigModel(Model& model) {
         }
 
         ImGui::TreePop();
+        return changed;
     }
+    return false;
 }
 
