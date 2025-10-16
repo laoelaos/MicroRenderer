@@ -30,6 +30,7 @@ void RenderGui::LaunchRender() {
     ImGui::Begin("渲染设置");
     ConfigBasic();
     ConfigRenderSetting();
+    ShowFPS();
     ImGui::End();
 
     RenderResult();
@@ -64,6 +65,22 @@ void RenderGui::ConfigRenderSetting() {
         int refresh_interval = static_cast<int>(m_RenderContext.refresh_interval);
         ImGui::InputInt("信息刷新间隔(ms)", &refresh_interval);
         m_RenderContext.refresh_interval = std::max(100, refresh_interval);
+    }
+
+    if (ImGui::Button("强制重新渲染")) {
+        m_RenderContext.force_render = true;
+    }
+}
+
+void RenderGui::ShowFPS() {
+    ImGui::Text("渲染纹理: ID=%u, 尺寸=%dx%d", m_TextureID,
+                m_TextureImage.width(), m_TextureImage.height());
+    ImGui::Text("渲染时间: %lld ms | FPS: %.1f", m_RenderContext.avg_render_time, m_RenderContext.current_fps);
+
+    if (m_RenderContext.real_time_rendering || m_RenderContext.auto_rotate) {
+        ImGui::TextColored(ImVec4(0, 1, 0, 1), "实时渲染已启用");
+    } else {
+        ImGui::TextColored(ImVec4(1, 1, 0, 1), "按需渲染模式");
     }
 }
 
@@ -100,18 +117,6 @@ void RenderGui::RenderResult() {
     float offsetY = (windowSize.y - imageSize.y) * 0.5f;
     if (offsetX > 0 || offsetY > 0) {
         ImGui::SetCursorPos(ImVec2(ImGui::GetCursorPosX() + offsetX, ImGui::GetCursorPosY() + offsetY));
-    }
-
-    // 显示纹理信息和预览
-    ImGui::Text("渲染纹理: ID=%u, 尺寸=%dx%d", m_TextureID,
-                m_TextureImage.width(), m_TextureImage.height());
-    ImGui::Text("渲染时间: %lld ms | FPS: %.1f", m_RenderContext.avg_render_time, m_RenderContext.current_fps);
-
-    // 显示渲染模式状态
-    if (m_RenderContext.real_time_rendering || m_RenderContext.auto_rotate) {
-        ImGui::TextColored(ImVec4(0, 1, 0, 1), "实时渲染已启用");
-    } else {
-        ImGui::TextColored(ImVec4(1, 1, 0, 1), "按需渲染模式");
     }
 
     ImGui::Image(m_TextureID, imageSize);

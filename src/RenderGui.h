@@ -10,10 +10,8 @@
 #include "Scene.h"
 #include "TGAImage.h"
 
-struct RenderSettings {
+struct RenderContext {
     int msaa_level = 1;
-
-    int selected_model = 0;
 
     // 渲染选项
     bool real_time_rendering = true;    // 是否启用实时渲染
@@ -34,7 +32,7 @@ struct RenderSettings {
 class RenderGui {
     Scene m_Scene = Scene("../obj/default2.sc");
 
-    RenderSettings m_RenderContext;
+    RenderContext m_RenderContext;
 
     uint32_t m_TextureID = 0;
     TGAImage m_TextureImage;
@@ -46,12 +44,13 @@ class RenderGui {
 public:
     static RenderGui& get();
 
-    RenderSettings& getSettings() { return m_RenderContext; }
+    RenderContext& getSettings() { return m_RenderContext; }
 
     void LaunchRender();
 private:
     void ConfigBasic();
     void ConfigRenderSetting();
+    void ShowFPS();
     void RenderResult();
 
     void PerformRendering();

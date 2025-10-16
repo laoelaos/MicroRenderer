@@ -4,8 +4,6 @@
 
 #include "imgui.h"
 #include "imgui_stdlib.h"
-#include "imgui_impl_glfw.h"
-#include "imgui_impl_opengl3.h"
 #include "ConfigGui.h"
 
 #include <algorithm>
@@ -18,7 +16,7 @@ ConfigGui& ConfigGui::get() {
 }
 
 void ConfigGui::LaunchConfig(Scene &scene) {
-    ImGui::Begin("渲染控制面板");
+    ImGui::Begin("场景设置");
 
     ConfigCamera(scene.camera);
 
@@ -66,26 +64,22 @@ void ConfigGui::LaunchConfig(Scene &scene) {
             model_names.push_back(model.name.c_str());
 
         if (!model_names.empty()) {
-            ImGui::Combo("选择模型", &m_RenderContext.selected_model, model_names.data(), static_cast<int>(model_names.size()));
+            ImGui::Combo("选择模型", &m_SelectedModel, model_names.data(), static_cast<int>(model_names.size()));
 
-            if (m_RenderContext.selected_model >= 0 && m_RenderContext.selected_model < static_cast<int>(scene.models.size())) {
-                Model& model = scene.models[m_RenderContext.selected_model];
+            if (m_SelectedModel >= 0 && m_SelectedModel < static_cast<int>(scene.models.size())) {
+                Model& model = scene.models[m_SelectedModel];
 
                 ConfigModel(model);
 
                 ImGui::Separator();
                 if (scene.models.size() > 1) {  // 至少保留一个模型
                     if (ImGui::Button("删除模型")) {
-                        scene.models.erase(scene.models.begin() + m_RenderContext.selected_model);
-                        m_RenderContext.selected_model = std::min(m_RenderContext.selected_model, static_cast<int>(scene.models.size()) - 1);
+                        scene.models.erase(scene.models.begin() + m_SelectedModel);
+                        m_SelectedModel = std::min(m_SelectedModel, static_cast<int>(scene.models.size()) - 1);
                     }
                 }
             }
         }
-    }
-
-    if (ImGui::Button("强制重新渲染")) {
-        m_RenderContext.force_render = true;
     }
 
     ImGui::End();
