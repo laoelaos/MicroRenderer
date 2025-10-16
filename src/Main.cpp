@@ -28,7 +28,6 @@
 
 #include "Scene.h"
 
-void output_gui();
 void glfw_error_callback(int error, const char* description);
 void initTexture(int width, int height);
 void performRendering();
@@ -43,41 +42,34 @@ static GLuint g_renderedTexture = 0;
 static std::vector<unsigned char> g_imageData;
 static TGAImage g_tgaImage(g_scene.camera.getWidth(), g_scene.camera.getHeight(), TGAImage::RGB);
 
-void MainLoop(GLFWwindow* window) {
-    ImVec4 clear_color = ImVec4(0.15f, 0.15f, 0.15f, 1.00f);
+void ShowMainDockspace() {
+    ImGuiWindowFlags host_flags =
+        ImGuiWindowFlags_NoDocking |
+        ImGuiWindowFlags_NoTitleBar |
+        ImGuiWindowFlags_NoCollapse |
+        ImGuiWindowFlags_NoResize |
+        ImGuiWindowFlags_NoMove |
+        ImGuiWindowFlags_NoBringToFrontOnFocus |
+        ImGuiWindowFlags_NoNavFocus |
+        ImGuiWindowFlags_NoBackground;
 
-    initTexture(g_scene.camera.getWidth(), g_scene.camera.getWidth());
-    g_rasterizer.set_msaa(1);
-    while (!glfwWindowShouldClose(window))
-    {
-        glfwPollEvents();
-        if (glfwGetWindowAttrib(window, GLFW_ICONIFIED) != 0)
-        {
-            ImGui_ImplGlfw_Sleep(10);
-            continue;
-        }
+    ImGuiViewport* vp = ImGui::GetMainViewport();
+    ImGui::SetNextWindowPos(vp->WorkPos);
+    ImGui::SetNextWindowSize(vp->WorkSize);
+    ImGui::SetNextWindowViewport(vp->ID);
 
-        ImGui_ImplOpenGL3_NewFrame();   // Start the Dear ImGui frame
-        ImGui_ImplGlfw_NewFrame();
-        ImGui::NewFrame();
+    ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 0.0f);
+    ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize, 0.0f);
+    ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0, 0));
 
-        ConfigGui::get().LaunchConfig(g_scene);
-        output_gui();
+    ImGui::Begin("##DockSpaceHost", nullptr, host_flags);
+    ImGui::PopStyleVar(3);
 
-        // Rendering
-        ImGui::Render();
-        int display_w, display_h;
-        glfwGetFramebufferSize(window, &display_w, &display_h);
-        glViewport(0, 0, display_w, display_h);
-        glClearColor(clear_color.x * clear_color.w, clear_color.y * clear_color.w, clear_color.z * clear_color.w, clear_color.w);
-        glClear(GL_COLOR_BUFFER_BIT);
-        ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
+    ImGuiDockNodeFlags dock_flags = ImGuiDockNodeFlags_PassthruCentralNode;
+    ImGuiID dockspace_id = ImGui::GetID("MainDockSpace");
+    ImGui::DockSpace(dockspace_id, ImVec2(0, 0), dock_flags);
 
-        glfwSwapBuffers(window);
-    }
-
-    if (saveScene)
-        g_scene.save_path_file();
+    ImGui::End();
 }
 
 void output_gui() {
@@ -132,6 +124,52 @@ void output_gui() {
     ImGui::End();
 }
 
+void MainLoop(GLFWwindow* window) {
+    ImVec4 clear_color = ImVec4(0.15f, 0.15f, 0.15f, 1.00f);
+
+    initTexture(g_scene.camera.getWidth(), g_scene.camera.getWidth());
+    g_rasterizer.set_msaa(1);
+    while (!glfwWindowShouldClose(window))
+    {
+        glfwPollEvents();
+        if (glfwGetWindowAttrib(window, GLFW_ICONIFIED) != 0)
+        {
+            ImGui_ImplGlfw_Sleep(10);
+            continue;
+        }
+
+        ImGui_ImplOpenGL3_NewFrame();   // Start the Dear ImGui frame
+        ImGui_ImplGlfw_NewFrame();
+        ImGui::NewFrame();
+
+        ShowMainDockspace();
+
+        ConfigGui::get().LaunchConfig(g_scene);
+        output_gui();
+
+        // Rendering
+        ImGui::Render();
+        int display_w, display_h;
+        glfwGetFramebufferSize(window, &display_w, &display_h);
+        glViewport(0, 0, display_w, display_h);
+        glClearColor(clear_color.x * clear_color.w, clear_color.y * clear_color.w, clear_color.z * clear_color.w, clear_color.w);
+        glClear(GL_COLOR_BUFFER_BIT);
+        ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
+
+        if (ImGui::GetIO().ConfigFlags & ImGuiConfigFlags_ViewportsEnable) {
+            GLFWwindow* backup_current_context = glfwGetCurrentContext();
+            ImGui::UpdatePlatformWindows();
+            ImGui::RenderPlatformWindowsDefault();
+            glfwMakeContextCurrent(backup_current_context);
+        }
+
+        glfwSwapBuffers(window);
+    }
+
+    if (saveScene)
+        g_scene.save_path_file();
+}
+
 int main(int, char**)
 {
     glfwSetErrorCallback(glfw_error_callback);
@@ -181,6 +219,8 @@ int main(int, char**)
     (void) io;
     io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard; // Enable Keyboard Controls
     io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad; // Enable Gamepad Controls
+    io.ConfigFlags |= ImGuiConfigFlags_DockingEnable; // Enable Docking
+    //io.ConfigFlags |= ImGuiConfigFlags_ViewportsEnable; // Enable Multi-Viewport /
 
     ImGui::StyleColorsDark(); // Setup Dear ImGui style
 

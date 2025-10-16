@@ -53,6 +53,7 @@ set(SOURCES ${IMGUI_SOURCES} ${Graphics_SOURCES}
         src/Rasterizer.cpp
         src/Shader.cpp
         src/ConfigGui.cpp
+        src/RenderGui.cpp
 )
 
 add_executable(${PROJECT_NAME} ${SOURCES})
