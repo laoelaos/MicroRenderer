@@ -39,9 +39,9 @@ void RenderGui::LaunchRender() {
 void RenderGui::ConfigBasic() {
     if (ImGui::CollapsingHeader("基本设置")) {
         const char* items[] = { "仅Z测试", "Phong光照", "Phong光照+阴影" };
-        int current_mode = Rasterizer::get().getType();
+        int current_mode = m_RenderContext.render_mode;
         if (ImGui::Combo("渲染模式", &current_mode, items, IM_ARRAYSIZE(items))) {
-            Rasterizer::get().getType() = static_cast<RasterizerMode>(current_mode);
+            m_RenderContext.render_mode = static_cast<RasterizerMode>(current_mode);
         }
 
         if (ImGui::InputInt("MSAA级别", &m_RenderContext.msaa_level, 1, 1)) {
@@ -131,8 +131,12 @@ void RenderGui::PerformRendering() {
         m_Scene.camera.rotate_around_point(vec3{0, 0, 0}, m_RenderContext.rotation_speed * delta_time * 60.0, 0, 0);
     }
 
-    Rasterizer::get().rasterize(m_Scene);
-    Rasterizer::get().framebuffer_to_TGA(m_TextureImage);
+    Rasterizer::get().rasterize(m_Scene, m_RenderContext.render_mode);
+    if (m_RenderContext.render_mode == PHONG_WITH_SHADOW || m_RenderContext.render_mode == PHONG) {
+        Rasterizer::get().framebuffer_to_TGA(m_TextureImage);
+    } else if (m_RenderContext.render_mode == ZTEST) {
+        Rasterizer::get().zBuffer_to_TGA(m_TextureImage);
+    }
 
     auto end_time = std::chrono::high_resolution_clock::now();
     auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end_time - start_time).count();
@@ -169,10 +173,18 @@ void RenderGui::LoadTexture() {
         for (int x = 0; x < width; x++) {
             TGAColor color = m_TextureImage.get(x, y);
             int index = ((height - y - 1) * width + x) * 4;
-            m_ImageData[index] = color.bgra[2];     // R
-            m_ImageData[index + 1] = color.bgra[1]; // G
-            m_ImageData[index + 2] = color.bgra[0]; // B
-            m_ImageData[index + 3] = 255;           // A (强制设为不透明)
+            if (m_RenderContext.render_mode == PHONG_WITH_SHADOW || m_RenderContext.render_mode == PHONG) {
+                m_ImageData[index] = color.bgra[2];     // R
+                m_ImageData[index + 1] = color.bgra[1]; // G
+                m_ImageData[index + 2] = color.bgra[0]; // B
+                m_ImageData[index + 3] = color.bgra[3]; // A (强制设为不透明)
+            } else if (m_RenderContext.render_mode == ZTEST) {
+                uint8_t zColor = static_cast<uint8_t>((color.to_double() + 1.0) * 100);
+                m_ImageData[index] = zColor;     // R
+                m_ImageData[index + 1] = zColor; // G
+                m_ImageData[index + 2] = zColor; // B
+                m_ImageData[index + 3] = 255;           // A (强制
+            }
         }
     }
 

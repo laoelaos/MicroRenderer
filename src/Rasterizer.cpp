@@ -52,10 +52,6 @@ void Rasterizer::rasterize(Scene &scene, RasterizerMode mode) {
     }
 }
 
-void Rasterizer::rasterize(Scene &scene) {
-    rasterize(scene, m_mode);
-}
-
 void Rasterizer::pass(const Scene& scene, RasterizerMode mode) {
     m_width = scene.camera.getWidth();
     m_height = scene.camera.getHeight();
@@ -63,6 +59,14 @@ void Rasterizer::pass(const Scene& scene, RasterizerMode mode) {
     m_view = scene.camera.get_view_matrix();
     m_projection = scene.camera.get_projection_matrix();
     m_Viewport = scene.camera.get_viewport_matrix();
+
+    if (mode == PHONG || mode == PHONG_WITH_SHADOW) {
+        PhongShader::s_lightPos = {};
+        for (const Light& light : scene.lights) {
+            PhongShader::s_lightPos.push_back((m_MV * light.getPosition().to_vec4(1.0)).to_vec3_point());
+        }
+    }
+
     for (const Model& obj_model: scene.models) {
         m_model = obj_model.mesh.GetTransformMatrix();
         m_MVP = m_projection * m_view * m_model;
@@ -72,17 +76,14 @@ void Rasterizer::pass(const Scene& scene, RasterizerMode mode) {
         if (mode == ZTEST)
             Ztest(obj_model);
         if (mode == PHONG) {
-            //sth..
+            PhongShader::s_EnableShadow = false;
             Ztest(obj_model);
             Phong(obj_model);
         }
         if (mode == PHONG_WITH_SHADOW) {
-            Phong_Shadow_Shader::s_lightInfo = &scene.lights;
-            Phong_Shadow_Shader::s_lightPos = {};
-            for (const Light& light : scene.lights) {
-                Phong_Shadow_Shader::s_lightPos.push_back((m_MV * light.getPosition().to_vec4(1.0)).to_vec3_point());
-            }
-            Phong_Shadow_Shader::s_mainCameraM = m_view.invert();
+            PhongShader::s_lightInfo = &scene.lights;
+            PhongShader::s_mainCameraM = m_view.invert();
+            PhongShader::s_EnableShadow = true;
             Ztest(obj_model);
             Phong(obj_model);
         }
@@ -109,7 +110,7 @@ void Rasterizer::Phong(const Model& model) {
         if (tri.discard)
             continue;
 
-        Phong_Shadow_Shader shader;
+        PhongShader shader;
         shader.properties = &model.material.properties;
 
 

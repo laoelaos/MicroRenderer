@@ -19,13 +19,11 @@ public:
     static Rasterizer& get();
 
     void rasterize(Scene& scene, RasterizerMode mode);
-    void rasterize(Scene& scene);
     void pass(const Scene& scene, RasterizerMode mode);
 
     void framebuffer_to_TGA(TGAImage& framebuffer);
     void zBuffer_to_TGA(TGAImage& framebuffer);
 
-    RasterizerMode& getType() { return m_mode; }
     void set_msaa(int MSAA);
 private:
     Rasterizer();
@@ -48,7 +46,6 @@ private:
 
     //options
     int m_MSAA = 1;
-    RasterizerMode m_mode = PHONG_WITH_SHADOW;
 
     //lock
     int m_tileRows = 20;

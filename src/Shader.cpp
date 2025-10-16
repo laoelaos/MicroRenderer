@@ -6,11 +6,12 @@
 
 #include <iostream>
 
+bool PhongShader::s_EnableShadow;
 const std::vector<Light>* Shader::s_lightInfo;
 std::vector<vec3> Shader::s_lightPos;
-mat4 Phong_Shadow_Shader::s_mainCameraM;
+mat4 PhongShader::s_mainCameraM;
 
-vec3 Phong_Shadow_Shader::shade() {
+vec3 PhongShader::shade() {
     vec3 result{};
     for (int i = 0; i < static_cast<int>(s_lightInfo->size()); i++) {
         const Light& light = (*s_lightInfo)[i];
@@ -20,7 +21,10 @@ vec3 Phong_Shadow_Shader::shade() {
         vec3 view_dir = normalize(vec3{0, 0, 0} - viewWorldPos);
         vec3 half_vec = normalize(light_dir + view_dir);
 
-        double visibility = light.getVisibility((s_mainCameraM * viewWorldPos.to_vec4(1.0)));
+        double visibility = 1.0;
+        if (s_EnableShadow) {
+            visibility = light.getVisibility((s_mainCameraM * viewWorldPos.to_vec4(1.0)));
+        }
 
         //ambient
         result += properties->k_ambient * vec3{10, 10, 10};

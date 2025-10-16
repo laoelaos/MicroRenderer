@@ -14,13 +14,12 @@ class Shader {
 public:
     static const std::vector<Light>* s_lightInfo;
     static std::vector<vec3> s_lightPos;
+
     virtual ~Shader() = default;
     virtual vec3 shade() = 0;
 };
 
-//TODO: Phong_Shader类
-
-class Phong_Shadow_Shader : public Shader {
+class PhongShader : public Shader {
     const double bias = 1e-3; //阴影偏移
 public:
     vec3 viewWorldPos;
@@ -29,6 +28,7 @@ public:
     vec2 tex_coords;
     const PhongProperties* properties;
 
+    static bool s_EnableShadow;
     static mat4 s_mainCameraM;
 
     vec3 shade() override;
