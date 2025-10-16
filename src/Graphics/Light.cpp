@@ -25,7 +25,7 @@ void Light::setPosition(const vec3 &position_) {
         m_position = position_;
     } else if (m_type == DIRECTIONAL_LIGHT) {
         m_position = position_;
-        m_dirInfo->LightCamera.getEye() = position_;
+        m_dirInfo->LightCamera.getCenter() = position_;
         m_dirInfo->lightMove = true;
     }
 }

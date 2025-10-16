@@ -32,7 +32,7 @@ public:
     [[nodiscard]] int getWidth() const { return m_width; }
     [[nodiscard]] int getHeight() const { return m_height; }
     [[nodiscard]] double getAspect() const { return m_aspect; }
-    vec3& getEye() { return m_eye; }
+    vec3& getCenter() { return m_center; }
 
     void updateRotate();
     void updateEuler();
