@@ -29,14 +29,14 @@ find_package(glfw3 CONFIG REQUIRED)
 find_package(OpenGL REQUIRED)
 
 set(IMGUI_SOURCES
-        src/ImGui/imgui.cpp
-        src/ImGui/imgui_stdlib.cpp
-        src/ImGui/imgui_demo.cpp
-        src/ImGui/imgui_draw.cpp
-        src/ImGui/imgui_tables.cpp
-        src/ImGui/imgui_widgets.cpp
-        src/ImGui/imgui_impl_glfw.cpp
-        src/ImGui/imgui_impl_opengl3.cpp
+        extern/ImGui/imgui.cpp
+        extern/ImGui/imgui_stdlib.cpp
+        extern/ImGui/imgui_demo.cpp
+        extern/ImGui/imgui_draw.cpp
+        extern/ImGui/imgui_tables.cpp
+        extern/ImGui/imgui_widgets.cpp
+        extern/ImGui/imgui_impl_glfw.cpp
+        extern/ImGui/imgui_impl_opengl3.cpp
 )
 
 set(Graphics_SOURCES
@@ -57,7 +57,7 @@ set(SOURCES ${IMGUI_SOURCES} ${Graphics_SOURCES}
 
 add_executable(${PROJECT_NAME} ${SOURCES})
 
-target_include_directories(${PROJECT_NAME} PRIVATE src/ImGui src/Graphics)
+target_include_directories(${PROJECT_NAME} PRIVATE extern/ImGui src/Graphics)
 
 target_link_libraries(${PROJECT_NAME} PRIVATE
         glfw
