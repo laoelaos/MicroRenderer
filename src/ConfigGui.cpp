@@ -229,16 +229,16 @@ bool ConfigGui::ConfigModel(Model& model) {
 
         ImGui::Checkbox("使用贴图", &model.material.diffuse_mapping);
 
-        const char *normal_types[] = {"全局法线贴图", "切线空间法线贴图"};
-        int normal_type_idx = model.material.normal_type == GLOBAL ? 0 : 1;
+        const char *normal_types[] = {"全局法线贴图", "切线空间法线贴图", "不使用法线贴图"};
+        int normal_type_idx = model.material.normal_type;
         if (ImGui::Combo("法线类型", &normal_type_idx, normal_types, IM_ARRAYSIZE(normal_types))) {
-            model.material.normal_type = normal_type_idx == 0 ? GLOBAL : TANGENT;
+            model.material.normal_type = static_cast<NormalMapType>(normal_type_idx);
         }
 
-        const char *shade_frequencies[] = {"每顶点着色", "每片段着色"};
-        int shade_freq_idx = model.material.shade_frequency == PER_VERTEX ? 0 : 1;
+        const char *shade_frequencies[] = {"平坦着色", "每片段着色"};
+        int shade_freq_idx = model.material.shade_frequency;
         if (ImGui::Combo("着色频率", &shade_freq_idx, shade_frequencies, IM_ARRAYSIZE(shade_frequencies))) {
-            model.material.shade_frequency = shade_freq_idx == 0 ? PER_VERTEX : PER_FRAGMENT;
+            model.material.shade_frequency = static_cast<ShadeFrequency>(shade_freq_idx);
         }
 
         ImGui::TreePop();

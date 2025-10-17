@@ -157,7 +157,7 @@ void Scene::LoadModel(std::ifstream& file) {
         else if (key == "normal_type") {
             int normal_type;
             iss >> normal_type;
-            if (!models.empty()) models.back().material.normal_type = static_cast<NormalType>(normal_type);
+            if (!models.empty()) models.back().material.normal_type = static_cast<NormalMapType>(normal_type);
         }
         else if (key == "shade_frequency") {
             int shade_freq;

@@ -68,9 +68,9 @@ mat4 Camera::get_projection_matrix() const {
     return scale * translate * pers;
 }
 
-mat4 Camera::get_viewport_matrix() const {
-    return {{{m_width/2., 0, 0, m_width/2.},
-                        {0, m_height/2., 0, m_height/2.},
+mat4 Camera::get_viewport_matrix(int MASS) const {
+    return {{{MASS * m_width/2., 0, 0, MASS * m_width/2.},
+                        {0, MASS * m_height/2., 0, MASS * m_height/2.},
                         {0, 0, 1, 0},
                         {0, 0, 0, 1}}};
 }

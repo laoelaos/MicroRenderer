@@ -10,8 +10,8 @@
 #include "Geometry.h"
 #include "../TGAImage.h"
 
-enum NormalType {GLOBAL, TANGENT, NONE};
-enum ShadeFrequency {FLAT, PER_VERTEX, PER_FRAGMENT};
+enum NormalMapType {GLOBAL = 0, TANGENT, NOT_USE};
+enum ShadeFrequency {FLAT = 0, PER_FRAGMENT};
 
 struct PhongProperties {
     double k_diffuse;
@@ -25,7 +25,7 @@ struct Material {
              const std::string& normal_map_path = "",
              const PhongProperties &properties = {},
              bool diffuse_mapping = false,
-             NormalType normal_type = NONE,
+             NormalMapType normal_type = NOT_USE,
              ShadeFrequency shade_frequency = FLAT)
                     : properties(properties), diffuse_mapping(diffuse_mapping),
                       normal_type(normal_type), shade_frequency(shade_frequency) {
@@ -41,7 +41,7 @@ struct Material {
     PhongProperties properties;
 
     bool diffuse_mapping;
-    NormalType normal_type;
+    NormalMapType normal_type;
     ShadeFrequency shade_frequency;
 
     void load_texture();

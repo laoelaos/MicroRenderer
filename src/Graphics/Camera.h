@@ -38,7 +38,7 @@ public:
     void updateEuler();
     [[nodiscard]] mat4 get_view_matrix() const;
     [[nodiscard]] mat4 get_projection_matrix() const;
-    [[nodiscard]] mat4 get_viewport_matrix() const;
+    [[nodiscard]] mat4 get_viewport_matrix(int MSAA) const;
 
     /**
      *  @brief 设置相机朝向，基于相机位置旋转，顺时针旋转

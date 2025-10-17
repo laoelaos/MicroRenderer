@@ -54,7 +54,7 @@ void Light::ProcessShadowMapIfNeeded(Scene &scene) {
         scene.camera = tmp;
 
         Rasterizer::get().zBuffer_to_TGA(m_dirInfo->shadowMap);
-        m_dirInfo->LightN = m_dirInfo->LightCamera.get_viewport_matrix()
+        m_dirInfo->LightN = m_dirInfo->LightCamera.get_viewport_matrix(1)
                                             * m_dirInfo->LightCamera.get_projection_matrix()
                                             * m_dirInfo->LightCamera.get_view_matrix();
         m_dirInfo->lightMove = false;

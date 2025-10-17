@@ -216,6 +216,7 @@ void Mesh::ProcessTransform(const mat4 &MVP, const mat4 &MV, const mat4 &MVit) {
     }
 }
 
+//TODO:裁剪不完全正确
 void Mesh::ProcessClipping() {
     // Vertex structure with all interpolable attributes
     struct ClipVtx {

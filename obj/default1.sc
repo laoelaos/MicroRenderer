@@ -25,7 +25,7 @@ texture ..\obj\african_head\african_head_diffuse.tga
 normal_map ..\obj\african_head\african_head_nm_tangent.tga
 diffuse_mapping 1
 normal_type 1
-shade_frequency 2
+shade_frequency 1
 phong 0.9 0.6 0.005 150
 end
 
@@ -40,6 +40,6 @@ texture ..\obj\african_head\african_head_eye_inner_diffuse.tga
 normal_map ..\obj\african_head\african_head_eye_inner_nm_tangent.tga
 diffuse_mapping 1
 normal_type 1
-shade_frequency 2
+shade_frequency 1
 phong 0.9 0.6 0.005 150
 end

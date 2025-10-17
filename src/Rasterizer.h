@@ -28,8 +28,10 @@ public:
 private:
     Rasterizer();
 
-    void Ztest(const Model& model);
-    void Phong(const Model& model);
+    void ZtestPipeline(const Model& model);
+    void ZtestFragment(Mesh& mesh);
+    void PhongPipeline(const Model& model);
+    void PhongFragment(const Material& material, Mesh& mesh);
     void build_buffer();
 
     int get_index(int x, int y) const { return x + y * m_width; }
@@ -53,7 +55,6 @@ private:
     std::vector<std::mutex> m_tileLocks = std::vector<std::mutex>(m_tileRows * m_tileCols);
 
     //helper
-    TGAImage m_texture, m_normalMap;
     mat4 m_model, m_view, m_projection, m_Viewport;
     mat4 m_MVP, m_MV, m_MVit, m_MVPVi;
 };
