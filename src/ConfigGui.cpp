@@ -20,7 +20,6 @@ void ConfigGui::LaunchConfig(Scene &scene) {
 
     ConfigCamera(scene.camera);
 
-    //TODO: LightCamera管理
     if (ImGui::CollapsingHeader("光照设置")) {
         ImGui::Text("光源数量: %zu", scene.lights.size());
 

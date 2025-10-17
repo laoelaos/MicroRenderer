@@ -44,7 +44,7 @@ Mesh::Mesh(const DefaultMesh type) {
             // Bottom (-Y)
             addQuad({-1,-1,-1}, { 1,-1,-1}, { 1,-1, 1}, {-1,-1, 1}, {0,-1,0});
             break;
-        } //TODO: 球体生成似乎有误
+        }
         case SPHERE: {
             const int sectorCount = 36;   // longitude slices
             const int stackCount  = 18;   // latitude stacks
@@ -83,14 +83,12 @@ Mesh::Mesh(const DefaultMesh type) {
                     int k1 = i * cols + j;
                     int k2 = k1 + cols;
 
-                    // First tri: (i,j) (i,j+1) (i+1,j+1)
-                    addTri(pos[k1], pos[k1+1], pos[k2+1],
-                           nor[k1], nor[k1+1], nor[k2+1],
-                           uv[k1],  uv[k1+1],  uv[k2+1]);
-                    // Second tri: (i,j) (i+1,j+1) (i+1,j)
-                    addTri(pos[k1], pos[k2+1], pos[k2],
-                           nor[k1], nor[k2+1], nor[k2],
-                           uv[k1],  uv[k2+1],  uv[k2]);
+                    addTri(pos[k1+1], pos[k1], pos[k2+1],
+                           nor[k1+1], nor[k1], nor[k2+1],
+                           uv[k1+1],  uv[k1],  uv[k2+1]);
+                    addTri(pos[k1], pos[k2], pos[k2+1],
+                           nor[k1], nor[k2], nor[k2+1],
+                           uv[k1],  uv[k2],  uv[k2+1]);
                 }
             }
             break;

@@ -228,7 +228,7 @@ void Scene::SaveLight(std::ofstream& file, const Light& light) const {
     }
     file << "end\n\n";
 }
-//TODO:改用LoadCamera
+
 void Scene::LoadLight(std::ifstream& file, LIGHT_TYPE type) {
     lights.emplace_back();
     Light& light = lights.back();
