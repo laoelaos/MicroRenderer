@@ -17,7 +17,7 @@ end
 [Model]
 path ..\obj\african_head\african_head.obj
 name african_head
-enable 0
+enable 1
 translation 0 0 0
 rotation 0 0 0
 scale 1 1 1
@@ -32,7 +32,7 @@ end
 [Model]
 path ..\obj\african_head\african_head_eye_inner.obj
 name african_head_eye_inner
-enable 0
+enable 1
 translation 0 0 0
 rotation 0 0 0
 scale 1 1 1

@@ -52,11 +52,15 @@ void Rasterizer::pass(const Scene& scene, RasterizerMode mode) {
     if (mode == PHONG || mode == PHONG_WITH_SHADOW) {
         PhongShader::s_lightPos = {};
         for (const Light& light : scene.lights) {
-            PhongShader::s_lightPos.push_back((m_MV * light.getPosition().to_vec4(1.0)).to_vec3_point());
+            PhongShader::s_lightPos.push_back((m_view * light.getPosition().to_vec4(1.0)).to_vec3_point());
         }
     }
 
     for (const Model& obj_model: scene.models) {
+
+        if (!obj_model.enable)
+            continue;
+
         m_model = obj_model.mesh.GetTransformMatrix();
         m_MVP = m_projection * m_view * m_model;
         m_MV = m_view * m_model;

@@ -53,8 +53,11 @@ void ConfigGui::LaunchConfig(Scene &scene) {
     if (ImGui::CollapsingHeader("模型管理")) {
         ImGui::Text("场景中的模型个数: %zu", scene.models.size());
 
-        if (ImGui::Button("添加新模型"))
+        if (ImGui::Button("添加新模型")) {
             scene.models.emplace_back();
+            scene.models.back().mesh = Mesh(SPHERE);
+            scene.SetMove();
+        }
 
         ImGui::Separator();
 
@@ -203,8 +206,12 @@ void ConfigGui::ConfigLight(Light& light) {
 }
 
 bool ConfigGui::ConfigModel(Model& model) {
+    bool changed = false;
+
     if (ImGui::TreeNode("模型基础设置")) {
-        ImGui::Checkbox("启用模型", &model.enable);
+
+        if (ImGui::Checkbox("启用模型", &model.enable))
+            changed = true;
 
         ImGui::InputText("模型名称", &model.name);
         if (ImGui::InputText("模型文件路径", &model.model_path))
@@ -245,7 +252,6 @@ bool ConfigGui::ConfigModel(Model& model) {
     }
 
     if (ImGui::TreeNode("模型变换")) {
-        bool changed = false;
         std::array<float, 3> translation = to_float_array(model.mesh.translation);
         if (ImGui::InputFloat3("位移", translation.data(), "%.2f")) {
             changed = true;
@@ -295,8 +301,6 @@ bool ConfigGui::ConfigModel(Model& model) {
         }
 
         ImGui::TreePop();
-        return changed;
     }
-    return false;
+    return changed;
 }
-

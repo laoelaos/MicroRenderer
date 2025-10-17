@@ -14,10 +14,10 @@ enum NormalMapType {GLOBAL = 0, TANGENT, NOT_USE};
 enum ShadeFrequency {FLAT = 0, PER_FRAGMENT};
 
 struct PhongProperties {
-    double k_diffuse;
-    double k_specular;
-    double k_ambient;
-    int p;
+    double k_diffuse = 0.8;
+    double k_specular = 0.5;
+    double k_ambient = 0.1;
+    int p = 100;
 };
 
 struct Material {
@@ -128,7 +128,7 @@ public:
 class Model {
 public:
     std::string name = "newObj";
-    bool enable = false;
+    bool enable = true;
     std::string model_path;
 
     Material material;
