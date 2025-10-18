@@ -271,7 +271,7 @@ void Mesh::ProcessClipping() {
                 } else if (!prevIn && currIn) {
                     const double denom = dp - dc;
                     if (std::abs(denom) > 1e-12) {
-                        const double t = dp / denom;
+                        const double t = dp > 0 ? dp / denom : -dp / denom;
                         out.push_back(lerp(prev, curr, t));
                     }
                     out.push_back(curr);

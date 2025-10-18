@@ -180,8 +180,8 @@ void Rasterizer::ZtestFragment(Mesh &mesh) {
                 tri.get_barycentric(x + .5, y + .5);
                 if (tri.is_invalid())
                     continue;
-
-                std::lock_guard guard(m_tileLocks[get_tile_lock(x, y)]);
+                //TODO:注释后光源位于物体内不会报错,待解决
+                //std::lock_guard guard(m_tileLocks[get_tile_lock(x, y)]);
                 double z = tri.get_interpolated_z();
                 if (z >= m_zBuffer[get_index(x, y)]) {
                     m_zBuffer[get_index(x, y)] = z;
