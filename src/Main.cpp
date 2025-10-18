@@ -5,6 +5,7 @@
 #include <cstdio>
 
 #include "RenderGui.h"
+#include "Util/Logger.h"
 #define GL_SILENCE_DEPRECATION
 #if defined(IMGUI_IMPL_OPENGL_ES2)
 #include <GLES2/gl2.h>
@@ -59,6 +60,11 @@ void ShowMainDockspace() {
 }
 
 void MainLoop(GLFWwindow* window) {
+    Logger::Get().setFile("MicroRenderer.log", false);
+    Logger::Get().enableConsole(true);
+    Logger::Get().setLevel(LogLevel::Debug);
+    LOGI("Start MainLoop");
+
     ImVec4 clear_color = ImVec4(0.15f, 0.15f, 0.15f, 1.00f);
 
     while (!glfwWindowShouldClose(window))
@@ -97,6 +103,7 @@ void MainLoop(GLFWwindow* window) {
 
         glfwSwapBuffers(window);
     }
+    LOGI("End MainLoop");
 }
 
 int main(int, char**)

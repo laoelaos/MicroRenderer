@@ -9,59 +9,6 @@
 #include "stb_image.h"
 #include "stb_image_write.h"
 
-template<typename T>
-Buffer<T>::Buffer(int width, int height) :m_width(width), m_height(height) {
-    m_size = width * height;
-    m_data = std::make_unique<T[]>(m_size);
-}
-
-template<typename T>
-T Buffer<T>::Get(int x, int y) const {
-    return m_data[GetIndex(x % m_width, y % m_height)];
-}
-
-template<typename T>
-T* Buffer<T>::GetP(int x, int y) {
-    T *ptr = m_data.get();
-    return &ptr[GetIndex(x % m_width, y % m_height)];
-}
-
-template<typename T>
-T Buffer<T>::GetBilinear(vec2 uv) const {
-    return Get(static_cast<int>(uv.x * m_width), static_cast<int>(uv.y * m_height));
-}
-
-template<typename T>
-T Buffer<T>::GetNearest(vec2 uv) const {
-    int x = static_cast<int>(uv.x * m_width);
-    int y = static_cast<int>(uv.y * m_height);
-    int xp = std::min(x + 1, m_width - 1);
-    int yp = std::min(y + 1, m_height - 1);
-    double u = uv.x * m_width - x;
-    double v = uv.y * m_height - y;
-    vec3 c00 = Get(x, y);
-    vec3 c10 = Get(xp, y);
-    vec3 c01 = Get(x, yp);
-    vec3 c11 = Get(xp, yp);
-    return (1 - u) * (1 - v) * c00 +
-           u * (1 - v) * c10 +
-           (1 - u) * v * c01 +
-           u * v * c11;
-}
-
-template<typename T>
-void Buffer<T>::Set(int x, int y, T val) {
-    m_data[GetIndex(x % m_width, y % m_height)] = val;
-}
-
-template<typename T>
-void Buffer<T>::SetAll(T val) {
-    T *ptr = m_data.get();
-    for (int i = 0; i < m_size; i++) {
-        ptr[i] = val;
-    }
-}
-
 std::shared_ptr<Buffer<RGBA>> ImageUtil::ReadImageRGBA(const std::string &path) {
     int iw = 0, ih = 0, n = 0;
     unsigned char *data = stbi_load(path.c_str(), &iw, &ih, &n, STBI_default);

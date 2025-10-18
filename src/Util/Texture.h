@@ -34,7 +34,6 @@ struct SamplerDesc {
     WrapMode wrapS = Wrap_CLAMP_TO_EDGE;   // S坐标环绕模式
     WrapMode wrapT = Wrap_CLAMP_TO_EDGE;   // T坐标环绕模式
     WrapMode wrapR = Wrap_CLAMP_TO_EDGE;   // R坐标环绕模式（3D纹理）
-
     BorderColor borderColor = Border_BLACK; // 边界颜色
 };
 
@@ -43,31 +42,35 @@ class Texture {
 public:
     virtual ~Texture() = default;
 
-    virtual vec3 Get(vec2 uv) = 0;
-    virtual vec3 Get(vec3 pos) = 0;
-
+    const SamplerDesc& GetSamplerDesc() const { return m_SamplerDesc; }
     void SetSamplerDesc(const SamplerDesc &sampler) { m_SamplerDesc = sampler; }
 };
 
 class FlatTexture : public Texture {
     std::shared_ptr<Buffer<RGBA>> m_data;
 public:
-    vec3 Get(vec2 uv);
-    vec3 Get(vec3 pos);
+    RGBA Get(vec2 uv);
     void SetData(const std::shared_ptr<Buffer<RGBA>> &data) { m_data = data; }
+};
+
+class SixFacesCubeTexture : public Texture {
+    std::array<std::shared_ptr<Buffer<RGBA>>, 6> m_data;
+public:
+    RGBA Get(vec3 dir);
+    void SetData(int i, const std::shared_ptr<Buffer<RGBA>> &data) { m_data[i] = data; }
 };
 
 enum CubeTexType {
     CubeTexType_Spherical = 0,
     CubeTexType_Cube,
 };
-class CubeTexture : public Texture {
-    std::array<std::shared_ptr<Buffer<RGBA>>, 6> m_data;
-    CubeTexType m_type = CubeTexType_Cube;
+class SingleCubeTexture : public Texture {
+    std::shared_ptr<Buffer<RGBA>> m_data;
+    CubeTexType m_type = CubeTexType_Spherical;
 public:
-    vec3 Get(vec2 uv);
-    vec3 Get(vec3 pos);
-    void SetData(int i, const std::shared_ptr<Buffer<RGBA>> &data) { m_data[i] = data; }
+    RGBA Get(vec3 dir);
+    void SetType(CubeTexType type) { m_type = type; }
+    void SetData(const std::shared_ptr<Buffer<RGBA>> &data) { m_data = data; }
 };
 
 #endif //MICRORENDERER_TEXTURE_H
