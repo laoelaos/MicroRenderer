@@ -47,7 +47,20 @@ set(Graphics_SOURCES
         src/Graphics/Geometry.cpp
 )
 
-set(SOURCES ${IMGUI_SOURCES} ${Graphics_SOURCES}
+set(UTIL_SOURCES
+        src/Util/Buffer.cpp
+        src/Util/Logger.cpp
+        src/Util/Texture.cpp
+)
+
+set(SET_SOURCES
+        ${IMGUI_SOURCES}
+        ${Graphics_SOURCES}
+        ${UTIL_SOURCES}
+)
+
+set(SOURCES
+        ${SET_SOURCES}
         src/main.cpp
         src/TGAImage.cpp
         src/Rasterizer.cpp
@@ -58,11 +71,17 @@ set(SOURCES ${IMGUI_SOURCES} ${Graphics_SOURCES}
 
 add_executable(${PROJECT_NAME} ${SOURCES})
 
-target_include_directories(${PROJECT_NAME} PRIVATE extern/ImGui src/Graphics)
+target_include_directories(${PROJECT_NAME} PRIVATE
+        extern/ImGui
+        extern/stb
+        src/Graphics
+        src
+)
 
 target_link_libraries(${PROJECT_NAME} PRIVATE
         glfw
         OpenGL::GL
-        $<$<BOOL:${OpenMP_CXX_FOUND}>:OpenMP::OpenMP_CXX>)
+        $<$<BOOL:${OpenMP_CXX_FOUND}>:OpenMP::OpenMP_CXX>
+)
 
 file(GENERATE OUTPUT .gitignore CONTENT "*")
