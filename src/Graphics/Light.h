@@ -17,23 +17,30 @@ enum LIGHT_TYPE {
     POINT_LIGHT = 0,
     DIRECTIONAL_LIGHT = 1
 };
+//TODO: 点光源在某些位置有点问题
+struct PointLightInfo {
+    TGAImage shadowMap[6];
+    mat4 LightN[6];
+};
 
 struct DirectionalLightInfo {
-    bool haveShadow = true;
-    bool lightMove = true;
-
     Camera LightCamera;
     TGAImage shadowMap;
     mat4 LightN;
 };
 
 class Light {
+    bool m_haveShadow = true;
+    bool m_lightMove = true;
     LIGHT_TYPE m_type = POINT_LIGHT;
 
     // basic
     vec3 m_color = {1.0, 1.0, 1.0};
     vec3 m_position = {20.0, 20.0, 20.0};
     double m_intensity = 2000.0;
+
+    // shadow / light-sphere (for point light)
+    std::optional<PointLightInfo> m_pointInfo;
 
     // shadow / light-camera (for directional light)
     std::optional<DirectionalLightInfo> m_dirInfo;

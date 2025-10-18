@@ -216,7 +216,6 @@ void Mesh::ProcessTransform(const mat4 &MVP, const mat4 &MV, const mat4 &MVit) {
     }
 }
 
-//TODO:裁剪不完全正确
 void Mesh::ProcessClipping() {
     // Vertex structure with all interpolable attributes
     struct ClipVtx {
@@ -247,7 +246,8 @@ void Mesh::ProcessClipping() {
         static bool inside(const ClipVtx& v, int plane) {
             double d = plane_value(v, plane);
             // If w is negative, the homogeneous sign is flipped; reverse inequality
-            return (v.clip.w >= 0.0) ? (d >= 0.0) : (d <= 0.0);
+            //return (v.clip.w >= 0.0) ? (d >= 0.0) : (d <= 0.0);
+            return d <= 0;
         }
         static std::vector<ClipVtx> clip_against_plane(const std::vector<ClipVtx>& in, int plane) {
             std::vector<ClipVtx> out;
@@ -283,7 +283,7 @@ void Mesh::ProcessClipping() {
 
     const size_t tri_count = triangles.size();
     std::vector<std::vector<Triangle>> thread_results;
-    
+
 #pragma omp parallel default(none) shared(tri_count, thread_results, triangles)
     {
         std::vector<Triangle> local_tris;
@@ -395,9 +395,6 @@ void Triangle::ProcessVertices(const mat4& MVP, const mat4& MV, const mat4& MVit
     for (int i = 0; i < 3; i++) {
         clip_vertices[i] = MVP * world_vertices[i].to_vec4(1.0);  // Store clip-space position
         world_vertices[i] = (MV * world_vertices[i].to_vec4(1.0)).to_vec3_point();
-        if (world_vertices[i].z > 0) {
-            clip_vertices[i].w = -clip_vertices[i].w;
-        }
         normals[i] = (MVit * normals[i].to_vec4(0.0)).to_vec3_vec();
     }
 }

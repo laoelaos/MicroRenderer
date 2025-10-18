@@ -23,7 +23,6 @@ Rasterizer& Rasterizer::get() {
     return instance;
 }
 
-//TODO: 暂时禁用MSAA, 目前实现方式不好
 void Rasterizer::set_msaa(int MSAA) {
     m_MSAA = MSAA;
 }

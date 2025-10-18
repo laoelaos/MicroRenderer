@@ -121,7 +121,7 @@ bool ConfigGui::ConfigCamera(Camera& camera) {
         bool view_changed = false;
         if (ImGui::SliderFloat("水平旋转 (Yaw)", &yaw, -180.0f, 180.0f, "%.1f°"))
             view_changed = true;
-        if (ImGui::SliderFloat("垂直旋转 (Pitch)", &pitch, -89.0f, 89.0f, "%.1f°"))
+        if (ImGui::SliderFloat("垂直旋转 (Pitch)", &pitch, -90.0f, 90.0f, "%.1f°"))
             view_changed = true;
         if (ImGui::SliderFloat("滚转 (roll)", &roll, -180.0f, 180.0f, "%.1f°"))
             view_changed = true;
@@ -163,17 +163,16 @@ void ConfigGui::ConfigLight(Light& light) {
         light.setType(lightType == 0 ? POINT_LIGHT : DIRECTIONAL_LIGHT);
     }
 
+    ImGui::Checkbox("启用阴影", &light.m_haveShadow);
+
     if (lightType == DIRECTIONAL_LIGHT) {
-        ImGui::Checkbox("启用阴影", &light.m_dirInfo->haveShadow);
         ImGui::Text("光源位置即为光照方向");
         ImGui::Text("光照方向: (%.1f, %.1f, %.1f)", -light.m_position.x, -light.m_position.y, -light.m_position.z);
     }
 
     if (ImGui::InputFloat3("位置", light_position.data(), "%.1f")) {
         light.setPosition(float_array_to_vec(light_position));
-        if (lightType == DIRECTIONAL_LIGHT) {
-            light.m_dirInfo->lightMove = true;
-        }
+        light.m_lightMove = true;
     }
 
     if (ImGui::ColorEdit3("颜色", light_color.data()))
@@ -185,7 +184,7 @@ void ConfigGui::ConfigLight(Light& light) {
         ImGui::Text("光照相机设置:");
         ImGui::InputInt("宽度", &light.m_dirInfo->LightCamera.m_width);
         ImGui::InputInt("高度", &light.m_dirInfo->LightCamera.m_height);
-
+        //TODO:或许集成相机设置?
         auto fov = static_cast<float>(light.m_dirInfo->LightCamera.m_fov);
         auto near_plane = static_cast<float>(light.m_dirInfo->LightCamera.m_near);
         auto far_plane = static_cast<float>(light.m_dirInfo->LightCamera.m_far);
@@ -195,12 +194,9 @@ void ConfigGui::ConfigLight(Light& light) {
             light.m_dirInfo->LightCamera.m_near = near_plane;
         if (ImGui::InputFloat("远平面", &far_plane, 0.1f, 0.5f, "%.2f"))
             light.m_dirInfo->LightCamera.m_far = far_plane;
-
-
-
         if (ImGui::Button("重置光照相机")) {
-            light.m_dirInfo->LightCamera.m_eye = light.m_position;
-            light.m_dirInfo->lightMove = true;
+            light.m_dirInfo->LightCamera.m_center = light.m_position;
+            light.m_lightMove = true;
         }
     }
 }

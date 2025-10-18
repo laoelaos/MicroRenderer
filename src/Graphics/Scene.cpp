@@ -42,9 +42,7 @@ Scene::Scene(const std::string &filename) {
 
 void Scene::SetMove() {
     for (Light& light : lights) {
-        if (light.getType() == DIRECTIONAL_LIGHT) {
-            light.m_dirInfo->lightMove = true;
-        }
+        light.m_lightMove = true;
     }
 }
 
