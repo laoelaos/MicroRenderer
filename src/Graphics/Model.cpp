@@ -498,6 +498,10 @@ void Material::load_normal_map(const std::string &normal_map_path) {
     this->normal_map_path = normal_map_path;
 }
 
+Model::Model(DefaultMesh type) {
+    mesh = Mesh(type);
+}
+
 Model::Model(const std::string& filename) {
     mesh = Mesh(filename);
 }

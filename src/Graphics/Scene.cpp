@@ -251,6 +251,15 @@ void Scene::LoadLight(std::ifstream& file, LIGHT_TYPE type) {
         else if (key == "fov" && light.m_dirInfo) iss >> light.m_dirInfo->LightCamera.m_fov;
         else if (key == "near_far" && light.m_dirInfo) iss >> light.m_dirInfo->LightCamera.m_near >> light.m_dirInfo->LightCamera.m_far;
         else if (key == "yaw_pitch_roll" && light.m_dirInfo) iss >> light.m_dirInfo->LightCamera.m_yaw >> light.m_dirInfo->LightCamera.m_pitch >> light.m_dirInfo->LightCamera.m_roll;
-        else if (key == "end") return;
+        else if (key == "end") {
+            models.emplace_back(CUBE);
+            light.m_lightModel = &models.back();
+            light.m_lightModel->name = "light_model";
+            light.m_lightModel->necessary = true;
+            light.m_lightModel->mesh.scale = vec3{0.05, 0.05, 0.05};
+            light.m_lightModel->mesh.translation = light.m_position;
+            light.m_lightModel->material.properties = {0.0, 0.0, 1.0, 1};
+            return;
+        }
     }
 }

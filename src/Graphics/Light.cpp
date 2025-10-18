@@ -22,6 +22,7 @@ vec3 Light::get_illumination_at(const vec3& point) const {
 
 void Light::setPosition(const vec3 &position_) {
     m_lightMove = true;
+    m_lightModel->mesh.translation = position_;
     if (m_type == POINT_LIGHT) {
         m_position = position_;
     } else if (m_type == DIRECTIONAL_LIGHT) {

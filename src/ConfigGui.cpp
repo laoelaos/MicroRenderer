@@ -54,8 +54,7 @@ void ConfigGui::LaunchConfig(Scene &scene) {
         ImGui::Text("场景中的模型个数: %zu", scene.models.size());
 
         if (ImGui::Button("添加新模型")) {
-            scene.models.emplace_back();
-            scene.models.back().mesh = Mesh(SPHERE);
+            scene.models.emplace_back(SPHERE);
             scene.SetMove();
         }
 
@@ -89,7 +88,7 @@ void ConfigGui::LaunchConfig(Scene &scene) {
                 }
 
                 ImGui::Separator();
-                if (scene.models.size() > 1) {  // 至少保留一个模型
+                if (scene.models.size() > 1 && !scene.models[m_SelectedModel].necessary) {  // 至少保留一个模型
                     if (ImGui::Button("删除模型")) {
                         scene.models.erase(scene.models.begin() + m_SelectedModel);
                         m_SelectedModel = std::min(m_SelectedModel, static_cast<int>(scene.models.size()) - 1);

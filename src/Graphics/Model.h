@@ -112,7 +112,7 @@ public:
     vec3 scale = {1, 1, 1};
 
     Mesh() = default;
-    explicit Mesh( DefaultMesh type);
+    explicit Mesh( DefaultMesh type );
     explicit Mesh( const std::string& filename );
 
     void LoadFromFile(const std::string& filename);
@@ -129,12 +129,14 @@ class Model {
 public:
     std::string name = "newObj";
     bool enable = true;
+    bool necessary = false;
     std::string model_path;
 
     Material material;
     Mesh mesh;
 
     Model() = default;
+    explicit Model( DefaultMesh type );
     explicit Model( const std::string& filename );
 };
 

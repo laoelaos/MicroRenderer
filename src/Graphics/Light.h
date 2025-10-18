@@ -9,6 +9,7 @@
 
 #include "Camera.h"
 #include "Geometry.h"
+#include "Model.h"
 #include "../TGAImage.h"
 
 class Scene;
@@ -38,6 +39,9 @@ class Light {
     vec3 m_color = {1.0, 1.0, 1.0};
     vec3 m_position = {20.0, 20.0, 20.0};
     double m_intensity = 2000.0;
+
+    // model
+    Model* m_lightModel;
 
     // shadow / light-sphere (for point light)
     std::optional<PointLightInfo> m_pointInfo;
