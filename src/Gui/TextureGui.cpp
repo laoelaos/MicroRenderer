@@ -17,11 +17,10 @@ TextureGui& TextureGui::Get() {
 }
 
 std::shared_ptr<Texture> TextureGui::GetTextureByIndex(int index) {
-    if (index < 0 || index >= m_TexturesBuffer.size()) {
+    if (index < 0 || static_cast<size_t>(index) >= m_TexturesBuffer.size()) {
         LOGE("TextureGui::GetTextureByIndex: Invalid texture index: %d", index);
         return nullptr;
     }
-    LOGI("TextureGui::GetTextureByIndex: Returning texture at index %d", index);
     return m_TexturesBuffer[index].texture;
 }
 
@@ -122,12 +121,12 @@ int TextureGui::LoadTextureFromFile(const std::string& path) {
 
     m_TexturesBuffer.push_back(preview);
 
-    LOGI("TextureGui::LoadTextureFromFile: success-> %s (ID: %u, Size: %dx%d)", path.c_str(), preview.textureID, preview.width, preview.height);
+    LOGI("TextureGui::LoadTextureFromFile: success-> %s (Index: %u, Size: %dx%d)", path.c_str(), preview.index, preview.width, preview.height);
     return preview.index;
 }
 
 void TextureGui::DeleteTexture(int index) {
-    if (index < 0 || index >= m_TexturesBuffer.size()) {
+    if (index < 0 || static_cast<size_t>(index) >= m_TexturesBuffer.size()) {
         LOGE("TextureGui::DeleteTexture: Invalid texture index: %d", index);
         return;
     }
@@ -162,6 +161,4 @@ void TextureGui::CreateGLTexture(TexturePreview& preview) {
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
     glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, preview.width, preview.height, 0,
                  GL_RGBA, GL_UNSIGNED_BYTE, buffer->GetP(0, 0));
-
-    LOGI("OpenGL texture created: ID=%u", preview.textureID);
 }

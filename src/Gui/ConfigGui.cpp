@@ -211,10 +211,18 @@ bool ConfigGui::ConfigModel(Model& model) {
         ImGui::InputText("模型名称", &model.name);
         if (ImGui::InputText("模型文件路径", &model.model_path))
             model.mesh.LoadFromFile(model.model_path);
-        if (ImGui::InputText("漫反射贴图路径", &model.material.normal_map_path))
-            model.material.load_normal_map();
-        if (ImGui::InputText("法线贴图路径", &model.material.texture_path))
-            model.material.load_texture();
+
+        ImGui::InputInt("漫反射贴图", &model.material.texture_index);
+        ImGui::SameLine();
+        ImGui::PushID(0);
+        if (ImGui::Button("确定"))
+            model.material.load_normal_map(model.material.texture_index);
+        ImGui::PopID();
+
+        ImGui::InputInt("法线贴图", &model.material.normal_map_index);
+        ImGui::SameLine();
+        if (ImGui::Button("确定"))
+            model.material.load_texture(model.material.normal_map_index);
 
         auto k_ambient = static_cast<float>(model.material.properties.k_ambient);
         auto k_diffuse = static_cast<float>(model.material.properties.k_diffuse);

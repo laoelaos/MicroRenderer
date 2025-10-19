@@ -472,36 +472,20 @@ std::tuple<int, int, int, int> Triangle::find_bounding_box_int(int width, int he
     return {x_min, x_max, y_min, y_max};
 }
 
-void Material::load_texture() {
-    load_texture(texture_path);
-}
-
 void Material::load_texture(int i) {
-    texture = std::dynamic_pointer_cast<FlatTexture>(TextureGui::Get().GetTextureByIndex(i));
-}
-
-void Material::load_texture(const std::string &texture_path) {
-    if (!texture_path.empty()) {
-        texture = std::make_shared<FlatTexture>();
-        texture->SetData(ImageUtil::ReadImageRGBA(texture_path, true));
+    auto tex = std::dynamic_pointer_cast<FlatTexture>(TextureGui::Get().GetTextureByIndex(i));
+    if (tex) {
+        texture = tex;
+        texture_index = i;
     }
-    this->texture_path = texture_path;
-}
-
-void Material::load_normal_map() {
-    load_normal_map(normal_map_path);
 }
 
 void Material::load_normal_map(int i) {
-    normal_map = std::dynamic_pointer_cast<FlatTexture>(TextureGui::Get().GetTextureByIndex(i));
-}
-
-void Material::load_normal_map(const std::string &normal_map_path) {
-    if (!normal_map_path.empty()) {
-        normal_map = std::make_shared<FlatTexture>();
-        normal_map->SetData(ImageUtil::ReadImageRGBA(normal_map_path, true));
+    auto nor = std::dynamic_pointer_cast<FlatTexture>(TextureGui::Get().GetTextureByIndex(i));
+    if (nor) {
+        normal_map = nor;
+        normal_map_index = i;
     }
-    this->normal_map_path = normal_map_path;
 }
 
 Model::Model(DefaultMesh type) {

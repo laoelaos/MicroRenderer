@@ -21,34 +21,20 @@ struct PhongProperties {
 };
 
 struct Material {
-    explicit Material(const std::string& texture_path = "",
-             const std::string& normal_map_path = "",
-             const PhongProperties &properties = {},
-             bool diffuse_mapping = false,
-             NormalMapType normal_type = NOT_USE,
-             ShadeFrequency shade_frequency = FLAT)
-                    : properties(properties), diffuse_mapping(diffuse_mapping),
-                      normal_type(normal_type), shade_frequency(shade_frequency) {
-
-        load_texture(texture_path);
-        load_normal_map(normal_map_path);
-    }
     std::string texture_path;
+    int texture_index = -1;
     std::shared_ptr<FlatTexture> texture;
     std::string normal_map_path;
+    int normal_map_index;
     std::shared_ptr<FlatTexture> normal_map;
 
     PhongProperties properties;
 
-    bool diffuse_mapping;
-    NormalMapType normal_type;
-    ShadeFrequency shade_frequency;
+    bool diffuse_mapping = false;
+    NormalMapType normal_type = NOT_USE;
+    ShadeFrequency shade_frequency = FLAT;
 
-    void load_texture();
-    void load_texture(const std::string& texture_path);
     void load_texture(int i);
-    void load_normal_map();
-    void load_normal_map(const std::string& normal_map_path);
     void load_normal_map(int i);
 };
 
