@@ -4,6 +4,8 @@
 
 #include "TextureGui.h"
 
+#include <format>
+
 #include "ImageUtils.h"
 #include "imgui.h"
 #include "imgui_stdlib.h"
@@ -41,59 +43,136 @@ void TextureGui::LaunchTextureGui() {
 
     ImGui::Separator();
 
-    // 已加载纹理列表
+    // 已加载纹理列表 - 网格布局
     if (ImGui::CollapsingHeader("已加载纹理", ImGuiTreeNodeFlags_DefaultOpen)) {
         ImGui::Text("纹理数量: %d", static_cast<int>(m_TexturesBuffer.size()));
 
         if (m_TexturesBuffer.empty()) {
             ImGui::TextColored(ImVec4(1.0f, 1.0f, 0.0f, 1.0f), "暂无已加载纹理");
         } else {
-            if (ImGui::BeginTable("TextureTable", 3, ImGuiTableFlags_Borders | ImGuiTableFlags_RowBg)) {
-                ImGui::TableSetupColumn("预览", ImGuiTableColumnFlags_WidthFixed, 150.0f);
-                ImGui::TableSetupColumn("信息", ImGuiTableColumnFlags_WidthStretch);
-                ImGui::TableSetupColumn("操作", ImGuiTableColumnFlags_WidthFixed, 80.0f);
-                ImGui::TableHeadersRow();
-                for (size_t i = 0; i < m_TexturesBuffer.size(); i++) {
-                    auto& preview = m_TexturesBuffer[i];
+            // 缩略图尺寸滑块
+            static float thumbnailSize = 120.0f;
+            ImGui::SliderFloat("缩略图大小", &thumbnailSize, 64.0f, 256.0f, "%.0f");
 
-                    ImGui::TableNextRow();
+            int name_size = thumbnailSize / 9;
 
-                    // 预览列
-                    ImGui::TableSetColumnIndex(0);
-                    if (preview.textureID != 0) {
-                        // 计算预览图大小，保持纵横比
-                        float previewSize = 128.0f;
-                        float aspect = static_cast<float>(preview.width) / static_cast<float>(preview.height);
-                        ImVec2 imageSize;
-                        if (aspect > 1.0f) {
-                            imageSize = ImVec2(previewSize, previewSize / aspect);
-                        } else {
-                            imageSize = ImVec2(previewSize * aspect, previewSize);
-                        }
-                        ImGui::Image(preview.textureID, imageSize);
+            ImGui::Separator();
+
+            // 计算每行可以放置多少个缩略图
+            float windowWidth = ImGui::GetContentRegionAvail().x;
+            float cellPadding = 8.0f;
+            float cellWidth = thumbnailSize + cellPadding * 2;
+            int columnsCount = std::max(1, static_cast<int>(windowWidth / cellWidth));
+
+            // 使用子窗口创建可滚动区域
+            ImGui::BeginChild("TextureGrid", ImVec2(0, 0), false, ImGuiWindowFlags_NoScrollbar);
+
+            // 遍历所有纹理，以网格形式显示
+            for (size_t i = 0; i < m_TexturesBuffer.size(); i++) {
+                auto& preview = m_TexturesBuffer[i];
+
+                ImGui::PushID(static_cast<int>(i));
+
+                // 开始一个组来包含缩略图和信息
+                ImGui::BeginGroup();
+
+                // 绘制带边框的背景
+                ImVec2 cursorPos = ImGui::GetCursorScreenPos();
+                ImVec2 rectMin = cursorPos;
+                ImVec2 rectMax = ImVec2(cursorPos.x + thumbnailSize, cursorPos.y + thumbnailSize + 60);
+
+                // 创建一个不可见的按钮来接收交互（用于右键菜单）
+                ImGui::SetCursorScreenPos(rectMin);
+                ImGui::InvisibleButton("##thumbnail", ImVec2(thumbnailSize, thumbnailSize + 60));
+                bool isHovered = ImGui::IsItemHovered();
+
+                // 绘制背景和边框
+                ImU32 bgColor = isHovered ? IM_COL32(60, 60, 80, 255) : IM_COL32(40, 40, 50, 255);
+                ImGui::GetWindowDrawList()->AddRectFilled(rectMin, rectMax, bgColor, 4.0f);
+                ImGui::GetWindowDrawList()->AddRect(rectMin, rectMax, IM_COL32(100, 100, 120, 255), 4.0f, 0, 1.5f);
+
+                // 显示纹理预览
+                if (preview.textureID != 0) {
+                    float aspect = static_cast<float>(preview.width) / static_cast<float>(preview.height);
+                    float imageSize = thumbnailSize - cellPadding * 2;
+                    ImVec2 imageDisplaySize;
+                    ImVec2 imagePadding(0, 0);
+
+                    if (aspect > 1.0f) {
+                        imageDisplaySize = ImVec2(imageSize, imageSize / aspect);
+                        imagePadding.y = (imageSize - imageDisplaySize.y) * 0.5f;
                     } else {
-                        ImGui::Text("无预览");
+                        imageDisplaySize = ImVec2(imageSize * aspect, imageSize);
+                        imagePadding.x = (imageSize - imageDisplaySize.x) * 0.5f;
                     }
 
-                    // 信息列
-                    ImGui::TableSetColumnIndex(1);
-                    ImGui::Text("路径: %s", preview.path.c_str());
-                    ImGui::Text("尺寸: %d x %d", preview.width, preview.height);
-                    ImGui::Text("Index: %d", preview.index);
+                    ImVec2 imagePos = ImVec2(cursorPos.x + cellPadding + imagePadding.x,
+                                             cursorPos.y + cellPadding + imagePadding.y);
+                    ImGui::GetWindowDrawList()->AddImage(
+                        preview.textureID,
+                        imagePos,
+                        ImVec2(imagePos.x + imageDisplaySize.x, imagePos.y + imageDisplaySize.y)
+                    );
+                } else {
+                    // 无纹理时显示占位符
+                    ImVec2 textPos = ImVec2(cursorPos.x + cellPadding,
+                                           cursorPos.y + cellPadding + (thumbnailSize - cellPadding * 2 - 20) * 0.5f);
+                    ImGui::GetWindowDrawList()->AddText(textPos, IM_COL32(255, 128, 128, 255), "无预览");
+                }
 
-                    // 操作列
-                    ImGui::TableSetColumnIndex(2);
-                    ImGui::PushID(i);
-                    if (ImGui::Button("删除", ImVec2(70, 0))) {
-                        DeleteTexture(i);
+                // 显示纹理信息（使用 DrawList 直接绘制文本）
+                ImVec2 textPos1 = ImVec2(cursorPos.x + cellPadding, cursorPos.y + thumbnailSize - cellPadding);
+                ImVec2 textPos2 = ImVec2(cursorPos.x + cellPadding, cursorPos.y + thumbnailSize + 14);
+                ImVec2 textPos3 = ImVec2(cursorPos.x + cellPadding, cursorPos.y + thumbnailSize + 28);
+
+                // 提取文件名（去掉路径）
+                std::string filename = preview.path;
+                size_t lastSlash = filename.find_last_of("/\\");
+                if (lastSlash != std::string::npos) {
+                    filename = filename.substr(lastSlash + 1);
+                }
+                // 限制文件名显示长度
+                if (filename.length() > name_size) {
+                    filename = filename.substr(0, name_size>3?name_size-3:1) + "...";
+                }
+                ImGui::GetWindowDrawList()->AddText(textPos1, IM_COL32(255, 255, 255, 255), filename.c_str());
+
+                std::string sizeText = std::format("{}x{}", preview.width, preview.height);
+                ImGui::GetWindowDrawList()->AddText(textPos2, IM_COL32(255, 255, 255, 255), sizeText.c_str());
+
+                std::string idText = std::format("ID: {}", preview.index);
+                ImGui::GetWindowDrawList()->AddText(textPos3, IM_COL32(179, 179, 179, 255), idText.c_str());
+
+                // 右键菜单
+                if (ImGui::BeginPopupContextItem("##thumbnail_context")) {
+                    ImGui::Text("纹理: %s", filename.c_str());
+                    ImGui::Separator();
+                    ImGui::Text("完整路径: %s", preview.path.c_str());
+                    ImGui::Text("尺寸: %d x %d", preview.width, preview.height);
+                    ImGui::Text("索引: %d", preview.index);
+                    ImGui::Separator();
+                    if (ImGui::Button("删除纹理")) {
+                        DeleteTexture(static_cast<int>(i));
+                        ImGui::CloseCurrentPopup();
+                        ImGui::EndPopup();
+                        ImGui::EndGroup();
                         ImGui::PopID();
                         break;
                     }
-                    ImGui::PopID();
+                    ImGui::EndPopup();
                 }
 
-                ImGui::EndTable();
+                ImGui::EndGroup();
+
+                // 设置下一个项目的位置
+                if ((i + 1) % columnsCount != 0 && i + 1 < m_TexturesBuffer.size()) {
+                    ImGui::SameLine(0.0f, cellPadding);
+                }
+
+                ImGui::PopID();
             }
+
+            ImGui::EndChild();
         }
     }
 
