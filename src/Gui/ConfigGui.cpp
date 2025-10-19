@@ -211,7 +211,7 @@ bool ConfigGui::ConfigModel(Model& model) {
 
         ImGui::InputText("模型名称", &model.name);
         if (ImGui::InputText("模型文件路径", &model.model_path)) {
-            LOGI("ConfigGui::ConfigModel: Loading model from path: %s", model.model_path.c_str());
+            LOGI("ConfigGui::ConfigModel: Loading model from path: {}", model.model_path);
             model.mesh.LoadFromFile(model.model_path);
         }
 

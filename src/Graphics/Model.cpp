@@ -117,7 +117,7 @@ void Mesh::LoadFromFile(const std::string &filename) {
 
     std::ifstream file(filename);
     if (!file.is_open()) {
-        LOGE("Mesh::LoadFromFile: Could not open file: %s", filename.c_str());
+        LOGE("Mesh::LoadFromFile: Could not open file: {}", filename);
         return;
     }
 
@@ -154,15 +154,15 @@ void Mesh::LoadFromFile(const std::string &filename) {
                 cnt++;
             }
             if (cnt != 3) {
-                LOGE("Mesh::LoadFromFile: Only triangular faces are supported. Face has %d vertices in file: %s", cnt, filename.c_str());
+                LOGE("Mesh::LoadFromFile: Only triangular faces are supported. Face has {} vertices in file: {}", cnt, filename);
                 return;
             }
             triangles.push_back(tri);
         }
     }
 
-    LOGI("Mesh::LoadFromFile: Successfully loaded mesh from %s (vertices: %zu, triangles: %zu)",
-         filename.c_str(), vertices.size(), triangles.size());
+    LOGI("Mesh::LoadFromFile: Successfully loaded mesh from {} (vertices: {}, triangles: {})",
+         filename, vertices.size(), triangles.size());
 }
 
 mat4 Mesh::GetTransformMatrix() const {

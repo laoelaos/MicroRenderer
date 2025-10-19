@@ -8,9 +8,6 @@
 #include <sstream>
 #include <chrono>
 #include <iomanip>
-#include <cstdarg>
-#include <vector>
-#include <cstdio>
 #include <iostream>
 
 namespace {
@@ -102,25 +99,6 @@ void Logger::log(LogLevel level, const std::string &message) {
     pimpl->writeLine(level, message);
 }
 
-static std::string vformat(const char* fmt, va_list args) {
-    va_list args_copy;
-    va_copy(args_copy, args);
-    int len = std::vsnprintf(nullptr, 0, fmt, args_copy);
-    va_end(args_copy);
-    if (len <= 0) return {};
-    std::vector<char> buf(static_cast<size_t>(len) + 1);
-    std::vsnprintf(buf.data(), buf.size(), fmt, args);
-    return {buf.data(), static_cast<size_t>(len)};
-}
-
-void Logger::logf(LogLevel level, const char *fmt, ...) {
-    va_list args;
-    va_start(args, fmt);
-    std::string s = vformat(fmt, args);
-    va_end(args);
-    pimpl->writeLine(level, s);
-}
-
 void Logger::trace(const std::string &msg)   { log(LogLevel::Trace, msg); }
 void Logger::debug(const std::string &msg)   { log(LogLevel::Debug, msg); }
 void Logger::info(const std::string &msg)    { log(LogLevel::Info, msg); }
@@ -128,21 +106,3 @@ void Logger::warn(const std::string &msg)    { log(LogLevel::Warn, msg); }
 void Logger::error(const std::string &msg)   { log(LogLevel::Error, msg); }
 void Logger::critical(const std::string &msg){ log(LogLevel::Critical, msg); }
 
-void Logger::tracef(const char *fmt, ...) {
-    va_list args; va_start(args, fmt); std::string s = vformat(fmt, args); va_end(args); log(LogLevel::Trace, s);
-}
-void Logger::debugf(const char *fmt, ...) {
-    va_list args; va_start(args, fmt); std::string s = vformat(fmt, args); va_end(args); log(LogLevel::Debug, s);
-}
-void Logger::infof(const char *fmt, ...)  {
-    va_list args; va_start(args, fmt); std::string s = vformat(fmt, args); va_end(args); log(LogLevel::Info, s);
-}
-void Logger::warnf(const char *fmt, ...)  {
-    va_list args; va_start(args, fmt); std::string s = vformat(fmt, args); va_end(args); log(LogLevel::Warn, s);
-}
-void Logger::errorf(const char *fmt, ...) {
-    va_list args; va_start(args, fmt); std::string s = vformat(fmt, args); va_end(args); log(LogLevel::Error, s);
-}
-void Logger::criticalf(const char *fmt, ...){
-    va_list args; va_start(args, fmt); std::string s = vformat(fmt, args); va_end(args); log(LogLevel::Critical, s);
-}

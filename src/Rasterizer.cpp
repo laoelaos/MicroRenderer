@@ -38,7 +38,7 @@ void Rasterizer::pass(const Scene& scene, RasterizerMode mode, FrameBuffer& fram
     m_height = scene.camera.getHeight() * m_MSAA;
 
     if (m_width <= 0 || m_height <= 0) {
-        LOGE("Rasterizer::pass: Invalid render dimensions: %dx%d", m_width, m_height);
+        LOGE("Rasterizer::pass: Invalid render dimensions: {}x{}", m_width, m_height);
         return;
     }
 
@@ -235,7 +235,7 @@ void Rasterizer::FillInZVal() {
 
 void Rasterizer::build_buffer() {
     if (m_width <= 0 || m_height <= 0) {
-        LOGE("Rasterizer::build_buffer: Invalid buffer dimensions: %dx%d", m_width, m_height);
+        LOGE("Rasterizer::build_buffer: Invalid buffer dimensions: {}x{}", m_width, m_height);
         return;
     }
     m_zBuffer = Buffer<double>(m_width, m_height);

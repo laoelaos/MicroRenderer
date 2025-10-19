@@ -164,11 +164,11 @@ void RenderGui::PerformRendering() {
 }
 
 void RenderGui::InitTexture() {
-    LOGI("RenderGui::InitTexture: Initializing texture buffer (%dx%d)",
+    LOGI("RenderGui::InitTexture: Initializing texture buffer ({}x{})",
          m_Scene.camera.getWidth(), m_Scene.camera.getHeight());
 
     if (m_Scene.camera.getWidth() <= 0 || m_Scene.camera.getHeight() <= 0) {
-        LOGE("RenderGui::InitTexture: Invalid texture dimensions: %dx%d",
+        LOGE("RenderGui::InitTexture: Invalid texture dimensions: {}x{}",
              m_Scene.camera.getWidth(), m_Scene.camera.getHeight());
         return;
     }
@@ -180,7 +180,7 @@ void RenderGui::InitTexture() {
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-    LOGI("RenderGui::InitTexture: Texture initialized successfully (ID: %u)", m_TextureID);
+    LOGI("RenderGui::InitTexture: Texture initialized successfully (ID: {})", m_TextureID);
 }
 
 void RenderGui::LoadTexture() {

@@ -3,6 +3,7 @@
 #include "imgui_impl_glfw.h"
 #include "imgui_impl_opengl3.h"
 #include <cstdio>
+#include <format>
 
 #include "RenderGui.h"
 #include "Logger.h"
@@ -26,7 +27,8 @@
 
 void glfw_error_callback(int error, const char* description)
 {
-    fprintf(stderr, "GLFW Error %d: %s\n", error, description);
+    std::string msg = std::format("GLFW Error {}: {}", error, description);
+    fprintf(stderr, "%s\n", msg.c_str());
 }
 
 void ShowMainDockspace() {

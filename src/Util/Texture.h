@@ -37,10 +37,16 @@ struct SamplerDesc {
     BorderColor borderColor = Border_BLACK; // 边界颜色
 };
 
+enum TextureType {
+    TextureType_Flat = 0,
+    TextureType_SixFacesCube,
+    TextureType_SingleCube,
+};
 class Texture {
     SamplerDesc m_SamplerDesc;
 public:
     virtual ~Texture() = default;
+    virtual TextureType GetType() = 0;
 
     const SamplerDesc& GetSamplerDesc() const { return m_SamplerDesc; }
     void SetSamplerDesc(const SamplerDesc &sampler) { m_SamplerDesc = sampler; }
@@ -49,6 +55,7 @@ public:
 class FlatTexture : public Texture {
     std::shared_ptr<Buffer<RGBA>> m_data;
 public:
+    TextureType GetType() override { return TextureType_Flat; }
     RGBA Get(vec2 uv);
     void SetData(const std::shared_ptr<Buffer<RGBA>> &data) { m_data = data; }
     [[nodiscard]] std::shared_ptr<Buffer<RGBA>> GetData() const { return m_data; }
@@ -57,6 +64,7 @@ public:
 class SixFacesCubeTexture : public Texture {
     std::array<std::shared_ptr<Buffer<RGBA>>, 6> m_data;
 public:
+    TextureType GetType() override { return TextureType_SixFacesCube; }
     RGBA Get(vec3 dir);
     void SetData(int i, const std::shared_ptr<Buffer<RGBA>> &data) { m_data[i] = data; }
     [[nodiscard]] std::shared_ptr<Buffer<RGBA>> GetData(int i) const { return m_data[i]; }
@@ -70,6 +78,7 @@ class SingleCubeTexture : public Texture {
     std::shared_ptr<Buffer<RGBA>> m_data;
     CubeTexType m_type = CubeTexType_Spherical;
 public:
+    TextureType GetType() override { return TextureType_SingleCube; }
     RGBA Get(vec3 dir);
     void SetType(CubeTexType type) { m_type = type; }
     void SetData(const std::shared_ptr<Buffer<RGBA>> &data) { m_data = data; }

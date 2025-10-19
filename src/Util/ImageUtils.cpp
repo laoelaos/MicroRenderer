@@ -17,7 +17,7 @@ std::shared_ptr<Buffer<RGBA>> ImageUtil::ReadImageRGBA(const std::string &path, 
     int iw = 0, ih = 0, n = 0;
     unsigned char *data = stbi_load(path.c_str(), &iw, &ih, &n, STBI_default);
     if (data == nullptr) {
-        LOGE("ImageUtil::ReadImageRGBA: %s read failed", path.c_str());
+        LOGE("ImageUtil::ReadImageRGBA: {} read failed", path);
         return nullptr;
     }
 
@@ -55,7 +55,7 @@ std::shared_ptr<Buffer<RGBA>> ImageUtil::ReadImageRGBA(const std::string &path, 
                     break;
                 }
                 default:
-                    LOGW("ImageUtil::ReadImageRGBA: %s unknown format n=%d", path.c_str(), n);
+                    LOGW("ImageUtil::ReadImageRGBA: {} unknown format n={}", path, n);
                     break;
             }
         }

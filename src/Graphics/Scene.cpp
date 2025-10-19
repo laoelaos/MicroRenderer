@@ -12,11 +12,11 @@
 Scene::Scene(const std::string &filename) {
     std::ifstream file(filename);
     if (!file.is_open()) {
-        LOGE("Scene::Scene: Failed to open scene file: %s", filename.c_str());
+        LOGE("Scene::Scene: Failed to open scene file: {}", filename);
         return;
     }
 
-    LOGI("Scene::Scene: Loading scene from file: %s", filename.c_str());
+    LOGI("Scene::Scene: Loading scene from file: {}", filename);
     this->filename = filename;
     std::string line, section;
 
@@ -58,11 +58,11 @@ void Scene::save_path_file() const {
 void Scene::save_path_file(const std::string &filename) const {
     std::ofstream file(filename);
     if (!file.is_open()) {
-        LOGE("Scene::save_path_file: Failed to create scene file: %s", filename.c_str());
+        LOGE("Scene::save_path_file: Failed to create scene file: {}", filename);
         return;
     }
 
-    LOGI("Scene::save_path_file: Saving scene to file: %s", filename.c_str());
+    LOGI("Scene::save_path_file: Saving scene to file: {}", filename);
 
     file << "# MicroRenderer Scene File\n\n";
 
@@ -124,7 +124,7 @@ void Scene::LoadModel(std::ifstream& file) {
             iss >> model_filename;
             models.emplace_back(model_filename);
             models.back().model_path = model_filename;
-            LOGI("Scene::LoadModel: Loading model from path: %s", model_filename.c_str());
+            LOGI("Scene::LoadModel: Loading model from path: {}", model_filename);
         }
         else if (key == "name") {
             std::string name;

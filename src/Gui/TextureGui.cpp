@@ -20,7 +20,7 @@ TextureGui& TextureGui::Get() {
 
 std::shared_ptr<Texture> TextureGui::GetTextureByIndex(int index) {
     if (index < 0 || static_cast<size_t>(index) >= m_TexturesBuffer.size()) {
-        LOGE("TextureGui::GetTextureByIndex: Invalid texture index: %d", index);
+        LOGE("TextureGui::GetTextureByIndex: Invalid texture index: {}", index);
         return nullptr;
     }
     return m_TexturesBuffer[index].texture;
@@ -132,7 +132,7 @@ void TextureGui::LaunchTextureGui() {
                     filename = filename.substr(lastSlash + 1);
                 }
                 // 限制文件名显示长度
-                if (filename.length() > name_size) {
+                if (filename.length() > static_cast<size_t>(name_size)) {
                     filename = filename.substr(0, name_size>3?name_size-3:1) + "...";
                 }
                 ImGui::GetWindowDrawList()->AddText(textPos1, IM_COL32(255, 255, 255, 255), filename.c_str());
@@ -182,7 +182,7 @@ void TextureGui::LaunchTextureGui() {
 int TextureGui::LoadTextureFromFile(const std::string& path) {
     auto buffer = ImageUtil::ReadImageRGBA(path, true);
     if (!buffer) {
-        LOGE("TextureGui::LoadTextureFromFile: Failed to load texture: %s", path.c_str());
+        LOGE("TextureGui::LoadTextureFromFile: Failed to load texture: {}", path);
         return -1;
     }
 
@@ -200,13 +200,13 @@ int TextureGui::LoadTextureFromFile(const std::string& path) {
 
     m_TexturesBuffer.push_back(preview);
 
-    LOGI("TextureGui::LoadTextureFromFile: success-> %s (Index: %u, Size: %dx%d)", path.c_str(), preview.index, preview.width, preview.height);
+    LOGI("TextureGui::LoadTextureFromFile: success-> {} (Index: {}, Size: {}x{})", path, preview.index, preview.width, preview.height);
     return preview.index;
 }
 
 void TextureGui::DeleteTexture(int index) {
     if (index < 0 || static_cast<size_t>(index) >= m_TexturesBuffer.size()) {
-        LOGE("TextureGui::DeleteTexture: Invalid texture index: %d", index);
+        LOGE("TextureGui::DeleteTexture: Invalid texture index: {}", index);
         return;
     }
 
@@ -216,19 +216,19 @@ void TextureGui::DeleteTexture(int index) {
     }
     m_TexturesBuffer.erase(m_TexturesBuffer.begin() + index);
 
-    LOGI("TextureGui::DeleteTexture: success-> index %d deleted", index);
+    LOGI("TextureGui::DeleteTexture: success-> index {} deleted", index);
 }
 
 void TextureGui::CreateGLTexture(TexturePreview& preview) {
     auto flatTexture = std::dynamic_pointer_cast<FlatTexture>(preview.texture);
     if (!flatTexture) {
-        LOGE("TextureGui::CreateGLTexture: Invalid texture type for preview at index %d", preview.index);
+        LOGE("TextureGui::CreateGLTexture: Invalid texture type for preview at index {}", preview.index);
         return;
     }
 
     auto buffer = flatTexture->GetData();
     if (!buffer) {
-        LOGE("TextureGui::CreateGLTexture: Texture has no data at index %d", preview.index);
+        LOGE("TextureGui::CreateGLTexture: Texture has no data at index {}", preview.index);
         return;
     }
 
