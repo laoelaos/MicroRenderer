@@ -6,6 +6,8 @@
 #include <iostream>
 
 #include "Rasterizer.h"
+
+#include "ImageUtils.h"
 #include "Util/Texture.h"
 
 Rasterizer::Rasterizer() {
@@ -116,10 +118,10 @@ void Rasterizer::PhongFragment(const Material &material, Mesh &mesh) {
 
                 shader.viewWorldPos = tri.get_interpolated_world_position();
                 shader.tex_coords = tri.get_interpolated_tex_coords();
-                shader.color = diffuse_mapping ? RGBAtoVec3(material.texture->Get(shader.tex_coords)) : vec3{0.5, 0.5, 0.5};
+                shader.color = diffuse_mapping ? ImageUtil::RGBAtoVec3(material.texture->Get(shader.tex_coords)) : vec3{0.5, 0.5, 0.5};
 
                 if (normal_type == GLOBAL) {
-                    shader.normal = RGBAtoVec3(material.normal_map->Get(shader.tex_coords)) * 2 - vec3{1, 1, 1};
+                    shader.normal = ImageUtil::RGBAtoVec3(material.normal_map->Get(shader.tex_coords)) * 2 - vec3{1, 1, 1};
                 } else if (shade_frequency == PER_FRAGMENT) {
                     shader.normal = tri.get_interpolated_normal();
                 } else {
@@ -140,7 +142,7 @@ void Rasterizer::PhongFragment(const Material &material, Mesh &mesh) {
                         vec3 n = shader.normal;
                         mat<3, 3> TBN{{{t.x, b.x, n.x}, {t.y, b.y, n.y}, {t.z, b.z, n.z}}};
                         shader.normal = normalize(
-                            TBN * (RGBAtoVec3(material.normal_map->Get(shader.tex_coords)) * 2 - vec3{1, 1, 1}));
+                            TBN * (ImageUtil::RGBAtoVec3(material.normal_map->Get(shader.tex_coords)) * 2 - vec3{1, 1, 1}));
                     }
                 }
 
@@ -199,7 +201,7 @@ void Rasterizer::FillInColor() {
                     color_sum += m_colorBuffer.Get(x * m_MSAA + dx, y * m_MSAA + dy);
                 }
             }
-            m_finalColorBuffer->Set(x, y, vec3ToRGBA(color_sum / (m_MSAA * m_MSAA)));
+            m_finalColorBuffer->Set(x, y, ImageUtil::Vec3ToRGBA(color_sum / (m_MSAA * m_MSAA)));
         }
     }
 }

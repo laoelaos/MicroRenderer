@@ -4,6 +4,7 @@
 
 #include "Light.h"
 #include "Scene.h"
+#include "ImageUtils.h"
 #include "../Rasterizer.h"
 
 Light::Light() { setType(POINT_LIGHT); }

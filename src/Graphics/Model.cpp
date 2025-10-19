@@ -6,6 +6,7 @@
 #include <sstream>
 
 #include "Model.h"
+#include "ImageUtils.h"
 
 #include <algorithm>
 #include <vector>

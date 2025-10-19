@@ -51,6 +51,7 @@ set(UTIL_SOURCES
         src/Util/Buffer.cpp
         src/Util/Logger.cpp
         src/Util/Texture.cpp
+        src/Util/ImageUtils.cpp
 )
 
 set(SET_SOURCES

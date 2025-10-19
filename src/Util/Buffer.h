@@ -6,23 +6,7 @@
 #define MICRORENDERER_BUFFER_H
 
 #include <memory>
-#include <algorithm>
 #include "Geometry.h"
-
-typedef std::array<unsigned char, 4> RGBA;
-
-inline vec3 RGBAtoVec3(const RGBA& color) {
-    return vec3(color[0], color[1], color[2]) / 255.0f;
-}
-
-inline RGBA vec3ToRGBA(const vec3& v) {
-    return {
-        static_cast<unsigned char>(std::clamp(v.x * 255, 0.0, 255.0)),
-        static_cast<unsigned char>(std::clamp(v.y * 255, 0.0, 255.0)),
-        static_cast<unsigned char>(std::clamp(v.z * 255, 0.0, 255.0)),
-        255
-    };
-}
 
 template<typename T>
 class Buffer {
@@ -44,19 +28,6 @@ public:
     void SetAll(T val);
 private:
     [[nodiscard]] int GetIndex(int x, int y) const { return x + y * m_width; }
-};
-
-struct FrameBuffer {;
-    std::shared_ptr<Buffer<RGBA>> colorBuffer;
-    std::shared_ptr<Buffer<RGBA>> zBuffer;
-};
-
-class ImageUtil {
-public:
-    static std::shared_ptr<Buffer<RGBA>> ReadImageRGBA(const std::string &path, bool flipY);
-    static void WriteImage(const char *filename, int w, int h, int comp, const void *data, int strideInBytes, bool flipY);
-    static RGBA EncodeZ(double z); // [-1, 1]
-    static double DecodeZ(const RGBA& color); // [-1, 1]
 };
 
 template<typename T>
@@ -84,6 +55,12 @@ inline T* Buffer<T>::GetP(int x, int y) {
     T *ptr = m_data.get();
     return &ptr[GetIndex(((x % w) + w) % w, ((y % h) + h) % h)];
 }
+
+typedef std::array<unsigned char, 4> RGBA;
+struct FrameBuffer {
+    std::shared_ptr<Buffer<RGBA>> colorBuffer;
+    std::shared_ptr<Buffer<RGBA>> zBuffer;
+};
 
 template<typename T>
 inline T Buffer<T>::GetBilinear(vec2 uv) const {
