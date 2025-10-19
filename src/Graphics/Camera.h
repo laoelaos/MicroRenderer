@@ -33,6 +33,10 @@ public:
     [[nodiscard]] int getHeight() const { return m_height; }
     [[nodiscard]] double getAspect() const { return m_aspect; }
     vec3& getCenter() { return m_center; }
+    void Move(const vec3& delta) {
+        m_eye += delta;
+        m_center += delta;
+    }
 
     void updateRotate();
     void updateEuler();

@@ -27,7 +27,7 @@ vec3 PhongShader::shade() {
         }
 
         //ambient
-        result += properties->k_ambient * vec3{10, 10, 10};
+        result += properties->k_ambient * cwise_multiply(vec3{10, 10, 10}, color);
         //diffuse
         double diff = std::max(0., normal * light_dir);
         result += properties->k_diffuse * cwise_multiply(light_color, color) * diff * visibility;

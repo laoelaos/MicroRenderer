@@ -270,6 +270,8 @@ void Scene::LoadLight(std::ifstream& file, LIGHT_TYPE type) {
         else if (key == "near_far" && light.m_dirInfo) iss >> light.m_dirInfo->LightCamera.m_near >> light.m_dirInfo->LightCamera.m_far;
         else if (key == "yaw_pitch_roll" && light.m_dirInfo) iss >> light.m_dirInfo->LightCamera.m_yaw >> light.m_dirInfo->LightCamera.m_pitch >> light.m_dirInfo->LightCamera.m_roll;
         else if (key == "end") {
+            if (type == DIRECTIONAL_LIGHT)
+                light.m_dirInfo->LightCamera.updateRotate();
             models.emplace_back(CUBE);
             light.m_lightModel = &models.back();
             light.m_lightModel->name = "light_model";

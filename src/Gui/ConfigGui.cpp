@@ -188,6 +188,20 @@ void ConfigGui::ConfigLight(Light& light) {
         auto fov = static_cast<float>(light.m_dirInfo->LightCamera.m_fov);
         auto near_plane = static_cast<float>(light.m_dirInfo->LightCamera.m_near);
         auto far_plane = static_cast<float>(light.m_dirInfo->LightCamera.m_far);
+        auto yaw = static_cast<float>(light.m_dirInfo->LightCamera.m_yaw);
+        auto pitch = static_cast<float>(light.m_dirInfo->LightCamera.m_pitch);
+        auto roll = static_cast<float>(light.m_dirInfo->LightCamera.m_roll);
+        bool view_changed = false;
+        if (ImGui::SliderFloat("水平旋转 (Yaw)", &yaw, -180.0f, 180.0f, "%.1f°"))
+            view_changed = true;
+        if (ImGui::SliderFloat("垂直旋转 (Pitch)", &pitch, -90.0f, 90.0f, "%.1f°"))
+            view_changed = true;
+        if (ImGui::SliderFloat("滚转 (roll)", &roll, -180.0f, 180.0f, "%.1f°"))
+            view_changed = true;
+        if (view_changed) {
+            light.m_dirInfo->LightCamera.set_toward_from_center(yaw, pitch, roll);
+            light.m_lightMove = true;
+        }
         if (ImGui::InputFloat("视场角FOV", &fov, 1.0f, 5.0f, "%.1f"))
             light.m_dirInfo->LightCamera.m_fov = fov;
         if (ImGui::InputFloat("近平面", &near_plane, 0.1f, 0.5f, "%.2f"))

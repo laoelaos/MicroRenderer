@@ -1,4 +1,5 @@
 # MicroRenderer Scene File
+# phong = diffuse specular ambient p
 
 [Camera]
 center 0 0 3
@@ -26,7 +27,7 @@ normal_map ..\obj\african_head\african_head_nm_tangent.tga
 diffuse_mapping 1
 normal_type 1
 shade_frequency 1
-phong 0.9 0.6 0.005 150
+phong 0.8 0.6 0.02 150
 end
 
 [Model]
@@ -41,5 +42,5 @@ normal_map ..\obj\african_head\african_head_eye_inner_nm_tangent.tga
 diffuse_mapping 1
 normal_type 1
 shade_frequency 1
-phong 0.9 0.6 0.005 150
+phong 0.8 0.6 0.02 150
 end
