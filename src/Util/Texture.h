@@ -51,6 +51,7 @@ class FlatTexture : public Texture {
 public:
     RGBA Get(vec2 uv);
     void SetData(const std::shared_ptr<Buffer<RGBA>> &data) { m_data = data; }
+    [[nodiscard]] std::shared_ptr<Buffer<RGBA>> GetData() const { return m_data; }
 };
 
 class SixFacesCubeTexture : public Texture {
@@ -58,6 +59,7 @@ class SixFacesCubeTexture : public Texture {
 public:
     RGBA Get(vec3 dir);
     void SetData(int i, const std::shared_ptr<Buffer<RGBA>> &data) { m_data[i] = data; }
+    [[nodiscard]] std::shared_ptr<Buffer<RGBA>> GetData(int i) const { return m_data[i]; }
 };
 
 enum CubeTexType {
@@ -71,6 +73,7 @@ public:
     RGBA Get(vec3 dir);
     void SetType(CubeTexType type) { m_type = type; }
     void SetData(const std::shared_ptr<Buffer<RGBA>> &data) { m_data = data; }
+    [[nodiscard]] std::shared_ptr<Buffer<RGBA>> GetData() const { return m_data; }
 };
 
 #endif //MICRORENDERER_TEXTURE_H

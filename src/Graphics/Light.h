@@ -10,7 +10,6 @@
 #include "Camera.h"
 #include "Geometry.h"
 #include "Model.h"
-#include "../TGAImage.h"
 
 class Scene;
 
@@ -18,15 +17,16 @@ enum LIGHT_TYPE {
     POINT_LIGHT = 0,
     DIRECTIONAL_LIGHT = 1
 };
+
 //TODO: 点光源在某些位置有点问题
 struct PointLightInfo {
-    TGAImage shadowMap[6];
+    std::shared_ptr<SixFacesCubeTexture> shadowMap;
     mat4 LightN[6];
 };
 
 struct DirectionalLightInfo {
     Camera LightCamera;
-    TGAImage shadowMap;
+    std::shared_ptr<FlatTexture> shadowMap;
     mat4 LightN;
 };
 
@@ -49,7 +49,7 @@ class Light {
     // shadow / light-camera (for directional light)
     std::optional<DirectionalLightInfo> m_dirInfo;
 public:
-    Light() = default;
+    Light();
     Light(const vec3& color_, const vec3& position_, double intensity_);
     Light(const vec3& color_, const vec3& position_, double intensity_, Camera& lightCamera);
 

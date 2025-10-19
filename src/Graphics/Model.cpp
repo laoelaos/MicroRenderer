@@ -480,20 +480,16 @@ void Material::load_normal_map() {
 
 void Material::load_texture(const std::string &texture_path) {
     if (!texture_path.empty()) {
-        if (!texture.read_tga_file(texture_path)) {
-            throw std::runtime_error("Failed to load texture: " + texture_path);
-        }
-        texture.flip_vertically();
+        texture = std::make_shared<FlatTexture>();
+        texture->SetData(ImageUtil::ReadImageRGBA(texture_path, true));
     }
     this->texture_path = texture_path;
 }
 
 void Material::load_normal_map(const std::string &normal_map_path) {
     if (!normal_map_path.empty()) {
-        if (!normal_map.read_tga_file(normal_map_path)) {
-            throw std::runtime_error("Failed to load normal map: " + normal_map_path);
-        }
-        normal_map.flip_vertically();
+        normal_map = std::make_shared<FlatTexture>();
+        normal_map->SetData(ImageUtil::ReadImageRGBA(normal_map_path, true));
     }
     this->normal_map_path = normal_map_path;
 }

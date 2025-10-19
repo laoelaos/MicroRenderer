@@ -5,11 +5,9 @@
 #ifndef MICRORENDERER_RENDERGUI_H
 #define MICRORENDERER_RENDERGUI_H
 
-#include <cstdint>
-
 #include "Rasterizer.h"
 #include "Scene.h"
-#include "TGAImage.h"
+#include "Util/Buffer.h"
 
 struct RenderContext {
     int msaa_level = 1;
@@ -37,8 +35,7 @@ class RenderGui {
     RenderContext m_RenderContext;
 
     uint32_t m_TextureID = 0;
-    TGAImage m_TextureImage;
-    std::vector<uint8_t> m_ImageData;
+    std::shared_ptr<Buffer<RGBA>> m_TextureBuffer;
 
     bool m_Save = false;
 
@@ -62,3 +59,4 @@ private:
 
 
 #endif //MICRORENDERER_RENDERGUI_H
+

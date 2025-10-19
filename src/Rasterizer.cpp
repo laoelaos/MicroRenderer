@@ -6,7 +6,7 @@
 #include <iostream>
 
 #include "Rasterizer.h"
-
+#include "Util/Texture.h"
 
 Rasterizer::Rasterizer() {
     m_width = 1;
@@ -15,7 +15,8 @@ Rasterizer::Rasterizer() {
     m_view = identity_matrix<4>();
     m_projection = identity_matrix<4>();
     m_Viewport = identity_matrix<4>();
-    build_buffer();
+    m_zBuffer = {};
+    m_colorBuffer = {};
 }
 
 Rasterizer& Rasterizer::get() {
@@ -27,20 +28,9 @@ void Rasterizer::set_msaa(int MSAA) {
     m_MSAA = MSAA;
 }
 
-void Rasterizer::rasterize(Scene &scene, RasterizerMode mode) {
-    if (mode == ZTEST) {
-        pass(scene, ZTEST);
-    } else if (mode == PHONG) {
-        pass(scene, PHONG);
-    } else if (mode == PHONG_WITH_SHADOW) {
-        for (Light& light : scene.lights) {
-            light.ProcessShadowMapIfNeeded(scene);
-        }
-        pass(scene, PHONG_WITH_SHADOW);
-    }
-}
-
-void Rasterizer::pass(const Scene& scene, RasterizerMode mode) {
+void Rasterizer::pass(const Scene& scene, RasterizerMode mode, FrameBuffer& frame_buffer) {
+    m_finalColorBuffer = frame_buffer.colorBuffer;
+    m_finalZBuffer = frame_buffer.zBuffer;
     m_width = scene.camera.getWidth() * m_MSAA;
     m_height = scene.camera.getHeight() * m_MSAA;
     build_buffer();
@@ -80,6 +70,9 @@ void Rasterizer::pass(const Scene& scene, RasterizerMode mode) {
             PhongPipeline(obj_model);
         }
     }
+
+    FillInColor();
+    FillInZVal();
 }
 
 void Rasterizer::PhongPipeline(const Model& model) {
@@ -97,7 +90,7 @@ void Rasterizer::PhongFragment(const Material &material, Mesh &mesh) {
     ShadeFrequency shade_frequency = material.shade_frequency;
 
     size_t tri_count = mesh.triangles.size();
-#pragma omp parallel for default(none) shared(material, mesh, diffuse_mapping, normal_type, shade_frequency, tri_count, m_width, m_height, m_frameBuffer, m_zBuffer, m_tileLocks)
+#pragma omp parallel for default(none) shared(material, mesh, diffuse_mapping, normal_type, shade_frequency, tri_count, m_width, m_height, m_colorBuffer, m_zBuffer, m_tileLocks)
     for (size_t idx = 0; idx < tri_count; ++idx) {
         Triangle& tri = mesh.triangles[idx];
         if (tri.discard)
@@ -116,17 +109,17 @@ void Rasterizer::PhongFragment(const Material &material, Mesh &mesh) {
 
                 std::lock_guard guard(m_tileLocks[get_tile_lock(x, y)]);
                 double z = tri.get_interpolated_z();
-                if (z < m_zBuffer[get_index(x, y)]) {
+                if (z < m_zBuffer.Get(x, y)) {
                     continue;
                 }
-                m_zBuffer[get_index(x, y)] = z;
+                m_zBuffer.Set(x, y, z);
 
                 shader.viewWorldPos = tri.get_interpolated_world_position();
                 shader.tex_coords = tri.get_interpolated_tex_coords();
-                shader.color = diffuse_mapping ? material.texture.get_bilinear(shader.tex_coords) : vec3{0.5, 0.5, 0.5};
+                shader.color = diffuse_mapping ? RGBAtoVec3(material.texture->Get(shader.tex_coords)) : vec3{0.5, 0.5, 0.5};
 
                 if (normal_type == GLOBAL) {
-                    shader.normal = material.normal_map.get_bilinear(shader.tex_coords) * 2 - vec3{1, 1, 1};
+                    shader.normal = RGBAtoVec3(material.normal_map->Get(shader.tex_coords)) * 2 - vec3{1, 1, 1};
                 } else if (shade_frequency == PER_FRAGMENT) {
                     shader.normal = tri.get_interpolated_normal();
                 } else {
@@ -147,11 +140,11 @@ void Rasterizer::PhongFragment(const Material &material, Mesh &mesh) {
                         vec3 n = shader.normal;
                         mat<3, 3> TBN{{{t.x, b.x, n.x}, {t.y, b.y, n.y}, {t.z, b.z, n.z}}};
                         shader.normal = normalize(
-                            TBN * (material.normal_map.get_bilinear(shader.tex_coords) * 2 - vec3{1, 1, 1}));
+                            TBN * (RGBAtoVec3(material.normal_map->Get(shader.tex_coords)) * 2 - vec3{1, 1, 1}));
                     }
                 }
 
-                m_frameBuffer[get_index(x, y)] = shader.shade();
+                m_colorBuffer.Set(x, y, shader.shade());
             }
         }
     }
@@ -183,39 +176,57 @@ void Rasterizer::ZtestFragment(Mesh &mesh) {
                 //TODO:注释后光源位于物体内不会报错,待解决
                 //std::lock_guard guard(m_tileLocks[get_tile_lock(x, y)]);
                 double z = tri.get_interpolated_z();
-                if (z >= m_zBuffer[get_index(x, y)]) {
-                    m_zBuffer[get_index(x, y)] = z;
+                if (z >= m_zBuffer.Get(x, y)) {
+                    m_zBuffer.Set(x, y, z);
                 }
             }
+        }
+    }
+}
+
+void Rasterizer::FillInColor() {
+    if (!m_finalColorBuffer)
+        return;
+
+    int final_w = m_finalColorBuffer->GetWidth();
+    int final_h = m_finalColorBuffer->GetHeight();
+#pragma omp parallel for default(none) shared(final_w, final_h)
+    for (int y = 0; y < final_h; y++) {
+        for (int x = 0; x < final_w; x++) {
+            vec3 color_sum;
+            for (int dy = 0; dy < m_MSAA; dy++) {
+                for (int dx = 0; dx < m_MSAA; dx++) {
+                    color_sum += m_colorBuffer.Get(x * m_MSAA + dx, y * m_MSAA + dy);
+                }
+            }
+            m_finalColorBuffer->Set(x, y, vec3ToRGBA(color_sum / (m_MSAA * m_MSAA)));
+        }
+    }
+}
+
+void Rasterizer::FillInZVal() {
+    if (!m_finalZBuffer)
+        return;
+
+    int final_w = m_finalZBuffer->GetWidth();
+    int final_h = m_finalZBuffer->GetHeight();
+#pragma omp parallel for default(none) shared(final_w, final_h)
+    for (int y = 0; y < final_h; y++) {
+        for (int x = 0; x < final_w; x++) {
+            double max_z = -std::numeric_limits<double>::infinity();
+            for (int dy = 0; dy < m_MSAA; dy++) {
+                for (int dx = 0; dx < m_MSAA; dx++) {
+                    max_z = std::max(max_z, m_zBuffer.Get(x * m_MSAA + dx, y * m_MSAA + dy));
+                }
+            }
+            m_finalZBuffer->Set(x, y, ImageUtil::EncodeZ(max_z));
         }
     }
 }
 
 void Rasterizer::build_buffer() {
-    m_zBuffer.resize(m_width * m_height);
-    m_frameBuffer.resize(m_width * m_height);
-    std::ranges::fill(m_frameBuffer, vec3());
-    std::ranges::fill(m_zBuffer, -std::numeric_limits<double>::infinity());
-}
-
-void Rasterizer::framebuffer_to_TGA(TGAImage& framebuffer_) {
-    for (int y = 0; y < m_height; y+=m_MSAA) {
-        for (int x = 0; x < m_width; x+=m_MSAA) {
-            vec3 color_sum;
-            for (int dy = 0; dy < m_MSAA; dy++) {
-                for (int dx = 0; dx < m_MSAA; dx++) {
-                    color_sum += m_frameBuffer[get_index(x + dx, y + dy)];
-                }
-            }
-            framebuffer_.set(x / m_MSAA, y / m_MSAA, TGAColor(color_sum / (m_MSAA * m_MSAA)));
-        }
-    }
-}
-
-void Rasterizer::zBuffer_to_TGA(TGAImage& framebuffer_) {
-    for (int y = 0; y < m_height; y++) {
-        for (int x = 0; x < m_width; x++) {
-            framebuffer_.set(x, y, TGAColor(m_zBuffer[get_index(x, y)]));
-        }
-    }
+    m_zBuffer = Buffer<double>(m_width, m_height);
+    m_zBuffer.SetAll( -std::numeric_limits<double>::infinity());
+    m_colorBuffer = Buffer<vec3>(m_width, m_height);
+    m_colorBuffer.SetAll(vec3());
 }

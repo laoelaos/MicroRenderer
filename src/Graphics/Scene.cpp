@@ -3,7 +3,7 @@
 //
 
 #include "Scene.h"
-
+#include <fstream>
 #include <sstream>
 
 Scene::Scene(const std::string &filename) {

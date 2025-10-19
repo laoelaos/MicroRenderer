@@ -11,6 +11,7 @@
 #include <chrono>
 
 #include "ConfigGui.h"
+#include "Logger.h"
 
 #include "Rasterizer.h"
 
@@ -74,7 +75,7 @@ void RenderGui::ConfigRenderSetting() {
 
 void RenderGui::ShowFPS() {
     ImGui::Text("渲染纹理: ID=%u, 尺寸=%dx%d", m_TextureID,
-                m_TextureImage.width(), m_TextureImage.height());
+                m_TextureBuffer->GetWidth(), m_TextureBuffer->GetHeight());
     ImGui::Text("渲染时间: %lld ms | FPS: %.1f", m_RenderContext.avg_render_time, m_RenderContext.current_fps);
 
     if (m_RenderContext.real_time_rendering || m_RenderContext.auto_rotate) {
@@ -131,11 +132,19 @@ void RenderGui::PerformRendering() {
         m_Scene.camera.rotate_around_point(vec3{0, 0, 0}, m_RenderContext.rotation_speed * delta_time * 60.0, 0, 0);
     }
 
-    Rasterizer::get().rasterize(m_Scene, m_RenderContext.render_mode);
-    if (m_RenderContext.render_mode == PHONG_WITH_SHADOW || m_RenderContext.render_mode == PHONG) {
-        Rasterizer::get().framebuffer_to_TGA(m_TextureImage);
-    } else if (m_RenderContext.render_mode == ZTEST) {
-        Rasterizer::get().zBuffer_to_TGA(m_TextureImage);
+    FrameBuffer fb;
+    if (m_RenderContext.render_mode == ZTEST) {
+        fb = {nullptr, m_TextureBuffer};
+        Rasterizer::get().pass(m_Scene, ZTEST, fb);
+    } else if (m_RenderContext.render_mode == PHONG) {
+        fb = {m_TextureBuffer, nullptr};
+        Rasterizer::get().pass(m_Scene, PHONG, fb);
+    } else if (m_RenderContext.render_mode == PHONG_WITH_SHADOW) {
+        fb = {m_TextureBuffer, nullptr};
+        for (Light& light : m_Scene.lights) {
+            light.ProcessShadowMapIfNeeded(m_Scene);
+        }
+        Rasterizer::get().pass(m_Scene, PHONG_WITH_SHADOW, fb);
     }
 
     auto end_time = std::chrono::high_resolution_clock::now();
@@ -153,41 +162,29 @@ void RenderGui::PerformRendering() {
 }
 
 void RenderGui::InitTexture() {
-    m_TextureImage = TGAImage(m_Scene.camera.getWidth(), m_Scene.camera.getHeight(), TGAImage::RGBA);
-
+    LOGI("InitTexture Begin");
+    m_TextureBuffer = std::make_shared<Buffer<RGBA>>(m_Scene.camera.getWidth(), m_Scene.camera.getHeight());
     glGenTextures(1, &m_TextureID);
     glBindTexture(GL_TEXTURE_2D, m_TextureID);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-
-    m_ImageData.resize(m_Scene.camera.getWidth() * m_Scene.camera.getHeight() * 4, 255);
+    LOGI("InitTexture End");
 }
 
 void RenderGui::LoadTexture() {
-    int width = m_TextureImage.width();
-    int height = m_TextureImage.height();
+    int width = m_TextureBuffer->GetWidth();
+    int height = m_TextureBuffer->GetHeight();
 
+    auto* data = m_TextureBuffer->GetP(0, 0);
+
+    // 翻转图像数据
+    std::vector<RGBA> flipped_data(width * height);
     for (int y = 0; y < height; y++) {
-        for (int x = 0; x < width; x++) {
-            TGAColor color = m_TextureImage.get(x, y);
-            int index = ((height - y - 1) * width + x) * 4;
-            if (m_RenderContext.render_mode == PHONG_WITH_SHADOW || m_RenderContext.render_mode == PHONG) {
-                m_ImageData[index] = color.bgra[2];     // R
-                m_ImageData[index + 1] = color.bgra[1]; // G
-                m_ImageData[index + 2] = color.bgra[0]; // B
-                m_ImageData[index + 3] = color.bgra[3]; // A (强制设为不透明)
-            } else if (m_RenderContext.render_mode == ZTEST) {
-                uint8_t zColor = static_cast<uint8_t>((color.to_double() + 1.0) * 100);
-                m_ImageData[index] = zColor;     // R
-                m_ImageData[index + 1] = zColor; // G
-                m_ImageData[index + 2] = zColor; // B
-                m_ImageData[index + 3] = 255;           // A (强制
-            }
-        }
+        memcpy(flipped_data.data() + (height - 1 - y) * width, data + y * width, width * sizeof(RGBA));
     }
 
     glBindTexture(GL_TEXTURE_2D, m_TextureID);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, m_ImageData.data());
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, flipped_data.data());
 }

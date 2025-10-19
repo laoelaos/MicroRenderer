@@ -62,7 +62,6 @@ set(SET_SOURCES
 set(SOURCES
         ${SET_SOURCES}
         src/main.cpp
-        src/TGAImage.cpp
         src/Rasterizer.cpp
         src/Shader.cpp
         src/ConfigGui.cpp
@@ -75,6 +74,7 @@ target_include_directories(${PROJECT_NAME} PRIVATE
         extern/ImGui
         extern/stb
         src/Graphics
+        src/Util
         src
 )
 

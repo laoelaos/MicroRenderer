@@ -6,13 +6,16 @@
 
 #define STB_IMAGE_IMPLEMENTATION
 #define STB_IMAGE_WRITE_IMPLEMENTATION
+#include "Logger.h"
 #include "stb_image.h"
 #include "stb_image_write.h"
 
-std::shared_ptr<Buffer<RGBA>> ImageUtil::ReadImageRGBA(const std::string &path) {
+std::shared_ptr<Buffer<RGBA>> ImageUtil::ReadImageRGBA(const std::string &path, bool flipY) {
+    stbi_set_flip_vertically_on_load(flipY);
     int iw = 0, ih = 0, n = 0;
     unsigned char *data = stbi_load(path.c_str(), &iw, &ih, &n, STBI_default);
     if (data == nullptr) {
+        LOGE("ImageUtil::ReadImageRGBA: %s read failed", path.c_str());
         return nullptr;
     }
 
@@ -50,6 +53,7 @@ std::shared_ptr<Buffer<RGBA>> ImageUtil::ReadImageRGBA(const std::string &path) 
                     break;
                 }
                 default:
+                    LOGW("ImageUtil::ReadImageRGBA: %s unknown format n=%d", path.c_str(), n);
                     break;
             }
         }
@@ -78,7 +82,7 @@ RGBA ImageUtil::EncodeZ(double z) {
     return out;
 }
 
-double ImageUtil::DecodeZ(RGBA &color) {
+double ImageUtil::DecodeZ(const RGBA &color) {
     unsigned int value = (static_cast<unsigned int>(color[0]) << 16) |
                          (static_cast<unsigned int>(color[1]) << 8) |
                           static_cast<unsigned int>(color[2]);

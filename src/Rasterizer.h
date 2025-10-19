@@ -7,9 +7,10 @@
 
 #include <vector>
 #include <mutex>
+#include <memory>
 
 #include "Scene.h"
-#include "TGAImage.h"
+#include "Util/Buffer.h"
 #include "Shader.h"
 
 enum RasterizerMode {ZTEST = 0, PHONG = 1, PHONG_WITH_SHADOW = 2};
@@ -18,11 +19,7 @@ class Rasterizer {
 public:
     static Rasterizer& get();
 
-    void rasterize(Scene& scene, RasterizerMode mode);
-    void pass(const Scene& scene, RasterizerMode mode);
-
-    void framebuffer_to_TGA(TGAImage& framebuffer);
-    void zBuffer_to_TGA(TGAImage& framebuffer);
+    void pass(const Scene& scene, RasterizerMode mode, FrameBuffer& frame_buffer);
 
     void set_msaa(int MSAA);
 private:
@@ -32,9 +29,11 @@ private:
     void ZtestFragment(Mesh& mesh);
     void PhongPipeline(const Model& model);
     void PhongFragment(const Material& material, Mesh& mesh);
+    void FillInColor();
+    void FillInZVal();
+
     void build_buffer();
 
-    int get_index(int x, int y) const { return x + y * m_width; }
     int get_tile_lock(int x, int y) const {
         int tile_x = x / (m_width / m_tileCols);
         int tile_y = y / (m_height / m_tileRows);
@@ -43,8 +42,10 @@ private:
 
     //basic
     int m_width, m_height;
-    std::vector<double> m_zBuffer;
-    std::vector<vec3> m_frameBuffer;
+    Buffer<double> m_zBuffer;
+    Buffer<vec3> m_colorBuffer;
+    std::shared_ptr<Buffer<RGBA>> m_finalZBuffer;
+    std::shared_ptr<Buffer<RGBA>> m_finalColorBuffer;
 
     //options
     int m_MSAA = 1;

@@ -8,7 +8,7 @@
 #include <vector>
 
 #include "Geometry.h"
-#include "../TGAImage.h"
+#include "Texture.h"
 
 enum NormalMapType {GLOBAL = 0, TANGENT, NOT_USE};
 enum ShadeFrequency {FLAT = 0, PER_FRAGMENT};
@@ -34,9 +34,9 @@ struct Material {
         load_normal_map(normal_map_path);
     }
     std::string texture_path;
-    TGAImage texture;
+    std::shared_ptr<FlatTexture> texture;
     std::string normal_map_path;
-    TGAImage normal_map;
+    std::shared_ptr<FlatTexture> normal_map;
 
     PhongProperties properties;
 
@@ -141,3 +141,4 @@ public:
 };
 
 #endif //MODEL_H
+
