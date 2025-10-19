@@ -7,13 +7,16 @@
 #include <sstream>
 
 #include "TextureGui.h"
+#include "Logger.h"
 
 Scene::Scene(const std::string &filename) {
     std::ifstream file(filename);
     if (!file.is_open()) {
-        throw std::runtime_error("无法打开场景文件: " + filename);
+        LOGE("Scene::Scene: Failed to open scene file: %s", filename.c_str());
+        return;
     }
 
+    LOGI("Scene::Scene: Loading scene from file: %s", filename.c_str());
     this->filename = filename;
     std::string line, section;
 
@@ -55,8 +58,11 @@ void Scene::save_path_file() const {
 void Scene::save_path_file(const std::string &filename) const {
     std::ofstream file(filename);
     if (!file.is_open()) {
-        throw std::runtime_error("无法创建场景文件: " + filename);
+        LOGE("Scene::save_path_file: Failed to create scene file: %s", filename.c_str());
+        return;
     }
+
+    LOGI("Scene::save_path_file: Saving scene to file: %s", filename.c_str());
 
     file << "# MicroRenderer Scene File\n\n";
 
@@ -109,12 +115,16 @@ void Scene::LoadModel(std::ifstream& file) {
         iss >> key;
 
         if (line.empty() || line[0] == '#') continue;
-        if (line[0] == '[' && line.back() == ']') throw std::runtime_error("wrong camera format");
+        if (line[0] == '[' && line.back() == ']') {
+            LOGE("Scene::LoadModel: Wrong model format - unexpected section header");
+            return;
+        }
 
         if (key == "path") {
             iss >> model_filename;
             models.emplace_back(model_filename);
             models.back().model_path = model_filename;
+            LOGI("Scene::LoadModel: Loading model from path: %s", model_filename.c_str());
         }
         else if (key == "name") {
             std::string name;
@@ -194,7 +204,10 @@ void Scene::LoadCamera(std::ifstream& file) {
         iss >> key;
 
         if (line.empty() || line[0] == '#') continue;
-        if (line[0] == '[' && line.back() == ']') throw std::runtime_error("wrong camera format");
+        if (line[0] == '[' && line.back() == ']') {
+            LOGE("Scene::LoadCamera: Wrong camera format - unexpected section header");
+            return;
+        }
 
         if (key == "eye") iss >> camera.m_eye.x >> camera.m_eye.y >> camera.m_eye.z;
         else if (key == "center") iss >> camera.m_center.x >> camera.m_center.y >> camera.m_center.z;
@@ -241,7 +254,10 @@ void Scene::LoadLight(std::ifstream& file, LIGHT_TYPE type) {
         iss >> key;
 
         if (line.empty() || line[0] == '#') continue;
-        if (line[0] == '[' && line.back() == ']') throw std::runtime_error("wrong light format");
+        if (line[0] == '[' && line.back() == ']') {
+            LOGE("Scene::LoadLight: Wrong light format - unexpected section header");
+            return;
+        }
 
         if (key == "color") iss >> light.m_color.x >> light.m_color.y >> light.m_color.z;
         else if (key == "position") iss >> light.m_position.x >> light.m_position.y >> light.m_position.z;

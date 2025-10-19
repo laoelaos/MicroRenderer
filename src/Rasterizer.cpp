@@ -9,6 +9,7 @@
 
 #include "ImageUtils.h"
 #include "Texture.h"
+#include "Logger.h"
 
 Rasterizer::Rasterizer() {
     m_width = 1;
@@ -35,6 +36,12 @@ void Rasterizer::pass(const Scene& scene, RasterizerMode mode, FrameBuffer& fram
     m_finalZBuffer = frame_buffer.zBuffer;
     m_width = scene.camera.getWidth() * m_MSAA;
     m_height = scene.camera.getHeight() * m_MSAA;
+
+    if (m_width <= 0 || m_height <= 0) {
+        LOGE("Rasterizer::pass: Invalid render dimensions: %dx%d", m_width, m_height);
+        return;
+    }
+
     build_buffer();
     m_view = scene.camera.get_view_matrix();
     m_projection = scene.camera.get_projection_matrix();
@@ -227,6 +234,10 @@ void Rasterizer::FillInZVal() {
 }
 
 void Rasterizer::build_buffer() {
+    if (m_width <= 0 || m_height <= 0) {
+        LOGE("Rasterizer::build_buffer: Invalid buffer dimensions: %dx%d", m_width, m_height);
+        return;
+    }
     m_zBuffer = Buffer<double>(m_width, m_height);
     m_zBuffer.SetAll( -std::numeric_limits<double>::infinity());
     m_colorBuffer = Buffer<vec3>(m_width, m_height);

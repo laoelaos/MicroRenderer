@@ -9,6 +9,7 @@
 #include <algorithm>
 
 #include "../Rasterizer.h"
+#include "Logger.h"
 
 ConfigGui& ConfigGui::Get() {
     static ConfigGui instance;
@@ -209,8 +210,10 @@ bool ConfigGui::ConfigModel(Model& model) {
             changed = true;
 
         ImGui::InputText("模型名称", &model.name);
-        if (ImGui::InputText("模型文件路径", &model.model_path))
+        if (ImGui::InputText("模型文件路径", &model.model_path)) {
+            LOGI("ConfigGui::ConfigModel: Loading model from path: %s", model.model_path.c_str());
             model.mesh.LoadFromFile(model.model_path);
+        }
 
         ImGui::InputInt("漫反射贴图", &model.material.texture_index);
         ImGui::SameLine();

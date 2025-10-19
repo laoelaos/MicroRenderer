@@ -164,7 +164,15 @@ void RenderGui::PerformRendering() {
 }
 
 void RenderGui::InitTexture() {
-    LOGI("InitTexture Begin");
+    LOGI("RenderGui::InitTexture: Initializing texture buffer (%dx%d)",
+         m_Scene.camera.getWidth(), m_Scene.camera.getHeight());
+
+    if (m_Scene.camera.getWidth() <= 0 || m_Scene.camera.getHeight() <= 0) {
+        LOGE("RenderGui::InitTexture: Invalid texture dimensions: %dx%d",
+             m_Scene.camera.getWidth(), m_Scene.camera.getHeight());
+        return;
+    }
+
     m_TextureBuffer = std::make_shared<Buffer<RGBA>>(m_Scene.camera.getWidth(), m_Scene.camera.getHeight());
     glGenTextures(1, &m_TextureID);
     glBindTexture(GL_TEXTURE_2D, m_TextureID);
@@ -172,10 +180,15 @@ void RenderGui::InitTexture() {
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-    LOGI("InitTexture End");
+    LOGI("RenderGui::InitTexture: Texture initialized successfully (ID: %u)", m_TextureID);
 }
 
 void RenderGui::LoadTexture() {
+    if (!m_TextureBuffer) {
+        LOGE("RenderGui::LoadTexture: Texture buffer is null");
+        return;
+    }
+
     int width = m_TextureBuffer->GetWidth();
     int height = m_TextureBuffer->GetHeight();
 

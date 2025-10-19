@@ -109,8 +109,10 @@ void MainLoop(GLFWwindow* window) {
 int main(int, char**)
 {
     glfwSetErrorCallback(glfw_error_callback);
-    if (!glfwInit())
+    if (!glfwInit()) {
+        fprintf(stderr, "Failed to initialize GLFW\n");
         return 1;
+    }
 
 #if defined(IMGUI_IMPL_OPENGL_ES2)  // Decide GL+GLSL versions
     // GL ES 2.0 + GLSL 100 (WebGL 1.0)
@@ -144,8 +146,11 @@ int main(int, char**)
     float main_scale = ImGui_ImplGlfw_GetContentScaleForMonitor(glfwGetPrimaryMonitor()); // Valid on GLFW 3.3+ only
     GLFWwindow *window = glfwCreateWindow(static_cast<int>(1280 * main_scale), static_cast<int>(800 * main_scale),
                                           "MicroRenderer", nullptr, nullptr);
-    if (window == nullptr)
+    if (window == nullptr) {
+        fprintf(stderr, "Failed to create GLFW window\n");
+        glfwTerminate();
         return 1;
+    }
     glfwMakeContextCurrent(window);
     glfwSwapInterval(1); // Enable vsync
 
