@@ -212,7 +212,7 @@ void Rasterizer::FillInColor() {
         }
     }
 }
-
+//TODO: framebuffer,zbuffer与camera未必同尺寸，待修改
 void Rasterizer::FillInZVal() {
     if (!m_finalZBuffer)
         return;

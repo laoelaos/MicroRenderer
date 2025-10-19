@@ -16,7 +16,7 @@ public:
 
     void LaunchConfig(Scene &scene);
 private:
-    bool ConfigCamera(Camera& camera);
+    bool ConfigCamera(Camera& camera, bool can_move = true);
     void ConfigLight(Light& light);
     bool ConfigModel(Model& model);
 };

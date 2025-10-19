@@ -37,7 +37,6 @@ void ConfigGui::LaunchConfig(Scene &scene) {
                 ConfigLight(scene.lights[i]);
 
                 if (scene.lights.size() > 1) {
-                    ImGui::SameLine();
                     if (ImGui::Button("删除")) {
                         scene.lights.erase(scene.lights.begin() + static_cast<int64_t>(i));
                         ImGui::TreePop();
@@ -52,6 +51,13 @@ void ConfigGui::LaunchConfig(Scene &scene) {
     }
 
     if (ImGui::CollapsingHeader("模型管理")) {
+        std::vector<const char*> model_names;
+        for (auto & model : scene.models)
+            model_names.push_back(model.name.c_str());
+
+        if (!model_names.empty())
+            ImGui::Combo("选择模型", &m_SelectedModel, model_names.data(), static_cast<int>(model_names.size()));
+
         ImGui::Text("场景中的模型个数: %zu", scene.models.size());
 
         if (ImGui::Button("添加新模型")) {
@@ -61,39 +67,31 @@ void ConfigGui::LaunchConfig(Scene &scene) {
 
         ImGui::Separator();
 
-        std::vector<const char*> model_names;
-        for (auto & model : scene.models)
-            model_names.push_back(model.name.c_str());
+        if (m_SelectedModel >= 0 && m_SelectedModel < static_cast<int>(scene.models.size())) {
+            Model& model = scene.models[m_SelectedModel];
 
-        if (!model_names.empty()) {
-            ImGui::Combo("选择模型", &m_SelectedModel, model_names.data(), static_cast<int>(model_names.size()));
-
-            if (m_SelectedModel >= 0 && m_SelectedModel < static_cast<int>(scene.models.size())) {
-                Model& model = scene.models[m_SelectedModel];
-
-                const char* default_mesh[] = {"正方体", "球体", "平面", "取消"};
-                ImGui::Combo("使用默认模型", &m_DefaultModel, default_mesh, IM_ARRAYSIZE(default_mesh));
-                ImGui::SameLine();
-                if (ImGui::Button("应用")) {
-                    scene.SetMove();
-                    if (m_DefaultModel < 3) {
-                        model.mesh = Mesh(static_cast<DefaultMesh>(m_DefaultModel));
-                    } else if (m_DefaultModel == 3) {
-                        model.mesh.LoadFromFile(model.model_path);
-                    }
-                    m_DefaultModel = -1; // 重置选择
+            const char* default_mesh[] = {"正方体", "球体", "平面", "取消"};
+            ImGui::Combo("使用默认模型", &m_DefaultModel, default_mesh, IM_ARRAYSIZE(default_mesh));
+            ImGui::SameLine();
+            if (ImGui::Button("应用")) {
+                scene.SetMove();
+                if (m_DefaultModel < 3) {
+                    model.mesh = Mesh(static_cast<DefaultMesh>(m_DefaultModel));
+                } else if (m_DefaultModel == 3) {
+                    model.mesh.LoadFromFile(model.model_path);
                 }
+                m_DefaultModel = -1; // 重置选择
+            }
 
-                if (ConfigModel(model)) {
-                    scene.SetMove();
-                }
+            if (ConfigModel(model)) {
+                scene.SetMove();
+            }
 
-                ImGui::Separator();
-                if (scene.models.size() > 1 && !scene.models[m_SelectedModel].necessary) {  // 至少保留一个模型
-                    if (ImGui::Button("删除模型")) {
-                        scene.models.erase(scene.models.begin() + m_SelectedModel);
-                        m_SelectedModel = std::min(m_SelectedModel, static_cast<int>(scene.models.size()) - 1);
-                    }
+            ImGui::Separator();
+            if (scene.models.size() > 1 && !scene.models[m_SelectedModel].necessary) {  // 至少保留一个模型
+                if (ImGui::Button("删除模型")) {
+                    scene.models.erase(scene.models.begin() + m_SelectedModel);
+                    m_SelectedModel = std::min(m_SelectedModel, static_cast<int>(scene.models.size()) - 1);
                 }
             }
         }
@@ -102,7 +100,8 @@ void ConfigGui::LaunchConfig(Scene &scene) {
     ImGui::End();
 }
 
-bool ConfigGui::ConfigCamera(Camera& camera) {
+bool ConfigGui::ConfigCamera(Camera& camera, bool can_move) {
+    bool view_changed = false;
     if (ImGui::CollapsingHeader("相机设置")) {
         std::array<float, 3> eye_pos = to_float_array(camera.m_eye);
         std::array<float, 3> center_pos = to_float_array(camera.m_center);
@@ -118,7 +117,6 @@ bool ConfigGui::ConfigCamera(Camera& camera) {
         if (ImGui::IsItemHovered())
             ImGui::SetTooltip("远平面应大于近平面");
 
-        bool view_changed = false;
         if (ImGui::SliderFloat("水平旋转 (Yaw)", &yaw, -180.0f, 180.0f, "%.1f°"))
             view_changed = true;
         if (ImGui::SliderFloat("垂直旋转 (Pitch)", &pitch, -90.0f, 90.0f, "%.1f°"))
@@ -128,35 +126,52 @@ bool ConfigGui::ConfigCamera(Camera& camera) {
         if (view_changed) {
             camera.set_toward_from_center(yaw, pitch, roll);
         }
-        if (ImGui::InputFloat3("相机位置", center_pos.data(), "%.2f"))
-            camera.m_center = float_array_to_vec(center_pos);
+        if (ImGui::InputInt("宽度", &camera.m_width)) {
+            view_changed = true;
+        }
+        if (ImGui::InputInt("高度", &camera.m_height)) {
+            view_changed = true;
+        }
+        if (can_move) {
+            if (ImGui::InputFloat3("相机位置", center_pos.data(), "%.2f"))
+                camera.m_center = float_array_to_vec(center_pos);
+        }
         ImGui::BeginDisabled();
         ImGui::InputFloat3("观察目标点", eye_pos.data(), "%.2f");
         ImGui::InputFloat3("相机上方向", up.data(), "%.2f");
         ImGui::EndDisabled();
 
-        if (ImGui::InputFloat("视场角FOV", &fov, 1.0f, 5.0f, "%.1f"))
+        if (ImGui::InputFloat("视场角FOV", &fov, 1.0f, 5.0f, "%.1f")) {
+            view_changed = true;
             camera.m_fov = fov;
-        if (ImGui::InputFloat("近平面", &near_plane, 0.1f, 0.5f, "%.2f"))
+        }
+        if (ImGui::InputFloat("近平面", &near_plane, 0.1f, 0.5f, "%.2f")) {
+            view_changed = true;
             camera.m_near = near_plane;
-        if (ImGui::InputFloat("远平面", &far_plane, 0.1f, 0.5f, "%.2f"))
+        }
+        if (ImGui::InputFloat("远平面", &far_plane, 0.1f, 0.5f, "%.2f")) {
+            view_changed = true;
             camera.m_far = far_plane;
+        }
         if (ImGui::InputFloat("相机与目标点距离", &length, 0.1f, 0.5f, "%.2f")) {
-            vec3 direction = normalize(camera.m_eye - camera.m_center);
+            view_changed = true;
+            vec3 direction = normalize(camera.m_center - camera.m_eye);
             camera.m_center = camera.m_eye + direction * length;
         }
 
-        if (ImGui::Button("重置相机"))
-            camera = {};
+        if (can_move) {
+            if (ImGui::Button("重置相机"))
+                camera = {};
+        }
     }
-    return true;
+    return view_changed;
 }
 
 void ConfigGui::ConfigLight(Light& light) {
     std::array<float, 3> light_position = to_float_array(light.m_position);
     std::array<float, 3> light_color = to_float_array(light.m_color);
     auto light_intensity = static_cast<float>(light.m_intensity);
-
+    //TODO: 点光源还是有问题, 切换到方向光相机位置出错
     const char* light_types[] = {"点光源", "方向光"};
     int lightType = light.getType();
     if (ImGui::Combo("光源类型", &lightType, light_types, IM_ARRAYSIZE(light_types))) {
@@ -181,35 +196,7 @@ void ConfigGui::ConfigLight(Light& light) {
         light.m_intensity = std::max(0.0f, light_intensity);
 
     if (lightType == DIRECTIONAL_LIGHT) {
-        ImGui::Text("光照相机设置:");
-        ImGui::InputInt("宽度", &light.m_dirInfo->LightCamera.m_width);
-        ImGui::InputInt("高度", &light.m_dirInfo->LightCamera.m_height);
-        //TODO:或许集成相机设置?
-        auto fov = static_cast<float>(light.m_dirInfo->LightCamera.m_fov);
-        auto near_plane = static_cast<float>(light.m_dirInfo->LightCamera.m_near);
-        auto far_plane = static_cast<float>(light.m_dirInfo->LightCamera.m_far);
-        auto yaw = static_cast<float>(light.m_dirInfo->LightCamera.m_yaw);
-        auto pitch = static_cast<float>(light.m_dirInfo->LightCamera.m_pitch);
-        auto roll = static_cast<float>(light.m_dirInfo->LightCamera.m_roll);
-        bool view_changed = false;
-        if (ImGui::SliderFloat("水平旋转 (Yaw)", &yaw, -180.0f, 180.0f, "%.1f°"))
-            view_changed = true;
-        if (ImGui::SliderFloat("垂直旋转 (Pitch)", &pitch, -90.0f, 90.0f, "%.1f°"))
-            view_changed = true;
-        if (ImGui::SliderFloat("滚转 (roll)", &roll, -180.0f, 180.0f, "%.1f°"))
-            view_changed = true;
-        if (view_changed) {
-            light.m_dirInfo->LightCamera.set_toward_from_center(yaw, pitch, roll);
-            light.m_lightMove = true;
-        }
-        if (ImGui::InputFloat("视场角FOV", &fov, 1.0f, 5.0f, "%.1f"))
-            light.m_dirInfo->LightCamera.m_fov = fov;
-        if (ImGui::InputFloat("近平面", &near_plane, 0.1f, 0.5f, "%.2f"))
-            light.m_dirInfo->LightCamera.m_near = near_plane;
-        if (ImGui::InputFloat("远平面", &far_plane, 0.1f, 0.5f, "%.2f"))
-            light.m_dirInfo->LightCamera.m_far = far_plane;
-        if (ImGui::Button("重置光照相机")) {
-            light.m_dirInfo->LightCamera.m_center = light.m_position;
+        if (ConfigCamera(light.m_dirInfo->LightCamera, false)) {
             light.m_lightMove = true;
         }
     }
