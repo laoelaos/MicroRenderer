@@ -5,7 +5,7 @@
 #include <cstdio>
 
 #include "RenderGui.h"
-#include "Util/Logger.h"
+#include "Logger.h"
 #define GL_SILENCE_DEPRECATION
 #if defined(IMGUI_IMPL_OPENGL_ES2)
 #include <GLES2/gl2.h>
@@ -82,7 +82,7 @@ void MainLoop(GLFWwindow* window) {
 
         // Self
         ShowMainDockspace();
-        RenderGui::get().LaunchRender();
+        RenderGui::Get().LaunchRender();
 
 
         // Rendering

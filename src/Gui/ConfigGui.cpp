@@ -8,9 +8,9 @@
 
 #include <algorithm>
 
-#include "Rasterizer.h"
+#include "../Rasterizer.h"
 
-ConfigGui& ConfigGui::get() {
+ConfigGui& ConfigGui::Get() {
     static ConfigGui instance;
     return instance;
 }

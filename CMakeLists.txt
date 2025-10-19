@@ -47,6 +47,12 @@ set(Graphics_SOURCES
         src/Graphics/Geometry.cpp
 )
 
+set(GUI_SOURCES
+        src/Gui/ConfigGui.cpp
+        src/Gui/RenderGui.cpp
+        src/Gui/TextureGui.cpp
+)
+
 set(UTIL_SOURCES
         src/Util/Buffer.cpp
         src/Util/Logger.cpp
@@ -56,6 +62,7 @@ set(UTIL_SOURCES
 
 set(SET_SOURCES
         ${IMGUI_SOURCES}
+        ${GUI_SOURCES}
         ${Graphics_SOURCES}
         ${UTIL_SOURCES}
 )
@@ -65,8 +72,10 @@ set(SOURCES
         src/main.cpp
         src/Rasterizer.cpp
         src/Shader.cpp
-        src/ConfigGui.cpp
-        src/RenderGui.cpp
+        src/Gui/ConfigGui.cpp
+        src/Gui/RenderGui.cpp
+        src/Gui/TextureGui.cpp
+        src/Gui/TextureGui.h
 )
 
 add_executable(${PROJECT_NAME} ${SOURCES})
@@ -75,6 +84,7 @@ target_include_directories(${PROJECT_NAME} PRIVATE
         extern/ImGui
         extern/stb
         src/Graphics
+        src/Gui
         src/Util
         src
 )

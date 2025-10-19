@@ -12,21 +12,23 @@
 
 #include "ConfigGui.h"
 #include "Logger.h"
+#include "TextureGui.h"
 
-#include "Rasterizer.h"
+#include "../Rasterizer.h"
 
 RenderGui::RenderGui() {
     InitTexture();
     Rasterizer::get().set_msaa(m_RenderContext.msaa_level);
 }
 
-RenderGui& RenderGui::get() {
+RenderGui& RenderGui::Get() {
     static RenderGui instance;
     return instance;
 }
 
 void RenderGui::LaunchRender() {
-    ConfigGui::get().LaunchConfig(m_Scene);
+    ConfigGui::Get().LaunchConfig(m_Scene);
+    TextureGui::Get().LaunchTextureGui();
 
     ImGui::Begin("渲染设置");
     ConfigBasic();

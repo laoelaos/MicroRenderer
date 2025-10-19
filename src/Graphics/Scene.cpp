@@ -6,6 +6,8 @@
 #include <fstream>
 #include <sstream>
 
+#include "TextureGui.h"
+
 Scene::Scene(const std::string &filename) {
     std::ifstream file(filename);
     if (!file.is_open()) {
@@ -137,14 +139,14 @@ void Scene::LoadModel(std::ifstream& file) {
             std::string texture_path;
             iss >> texture_path;
             if (!models.empty() && !texture_path.empty()) {
-                models.back().material.load_texture(texture_path);
+                models.back().material.load_texture(TextureGui::Get().LoadTextureFromFile(texture_path));
             }
         }
         else if (key == "normal_map") {
             std::string normal_map_path;
             iss >> normal_map_path;
             if (!models.empty() && !normal_map_path.empty()) {
-                models.back().material.load_normal_map(normal_map_path);
+                models.back().material.load_normal_map(TextureGui::Get().LoadTextureFromFile(normal_map_path));
             }
         }
         else if (key == "diffuse_mapping") {

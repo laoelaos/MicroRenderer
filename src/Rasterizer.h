@@ -10,7 +10,7 @@
 #include <memory>
 
 #include "Scene.h"
-#include "Util/Buffer.h"
+#include "Buffer.h"
 #include "Shader.h"
 
 enum RasterizerMode {ZTEST = 0, PHONG = 1, PHONG_WITH_SHADOW = 2};

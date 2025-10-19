@@ -12,6 +12,7 @@
 #include <vector>
 
 #include "Geometry.h"
+#include "TextureGui.h"
 
 // File-scope constant for pi to avoid relying on non-standard M_PI
 constexpr double PI = 3.1415926535897932384626433832795;
@@ -475,8 +476,8 @@ void Material::load_texture() {
     load_texture(texture_path);
 }
 
-void Material::load_normal_map() {
-    load_normal_map(normal_map_path);
+void Material::load_texture(int i) {
+    texture = std::dynamic_pointer_cast<FlatTexture>(TextureGui::Get().GetTextureByIndex(i));
 }
 
 void Material::load_texture(const std::string &texture_path) {
@@ -485,6 +486,14 @@ void Material::load_texture(const std::string &texture_path) {
         texture->SetData(ImageUtil::ReadImageRGBA(texture_path, true));
     }
     this->texture_path = texture_path;
+}
+
+void Material::load_normal_map() {
+    load_normal_map(normal_map_path);
+}
+
+void Material::load_normal_map(int i) {
+    normal_map = std::dynamic_pointer_cast<FlatTexture>(TextureGui::Get().GetTextureByIndex(i));
 }
 
 void Material::load_normal_map(const std::string &normal_map_path) {

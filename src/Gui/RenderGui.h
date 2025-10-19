@@ -5,9 +5,9 @@
 #ifndef MICRORENDERER_RENDERGUI_H
 #define MICRORENDERER_RENDERGUI_H
 
-#include "Rasterizer.h"
+#include "../Rasterizer.h"
 #include "Scene.h"
-#include "Util/Buffer.h"
+#include "Buffer.h"
 
 struct RenderContext {
     int msaa_level = 1;
@@ -31,19 +31,18 @@ struct RenderContext {
 
 class RenderGui {
     Scene m_Scene = Scene("../obj/default2.sc");
+    bool m_Save = false;
 
     RenderContext m_RenderContext;
 
     uint32_t m_TextureID = 0;
     std::shared_ptr<Buffer<RGBA>> m_TextureBuffer;
 
-    bool m_Save = false;
-
     RenderGui();
 public:
-    static RenderGui& get();
+    static RenderGui& Get();
 
-    RenderContext& getSettings() { return m_RenderContext; }
+    RenderContext& GetSettings() { return m_RenderContext; }
 
     void LaunchRender();
 private:

@@ -8,7 +8,7 @@
 #include "Rasterizer.h"
 
 #include "ImageUtils.h"
-#include "Util/Texture.h"
+#include "Texture.h"
 
 Rasterizer::Rasterizer() {
     m_width = 1;

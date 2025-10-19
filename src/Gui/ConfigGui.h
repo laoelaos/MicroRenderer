@@ -12,7 +12,7 @@ class ConfigGui {
     int m_DefaultModel = -1;
     ConfigGui() = default;
 public:
-    static ConfigGui& get();
+    static ConfigGui& Get();
 
     void LaunchConfig(Scene &scene);
 private:

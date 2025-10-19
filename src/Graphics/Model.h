@@ -46,8 +46,10 @@ struct Material {
 
     void load_texture();
     void load_texture(const std::string& texture_path);
+    void load_texture(int i);
     void load_normal_map();
     void load_normal_map(const std::string& normal_map_path);
+    void load_normal_map(int i);
 };
 
 // struct Vertex {
