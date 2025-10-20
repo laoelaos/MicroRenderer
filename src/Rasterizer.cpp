@@ -59,7 +59,7 @@ void Rasterizer::pass(const Scene& scene, RasterizerMode mode, FrameBuffer& fram
         if (!obj_model.enable)
             continue;
 
-        m_model = obj_model.mesh.GetTransformMatrix();
+        m_model = obj_model.mesh->GetTransformMatrix();
         m_MVP = m_projection * m_view * m_model;
         m_MV = m_view * m_model;
         m_MVit = (m_view * m_model).invert().transpose();
@@ -85,7 +85,7 @@ void Rasterizer::pass(const Scene& scene, RasterizerMode mode, FrameBuffer& fram
 }
 
 void Rasterizer::PhongPipeline(const Model& model) {
-    Mesh mesh = model.mesh;
+    Mesh mesh = *model.mesh;
     mesh.ProcessTransform(m_MVP, m_MV, m_MVit);
     mesh.ProcessClipping();
     mesh.ProcessViewport(m_Viewport);
@@ -160,7 +160,7 @@ void Rasterizer::PhongFragment(const Material &material, Mesh &mesh) {
 }
 
 void Rasterizer::ZtestPipeline(const Model& model) {
-    Mesh mesh = model.mesh;
+    Mesh mesh = *model.mesh;
     mesh.ProcessTransform(m_MVP, m_MV, m_MVit);
     mesh.ProcessClipping();
     mesh.ProcessViewport(m_Viewport);

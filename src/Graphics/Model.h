@@ -121,7 +121,7 @@ public:
     std::string model_path;
 
     Material material;
-    Mesh mesh;
+    std::shared_ptr<Mesh> mesh;
 
     Model() = default;
     explicit Model( DefaultMesh type );

@@ -76,9 +76,9 @@ void ConfigGui::LaunchConfig(Scene &scene) {
             if (ImGui::Button("应用")) {
                 scene.SetMove();
                 if (m_DefaultModel < 3) {
-                    model.mesh = Mesh(static_cast<DefaultMesh>(m_DefaultModel));
+                    model.mesh = std::make_shared<Mesh>(static_cast<DefaultMesh>(m_DefaultModel));
                 } else if (m_DefaultModel == 3) {
-                    model.mesh.LoadFromFile(model.model_path);
+                    model.mesh->LoadFromFile(model.model_path);
                 }
                 m_DefaultModel = -1; // 重置选择
             }
@@ -135,8 +135,11 @@ bool ConfigGui::ConfigCamera(Camera& camera, bool can_move) {
         if (can_move) {
             if (ImGui::InputFloat3("相机位置", center_pos.data(), "%.2f"))
                 camera.m_center = float_array_to_vec(center_pos);
+            ImGui::BeginDisabled();
+        } else {
+            ImGui::BeginDisabled();
+            ImGui::InputFloat3("相机位置", center_pos.data(), "%.2f");
         }
-        ImGui::BeginDisabled();
         ImGui::InputFloat3("观察目标点", eye_pos.data(), "%.2f");
         ImGui::InputFloat3("相机上方向", up.data(), "%.2f");
         ImGui::EndDisabled();
@@ -171,7 +174,7 @@ void ConfigGui::ConfigLight(Light& light) {
     std::array<float, 3> light_position = to_float_array(light.m_position);
     std::array<float, 3> light_color = to_float_array(light.m_color);
     auto light_intensity = static_cast<float>(light.m_intensity);
-    //TODO: 点光源还是有问题, 切换到方向光相机位置出错
+
     const char* light_types[] = {"点光源", "方向光"};
     int lightType = light.getType();
     if (ImGui::Combo("光源类型", &lightType, light_types, IM_ARRAYSIZE(light_types))) {
@@ -213,7 +216,7 @@ bool ConfigGui::ConfigModel(Model& model) {
         ImGui::InputText("模型名称", &model.name);
         if (ImGui::InputText("模型文件路径", &model.model_path)) {
             LOGI("ConfigGui::ConfigModel: Loading model from path: {}", model.model_path);
-            model.mesh.LoadFromFile(model.model_path);
+            model.mesh->LoadFromFile(model.model_path);
         }
 
         ImGui::InputInt("漫反射贴图", &model.material.texture_index);
@@ -259,30 +262,30 @@ bool ConfigGui::ConfigModel(Model& model) {
     }
 
     if (ImGui::TreeNode("模型变换")) {
-        std::array<float, 3> translation = to_float_array(model.mesh.translation);
+        std::array<float, 3> translation = to_float_array(model.mesh->translation);
         if (ImGui::InputFloat3("位移", translation.data(), "%.2f")) {
             changed = true;
-            model.mesh.translation = float_array_to_vec(translation);
+            model.mesh->translation = float_array_to_vec(translation);
         }
 
-        std::array<float, 3> rotation_degrees = to_float_array(model.mesh.rotation); //角度制
+        std::array<float, 3> rotation_degrees = to_float_array(model.mesh->rotation); //角度制
         if (ImGui::SliderFloat("X轴旋转", &rotation_degrees[0], -180.0f, 180.0f, "%.1f°")) {
             changed = true;
-            model.mesh.rotation = float_array_to_vec(rotation_degrees);
+            model.mesh->rotation = float_array_to_vec(rotation_degrees);
         }
         if (ImGui::SliderFloat("Y轴旋转", &rotation_degrees[1], -180.0f, 180.0f, "%.1f°")) {
             changed = true;
-            model.mesh.rotation = float_array_to_vec(rotation_degrees);
+            model.mesh->rotation = float_array_to_vec(rotation_degrees);
         }
         if (ImGui::SliderFloat("Z轴旋转", &rotation_degrees[2], -180.0f, 180.0f, "%.1f°")) {
             changed = true;
-            model.mesh.rotation = float_array_to_vec(rotation_degrees);
+            model.mesh->rotation = float_array_to_vec(rotation_degrees);
         }
 
-        std::array<float, 3> scale = to_float_array(model.mesh.scale);
+        std::array<float, 3> scale = to_float_array(model.mesh->scale);
         if (ImGui::InputFloat3("缩放", scale.data(), "%.2f")) {
             changed = true;
-            model.mesh.scale = {
+            model.mesh->scale = {
                 std::max(0.01, static_cast<double>(scale[0])),
                 std::max(0.01, static_cast<double>(scale[1])),
                 std::max(0.01, static_cast<double>(scale[2]))
@@ -296,14 +299,14 @@ bool ConfigGui::ConfigModel(Model& model) {
         ImGui::SameLine();
         if (ImGui::Button("应用统一缩放")) {
             changed = true;
-            model.mesh.scale = {uniform_scale, uniform_scale, uniform_scale};
+            model.mesh->scale = {uniform_scale, uniform_scale, uniform_scale};
         }
 
         if (ImGui::Button("重置所有变换")) {
             changed = true;
-            model.mesh.translation = {0, 0, 0};
-            model.mesh.rotation = {0, 0, 0};
-            model.mesh.scale = {1, 1, 1};
+            model.mesh->translation = {0, 0, 0};
+            model.mesh->rotation = {0, 0, 0};
+            model.mesh->scale = {1, 1, 1};
             uniform_scale = 1.0f;
         }
 

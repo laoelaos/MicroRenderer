@@ -30,16 +30,16 @@ namespace {
 
         if (absX >= absY && absX >= absZ) { // X-face
             faceIndex = dir.x > 0 ? 0 : 1;
-            uv.x = (dir.x > 0 ? -dir.z / absX + 1.0f : dir.z / absX + 1.0f) * 0.5f;
-            uv.y = (-dir.y / absX + 1.0f) * 0.5f;
+            uv.x = (dir.x > 0 ? dir.z / absX + 1.0f : -dir.z / absX + 1.0f) * 0.5f;
+            uv.y = (dir.y / absX + 1.0f) * 0.5f;
         } else if (absY >= absX && absY >= absZ) { // Y-face
             faceIndex = dir.y > 0 ? 2 : 3;
             uv.x = (dir.x / absY + 1.0f) * 0.5f;
             uv.y = (dir.y > 0 ? dir.z / absY + 1.0f : -dir.z / absY + 1.0f) * 0.5f;
         } else { // Z-face
             faceIndex = dir.z > 0 ? 4 : 5;
-            uv.x = (dir.z > 0 ? dir.x / absZ + 1.0f : -dir.x / absZ + 1.0f) * 0.5f;
-            uv.y = (-dir.y / absZ + 1.0f) * 0.5f;
+            uv.x = (dir.z > 0 ? -dir.x / absZ + 1.0f : dir.x / absZ + 1.0f) * 0.5f;
+            uv.y = (dir.y / absZ + 1.0f) * 0.5f;
         }
         return faceIndex;
     }

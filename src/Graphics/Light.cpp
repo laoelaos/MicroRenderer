@@ -24,12 +24,12 @@ vec3 Light::get_illumination_at(const vec3& point) const {
 
 void Light::setPosition(const vec3 &position_) {
     m_lightMove = true;
-    m_lightModel->mesh.translation = position_;
+    m_lightMesh->translation = position_;
     if (m_type == POINT_LIGHT) {
         m_position = position_;
     } else if (m_type == DIRECTIONAL_LIGHT) {
+        m_dirInfo->LightCamera.Move(position_ - m_position);
         m_position = position_;
-        m_dirInfo->LightCamera.Move(position_);
     }
 }
 
@@ -40,6 +40,7 @@ void Light::setType(LIGHT_TYPE t) {
         if (!m_dirInfo) {
             m_dirInfo.emplace();
             m_dirInfo->shadowMap = std::make_shared<FlatTexture>();
+            m_dirInfo->LightCamera = Camera{{0, 0, 0}, m_position, {0,1,0}, 512, 512, 45.0, 1.0, 100.0};
         }
         m_pointInfo.reset();
     } else if (t == POINT_LIGHT) {
@@ -71,11 +72,11 @@ void Light::ProcessShadowMapIfNeeded(Scene &scene) {
     } else if (m_type == POINT_LIGHT && m_lightMove) {
         const int size = 512;
         Camera tmp = scene.camera;
-        Camera lightCam(m_position + vec3{1, 0, 0}, m_position, {0, 1, 0}, size, size, 90.0, 1.0, 100.0);
+        Camera lightCam(m_position + vec3{1, 0, 0}, m_position, {0, 1, 0}, size, size, 90.0, 0.1, 1000.0);
         scene.camera = lightCam;
 
-        double yaws[6] = {90, 180, -90, 0, 0, 0};
-        double pitches[6] = {0, 0, 0, 0, 89.9, -89.9};
+        double yaws[6] = {0, 180, -90, -90, 90, -90};
+        double pitches[6] = {0, 0, 89.9, -89.9, 0, 0};
         FrameBuffer fb;
         for (int i = 0; i < 6; ++i) {
             if (!m_pointInfo->shadowMap->GetData(i) || m_pointInfo->shadowMap->GetData(i)->GetWidth() != size || m_pointInfo->shadowMap->GetData(i)->GetHeight() != size) {
@@ -100,15 +101,14 @@ float Light::getVisibility(const vec4& world_pos) const {
     float visibility = 1.0;
 
     if (m_type == POINT_LIGHT) {
-
         vec3 light_dir = normalize(world_pos.to_vec3_point() - m_position);
         int face_index;
         if (std::abs(light_dir.x) >= std::abs(light_dir.y) && std::abs(light_dir.x) >= std::abs(light_dir.z)) {
-            face_index = (light_dir.x > 0) ? 0 : 2;
+            face_index = (light_dir.x > 0) ? 0 : 1;
         } else if (std::abs(light_dir.y) >= std::abs(light_dir.x) && std::abs(light_dir.y) >= std::abs(light_dir.z)) {
-            face_index = (light_dir.y > 0) ? 4 : 5;
+            face_index = (light_dir.y > 0) ? 2 : 3;
         } else {
-            face_index = (light_dir.z > 0) ? 1 : 3;
+            face_index = (light_dir.z > 0) ? 4 : 5;
         }
         vec3 light_space_pos = (m_pointInfo->LightN[face_index] * world_pos).to_vec3_point();
         double z = light_space_pos.z;

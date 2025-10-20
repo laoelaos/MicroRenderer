@@ -18,7 +18,6 @@ enum LIGHT_TYPE {
     DIRECTIONAL_LIGHT = 1
 };
 
-//TODO: 点光源在某些位置有点问题
 struct PointLightInfo {
     std::shared_ptr<SixFacesCubeTexture> shadowMap;
     mat4 LightN[6];
@@ -41,7 +40,7 @@ class Light {
     double m_intensity = 2000.0;
 
     // model
-    Model* m_lightModel;
+    std::shared_ptr<Mesh> m_lightMesh;
 
     // shadow / light-sphere (for point light)
     std::optional<PointLightInfo> m_pointInfo;

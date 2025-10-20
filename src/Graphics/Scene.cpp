@@ -84,9 +84,9 @@ void Scene::SaveModel(std::ofstream& file, const Model &model) const {
     file << "path " << model.model_path << "\n";
     file << "name " << model.name << "\n";
     file << "enable " << model.enable << "\n";
-    file << "translation " << model.mesh.translation.x << " " << model.mesh.translation.y << " " << model.mesh.translation.z << "\n";
-    file << "rotation " << model.mesh.rotation.x << " " << model.mesh.rotation.y << " " << model.mesh.rotation.z << "\n";
-    file << "scale " << model.mesh.scale.x << " " << model.mesh.scale.y << " " << model.mesh.scale.z << "\n";
+    file << "translation " << model.mesh->translation.x << " " << model.mesh->translation.y << " " << model.mesh->translation.z << "\n";
+    file << "rotation " << model.mesh->rotation.x << " " << model.mesh->rotation.y << " " << model.mesh->rotation.z << "\n";
+    file << "scale " << model.mesh->scale.x << " " << model.mesh->scale.y << " " << model.mesh->scale.z << "\n";
 
     if (!model.material.texture_path.empty()) {
         file << "texture " << model.material.texture_path << "\n";
@@ -137,13 +137,13 @@ void Scene::LoadModel(std::ifstream& file) {
             if (!models.empty()) models.back().enable = enable;
         }
         else if (key == "translation") {
-            if (!models.empty()) iss >> models.back().mesh.translation.x >> models.back().mesh.translation.y >> models.back().mesh.translation.z;
+            if (!models.empty()) iss >> models.back().mesh->translation.x >> models.back().mesh->translation.y >> models.back().mesh->translation.z;
         }
         else if (key == "rotation") {
-            if (!models.empty()) iss >> models.back().mesh.rotation.x >> models.back().mesh.rotation.y >> models.back().mesh.rotation.z;
+            if (!models.empty()) iss >> models.back().mesh->rotation.x >> models.back().mesh->rotation.y >> models.back().mesh->rotation.z;
         }
         else if (key == "scale") {
-            if (!models.empty()) iss >> models.back().mesh.scale.x >> models.back().mesh.scale.y >> models.back().mesh.scale.z;
+            if (!models.empty()) iss >> models.back().mesh->scale.x >> models.back().mesh->scale.y >> models.back().mesh->scale.z;
         }
         else if (key == "texture") {
             std::string texture_path;
@@ -272,13 +272,15 @@ void Scene::LoadLight(std::ifstream& file, LIGHT_TYPE type) {
         else if (key == "end") {
             if (type == DIRECTIONAL_LIGHT)
                 light.m_dirInfo->LightCamera.updateRotate();
+
             models.emplace_back(CUBE);
-            light.m_lightModel = &models.back();
-            light.m_lightModel->name = "light_model";
-            light.m_lightModel->necessary = true;
-            light.m_lightModel->mesh.scale = vec3{0.05, 0.05, 0.05};
-            light.m_lightModel->mesh.translation = light.m_position;
-            light.m_lightModel->material.properties = {0.0, 0.0, 1.0, 1};
+            Model& lightModel = models.back();
+            light.m_lightMesh = lightModel.mesh;
+            lightModel.name = "light_model";
+            lightModel.necessary = true;
+            lightModel.mesh->scale = vec3{0.05, 0.05, 0.05};
+            lightModel.mesh->translation = light.m_position;
+            lightModel.material.properties = {0.0, 0.0, 1.0, 1};
             return;
         }
     }

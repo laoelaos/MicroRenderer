@@ -495,9 +495,9 @@ void Material::load_normal_map(int i) {
 }
 
 Model::Model(DefaultMesh type) {
-    mesh = Mesh(type);
+    mesh = std::make_shared<Mesh>(type);
 }
 
 Model::Model(const std::string& filename) {
-    mesh = Mesh(filename);
+    mesh = std::make_shared<Mesh>(filename);
 }
