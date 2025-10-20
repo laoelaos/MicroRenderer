@@ -1,6 +1,9 @@
 # MicroRenderer Scene File
 # phong = diffuse specular ambient p
 
+[SkyBox]
+..\obj\Hotel.jpg
+
 [Camera]
 center 0 0 3
 size 600 600

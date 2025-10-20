@@ -31,11 +31,14 @@ void TextureGui::LaunchTextureGui() {
 
     // 加载纹理部分
     if (ImGui::CollapsingHeader("加载新纹理", ImGuiTreeNodeFlags_DefaultOpen)) {
+        const char* textureType[] = { "平面纹理", "球状纹理" };
+        static int currentTextureType = 0;
+        ImGui::Combo("纹理类型", &currentTextureType, textureType, IM_ARRAYSIZE(textureType));
         ImGui::InputText("纹理路径", &m_ReadyToLoadPath);
         ImGui::SameLine();
         if (ImGui::Button("加载")) {
             if (!m_ReadyToLoadPath.empty()) {
-                LoadTextureFromFile(m_ReadyToLoadPath);
+                LoadTextureFromFile(m_ReadyToLoadPath, static_cast<TextureType>(currentTextureType), true);
             }
         }
         ImGui::TextColored(ImVec4(0.7f, 0.7f, 0.7f, 1.0f), "示例: ../obj/floor_diffuse.tga");
@@ -179,18 +182,34 @@ void TextureGui::LaunchTextureGui() {
     ImGui::End();
 }
 
-int TextureGui::LoadTextureFromFile(const std::string& path) {
-    auto buffer = ImageUtil::ReadImageRGBA(path, true);
+int TextureGui::LoadTextureFromFile(const std::string& path, TextureType type, bool flipY) {
+    auto buffer = ImageUtil::ReadImageRGBA(path, flipY);
     if (!buffer) {
         LOGE("TextureGui::LoadTextureFromFile: Failed to load texture: {}", path);
         return -1;
     }
-
-    auto flatTexture = std::make_shared<FlatTexture>();
-    flatTexture->SetData(buffer);
+    std::shared_ptr<Texture> texture;
+    switch (type) {
+        case TextureType_FLAT: {
+            auto flatTexture = std::make_shared<FlatTexture>();
+            flatTexture->SetData(buffer);
+            texture = flatTexture;
+            break;
+        }
+        case TextureType_SIXFACESCUBE: {
+            LOGE("TextureGui::LoadTextureFromFile: SIXFACESCUBE texture loading not implemented yet: {}", path);
+            return -1;
+        }
+        case TextureType_SINGLECUBE: {
+            auto flatTexture = std::make_shared<SingleCubeTexture>();
+            flatTexture->SetData(buffer);
+            texture = flatTexture;
+            break;
+        }
+    }
 
     TexturePreview preview;
-    preview.texture = flatTexture;
+    preview.texture = texture;
     preview.path = path;
     preview.width = buffer->GetWidth();
     preview.height = buffer->GetHeight();

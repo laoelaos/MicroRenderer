@@ -31,7 +31,7 @@ public:
     std::shared_ptr<Texture> GetTextureByIndex(int index);
 
     void LaunchTextureGui();
-    int LoadTextureFromFile(const std::string& path); //返回纹理索引
+    int LoadTextureFromFile(const std::string& path, TextureType type, bool flipY); //返回纹理索引
 private:
     void DeleteTexture(int index);
     void CreateGLTexture(TexturePreview& preview);

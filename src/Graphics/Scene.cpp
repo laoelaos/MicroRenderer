@@ -30,7 +30,15 @@ Scene::Scene(const std::string &filename) {
             section = line.substr(1, line.size() - 2);
         }
 
-        if (section == "Camera") {
+        if (section == "SkyBox") {
+            std::string skybox_path;
+            std::getline(file, line);
+            std::istringstream iss(line);
+            iss >> skybox_path;
+            int index = TextureGui::Get().LoadTextureFromFile(skybox_path, TextureType_SINGLECUBE, false);
+            skybox_texture = std::dynamic_pointer_cast<SingleCubeTexture>(TextureGui::Get().GetTextureByIndex(index));
+        }
+        else if (section == "Camera") {
             LoadCamera(file);
         }
         else if (section == "POINT_LIGHT") {
@@ -149,14 +157,14 @@ void Scene::LoadModel(std::ifstream& file) {
             std::string texture_path;
             iss >> texture_path;
             if (!models.empty() && !texture_path.empty()) {
-                models.back().material.load_texture(TextureGui::Get().LoadTextureFromFile(texture_path));
+                models.back().material.load_texture(TextureGui::Get().LoadTextureFromFile(texture_path, TextureType_FLAT, true));
             }
         }
         else if (key == "normal_map") {
             std::string normal_map_path;
             iss >> normal_map_path;
             if (!models.empty() && !normal_map_path.empty()) {
-                models.back().material.load_normal_map(TextureGui::Get().LoadTextureFromFile(normal_map_path));
+                models.back().material.load_normal_map(TextureGui::Get().LoadTextureFromFile(normal_map_path, TextureType_FLAT, true));
             }
         }
         else if (key == "diffuse_mapping") {

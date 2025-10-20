@@ -20,6 +20,8 @@ public:
     std::vector<Light> lights;
     std::vector<Model> models;
 
+    std::shared_ptr<SingleCubeTexture> skybox_texture;
+
     Scene() = default;
     explicit Scene(const std::string& filename);
 

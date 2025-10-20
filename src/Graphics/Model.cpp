@@ -48,6 +48,15 @@ Mesh::Mesh(const DefaultMesh type) {
             addQuad({-1,-1,-1}, { 1,-1,-1}, { 1,-1, 1}, {-1,-1, 1}, {0,-1,0});
             break;
         }
+        case DefaultMesh_CUBE_INVERT: {
+            addQuad({-1,-1, 1}, { 1,-1, 1}, { 1, 1, 1}, {-1, 1, 1}, {0,0,-1});
+            addQuad({ 1,-1,-1}, {-1,-1,-1}, {-1, 1,-1}, { 1, 1,-1}, {0,0,1});
+            addQuad({-1,-1,-1}, {-1,-1, 1}, {-1, 1, 1}, {-1, 1,-1}, {1,0,0});
+            addQuad({ 1,-1, 1}, { 1,-1,-1}, { 1, 1,-1}, { 1, 1, 1}, {-1,0,0});
+            addQuad({-1, 1, 1}, { 1, 1, 1}, { 1, 1,-1}, {-1, 1,-1}, {0,-1,0});
+            addQuad({-1,-1,-1}, { 1,-1,-1}, { 1,-1, 1}, {-1,-1, 1}, {0,1,0});
+            break;
+        }
         case DefaultMesh_SPHERE: {
             const int sectorCount = 36;   // longitude slices
             const int stackCount  = 18;   // latitude stacks
@@ -444,9 +453,9 @@ void Triangle::get_barycentric_correct(double x, double y) {
     get_barycentric(x, y);
     if (alpha < 0 || beta < 0 || gamma < 0)
         return;
-    double z0 = 1.0/world_vertices[0].z;
-    double z1 = 1.0/world_vertices[1].z;
-    double z2 = 1.0/world_vertices[2].z;
+    double z0 = 1.0/clip_vertices[0].w;
+    double z1 = 1.0/clip_vertices[1].w;
+    double z2 = 1.0/clip_vertices[2].w;
     c_alpha = alpha * z0 / (alpha * z0 + beta * z1 + gamma * z2);
     c_beta = beta * z1 / (alpha * z0 + beta * z1 + gamma * z2);
     c_gamma = gamma * z2 / (alpha * z0 + beta * z1 + gamma * z2);

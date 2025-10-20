@@ -16,7 +16,8 @@
 enum RasterizerMode {
     RasterizerMode_ZTEST = 0,
     RasterizerMode_PHONG = 1,
-    RasterizerMode_PHONG_SHADOW = 2
+    RasterizerMode_PHONG_SHADOW = 2,
+    RasterizerMode_SKYBOX = 3
 };
 
 class Rasterizer {
@@ -33,6 +34,8 @@ private:
     void ZtestFragment(Mesh& mesh);
     void PhongPipeline(const Model& model);
     void PhongFragment(const Material& material, Mesh& mesh);
+    void SkyboxPipeline(const Scene& scene);
+    void SkyboxFragment(const std::shared_ptr<SingleCubeTexture>& skybox_texture);
     void FillInColor();
     void FillInZVal();
 

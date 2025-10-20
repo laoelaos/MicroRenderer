@@ -52,8 +52,9 @@ private:
     void RenderResult();
 
     void PerformRendering();
-    void InitTexture();
     void LoadTexture();
+
+    void InitTexture();
 };
 
 

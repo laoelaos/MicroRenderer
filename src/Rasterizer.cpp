@@ -54,6 +54,11 @@ void Rasterizer::pass(const Scene& scene, RasterizerMode mode, FrameBuffer& fram
         }
     }
 
+    if (mode == RasterizerMode_SKYBOX) {
+        SkyboxPipeline(scene);
+        mode = RasterizerMode_PHONG_SHADOW;
+    }
+
     for (const Model& obj_model: scene.models) {
 
         if (!obj_model.enable)
@@ -189,6 +194,30 @@ void Rasterizer::ZtestFragment(Mesh &mesh) {
                     m_zBuffer.Set(x, y, z);
                 }
             }
+        }
+    }
+}
+
+void Rasterizer::SkyboxPipeline(const Scene &scene) {
+    if (!scene.skybox_texture) return;
+    m_MVPVi = (m_Viewport * m_projection * m_view).invert();
+    SkyboxFragment(scene.skybox_texture);
+}
+
+void Rasterizer::SkyboxFragment(const std::shared_ptr<SingleCubeTexture>& skybox_texture) {
+#pragma omp parallel for default(none) shared(skybox_texture, m_width, m_height, m_colorBuffer, m_zBuffer, m_tileLocks)
+    for (int y = 0; y < m_height; y++) {
+        for (int x = 0; x < m_width; x++) {
+            std::lock_guard guard(m_tileLocks[get_tile_lock(x, y)]);
+            if (m_zBuffer.Get(x, y) > -std::numeric_limits<double>::infinity()) {
+                continue;
+            }
+
+            vec4 screen_pos = {(double)x + 0.5, (double)y + 0.5, -1.0, 1.0};
+            vec4 world_pos = m_MVPVi * screen_pos;
+            vec3 dir = normalize(world_pos.to_vec3_point());
+
+            m_colorBuffer.Set(x, y, ImageUtil::RGBAtoVec3(skybox_texture->Get(dir)));
         }
     }
 }

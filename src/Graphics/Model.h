@@ -65,6 +65,7 @@ struct Material {
 
 enum DefaultMesh {
     DefaultMesh_CUBE = 0,
+    DefaultMesh_CUBE_INVERT,
     DefaultMesh_SPHERE,
     DefaultMesh_PLANE
 };

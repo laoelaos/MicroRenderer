@@ -41,7 +41,7 @@ void RenderGui::LaunchRender() {
 
 void RenderGui::ConfigBasic() {
     if (ImGui::CollapsingHeader("基本设置")) {
-        const char* items[] = { "仅Z测试", "Phong光照", "Phong光照+阴影" };
+        const char* items[] = { "仅Z测试", "Phong光照", "Phong光照+阴影", "天空盒+Phong光照+阴影" };
         int current_mode = m_RenderContext.render_mode;
         if (ImGui::Combo("渲染模式", &current_mode, items, IM_ARRAYSIZE(items))) {
             m_RenderContext.render_mode = static_cast<RasterizerMode>(current_mode);
@@ -147,6 +147,9 @@ void RenderGui::PerformRendering() {
             light.ProcessShadowMapIfNeeded(m_Scene);
         }
         Rasterizer::get().pass(m_Scene, RasterizerMode_PHONG_SHADOW, fb);
+    } else if (m_RenderContext.render_mode == RasterizerMode_SKYBOX) {
+        fb = {m_TextureBuffer, nullptr};
+        Rasterizer::get().pass(m_Scene, RasterizerMode_SKYBOX, fb);
     }
 
     auto end_time = std::chrono::high_resolution_clock::now();
@@ -161,26 +164,6 @@ void RenderGui::PerformRendering() {
         frame_counter = 0;
         duration_counter = 0;
     }
-}
-
-void RenderGui::InitTexture() {
-    LOGI("RenderGui::InitTexture: Initializing texture buffer ({}x{})",
-         m_Scene.camera.getWidth(), m_Scene.camera.getHeight());
-
-    if (m_Scene.camera.getWidth() <= 0 || m_Scene.camera.getHeight() <= 0) {
-        LOGE("RenderGui::InitTexture: Invalid texture dimensions: {}x{}",
-             m_Scene.camera.getWidth(), m_Scene.camera.getHeight());
-        return;
-    }
-
-    m_TextureBuffer = std::make_shared<Buffer<RGBA>>(m_Scene.camera.getWidth(), m_Scene.camera.getHeight());
-    glGenTextures(1, &m_TextureID);
-    glBindTexture(GL_TEXTURE_2D, m_TextureID);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-    LOGI("RenderGui::InitTexture: Texture initialized successfully (ID: {})", m_TextureID);
 }
 
 void RenderGui::LoadTexture() {
@@ -202,4 +185,24 @@ void RenderGui::LoadTexture() {
 
     glBindTexture(GL_TEXTURE_2D, m_TextureID);
     glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, flipped_data.data());
+}
+
+void RenderGui::InitTexture() {
+    LOGI("RenderGui::InitTexture: Initializing texture buffer ({}x{})",
+         m_Scene.camera.getWidth(), m_Scene.camera.getHeight());
+
+    if (m_Scene.camera.getWidth() <= 0 || m_Scene.camera.getHeight() <= 0) {
+        LOGE("RenderGui::InitTexture: Invalid texture dimensions: {}x{}",
+             m_Scene.camera.getWidth(), m_Scene.camera.getHeight());
+        return;
+    }
+
+    m_TextureBuffer = std::make_shared<Buffer<RGBA>>(m_Scene.camera.getWidth(), m_Scene.camera.getHeight());
+    glGenTextures(1, &m_TextureID);
+    glBindTexture(GL_TEXTURE_2D, m_TextureID);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+    LOGI("RenderGui::InitTexture: Texture initialized successfully (ID: {})", m_TextureID);
 }
