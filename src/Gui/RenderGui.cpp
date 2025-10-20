@@ -135,18 +135,18 @@ void RenderGui::PerformRendering() {
     }
 
     FrameBuffer fb;
-    if (m_RenderContext.render_mode == ZTEST) {
+    if (m_RenderContext.render_mode == RasterizerMode_ZTEST) {
         fb = {nullptr, m_TextureBuffer};
-        Rasterizer::get().pass(m_Scene, ZTEST, fb);
-    } else if (m_RenderContext.render_mode == PHONG) {
+        Rasterizer::get().pass(m_Scene, RasterizerMode_ZTEST, fb);
+    } else if (m_RenderContext.render_mode == RasterizerMode_PHONG) {
         fb = {m_TextureBuffer, nullptr};
-        Rasterizer::get().pass(m_Scene, PHONG, fb);
-    } else if (m_RenderContext.render_mode == PHONG_WITH_SHADOW) {
+        Rasterizer::get().pass(m_Scene, RasterizerMode_PHONG, fb);
+    } else if (m_RenderContext.render_mode == RasterizerMode_PHONG_SHADOW) {
         fb = {m_TextureBuffer, nullptr};
         for (Light& light : m_Scene.lights) {
             light.ProcessShadowMapIfNeeded(m_Scene);
         }
-        Rasterizer::get().pass(m_Scene, PHONG_WITH_SHADOW, fb);
+        Rasterizer::get().pass(m_Scene, RasterizerMode_PHONG_SHADOW, fb);
     }
 
     auto end_time = std::chrono::high_resolution_clock::now();

@@ -95,7 +95,7 @@ RGBA SingleCubeTexture::Get(vec3 dir) {
     vec2 uv;
     const auto& sampler = GetSamplerDesc();
 
-    if (m_type == CubeTexType_Spherical) {
+    if (m_type == CubeTexType_SPHERICAL) {
         uv.x = 0.5 + atan2(dir.z, dir.x) / (2 * M_PI);
         uv.y = 0.5 - asin(dir.y) / M_PI;
 
@@ -103,7 +103,7 @@ RGBA SingleCubeTexture::Get(vec3 dir) {
         // spherical maps often use REPEAT for u and CLAMP for v
         uv.x = applyWrap(uv.x, sampler.wrapS);
         uv.y = applyWrap(uv.y, sampler.wrapT);
-    } else if (m_type == CubeTexType_Cube) {
+    } else if (m_type == CubeTexType_CUBE) {
         vec2 face_uv;
         int faceIndex = selectFace(dir, face_uv);
 

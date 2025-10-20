@@ -10,8 +10,15 @@
 #include "Geometry.h"
 #include "Texture.h"
 
-enum NormalMapType {GLOBAL = 0, TANGENT, NOT_USE};
-enum ShadeFrequency {FLAT = 0, PER_FRAGMENT};
+enum NormalMapType {
+    NormalMapType_GLOBAL = 0,
+    NormalMapType_TANGENT,
+    NormalMapType_NOT_USE
+};
+enum ShadeFrequency {
+    ShadeFrequency_FLAT = 0,
+    ShadeFrequency_PER_FRAGMENT
+};
 
 struct PhongProperties {
     double k_diffuse = 0.8;
@@ -31,8 +38,8 @@ struct Material {
     PhongProperties properties;
 
     bool diffuse_mapping = false;
-    NormalMapType normal_type = NOT_USE;
-    ShadeFrequency shade_frequency = FLAT;
+    NormalMapType normal_type = NormalMapType_NOT_USE;
+    ShadeFrequency shade_frequency = ShadeFrequency_FLAT;
 
     void load_texture(int i);
     void load_normal_map(int i);
@@ -56,7 +63,11 @@ struct Material {
 //     size_t indices[3] = {0, 0, 0};
 // };
 
-enum DefaultMesh {CUBE, SPHERE, PLANE};
+enum DefaultMesh {
+    DefaultMesh_CUBE = 0,
+    DefaultMesh_SPHERE,
+    DefaultMesh_PLANE
+};
 
 struct Triangle {
     bool discard = false;

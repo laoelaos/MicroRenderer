@@ -13,9 +13,9 @@
 
 class Scene;
 
-enum LIGHT_TYPE {
-    POINT_LIGHT = 0,
-    DIRECTIONAL_LIGHT = 1
+enum LightType {
+    LightType_POINT = 0,
+    LightType_DIRECTIONAL
 };
 
 struct PointLightInfo {
@@ -32,7 +32,7 @@ struct DirectionalLightInfo {
 class Light {
     bool m_haveShadow = true;
     bool m_lightMove = true;
-    LIGHT_TYPE m_type = POINT_LIGHT;
+    LightType m_type = LightType_POINT;
 
     // basic
     vec3 m_color = {1.0, 1.0, 1.0};
@@ -55,8 +55,8 @@ public:
     [[nodiscard]] vec3 getPosition() const { return m_position; }
     void setPosition(const vec3& position_);
 
-    [[nodiscard]] LIGHT_TYPE getType() const { return m_type; }
-    void setType(LIGHT_TYPE t);
+    [[nodiscard]] LightType getType() const { return m_type; }
+    void setType(LightType t);
 
     void ProcessShadowMapIfNeeded(Scene& scene);
     [[nodiscard]] float getVisibility(const vec4& world_pos) const;

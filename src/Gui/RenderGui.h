@@ -11,7 +11,7 @@
 
 struct RenderContext {
     int msaa_level = 1;
-    RasterizerMode render_mode = PHONG_WITH_SHADOW;
+    RasterizerMode render_mode = RasterizerMode_PHONG_SHADOW;
 
     // 渲染选项
     bool real_time_rendering = true;    // 是否启用实时渲染

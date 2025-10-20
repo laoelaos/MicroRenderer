@@ -34,10 +34,10 @@ Scene::Scene(const std::string &filename) {
             LoadCamera(file);
         }
         else if (section == "POINT_LIGHT") {
-            LoadLight(file, POINT_LIGHT);
+            LoadLight(file, LightType_POINT);
         }
         else if (section == "DIRECTIONAL_LIGHT") {
-            LoadLight(file, DIRECTIONAL_LIGHT);
+            LoadLight(file, LightType_DIRECTIONAL);
         }
         else if (section == "Model") {
             LoadModel(file);
@@ -221,16 +221,16 @@ void Scene::LoadCamera(std::ifstream& file) {
 }
 
 void Scene::SaveLight(std::ofstream& file, const Light& light) const {
-    if (light.getType() == POINT_LIGHT) {
+    if (light.getType() == LightType_POINT) {
         file << "[POINT_LIGHT]\n";
-    } else if (light.getType() == DIRECTIONAL_LIGHT) {
+    } else if (light.getType() == LightType_DIRECTIONAL) {
         file << "[DIRECTIONAL_LIGHT]\n";
     }
 
     file << "color" << light.m_color.x << " " << light.m_color.y << " " << light.m_color.z << "\n";
     file << "position" << light.m_position.x << " " << light.m_position.y << " " << light.m_position.z << "\n";
     file << "intensity" << light.m_intensity << "\n";
-    if (light.getType() == DIRECTIONAL_LIGHT) {
+    if (light.getType() == LightType_DIRECTIONAL) {
         file << "eye" << light.m_dirInfo->LightCamera.m_eye.x << " " << light.m_dirInfo->LightCamera.m_eye.y << " " << light.m_dirInfo->LightCamera.m_eye.z << "\n";
         file << "center" << light.m_dirInfo->LightCamera.m_center.x << " "<< light.m_dirInfo->LightCamera.m_center.y << " " << light.m_dirInfo->LightCamera.m_center.z << "\n";
         file << "up" << light.m_dirInfo->LightCamera.m_up.x << " " << light.m_dirInfo->LightCamera.m_up.y << " " << light.m_dirInfo->LightCamera.m_up.z << "\n";
@@ -242,7 +242,7 @@ void Scene::SaveLight(std::ofstream& file, const Light& light) const {
     file << "end\n\n";
 }
 
-void Scene::LoadLight(std::ifstream& file, LIGHT_TYPE type) {
+void Scene::LoadLight(std::ifstream& file, LightType type) {
     lights.emplace_back();
     Light& light = lights.back();
     light.setType(type);
@@ -270,10 +270,10 @@ void Scene::LoadLight(std::ifstream& file, LIGHT_TYPE type) {
         else if (key == "near_far" && light.m_dirInfo) iss >> light.m_dirInfo->LightCamera.m_near >> light.m_dirInfo->LightCamera.m_far;
         else if (key == "yaw_pitch_roll" && light.m_dirInfo) iss >> light.m_dirInfo->LightCamera.m_yaw >> light.m_dirInfo->LightCamera.m_pitch >> light.m_dirInfo->LightCamera.m_roll;
         else if (key == "end") {
-            if (type == DIRECTIONAL_LIGHT)
+            if (type == LightType_DIRECTIONAL)
                 light.m_dirInfo->LightCamera.updateRotate();
 
-            models.emplace_back(CUBE);
+            models.emplace_back(DefaultMesh_CUBE);
             Model& lightModel = models.back();
             light.m_lightMesh = lightModel.mesh;
             lightModel.name = "light_model";

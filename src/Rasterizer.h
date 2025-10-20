@@ -13,7 +13,11 @@
 #include "Buffer.h"
 #include "Shader.h"
 
-enum RasterizerMode {ZTEST = 0, PHONG = 1, PHONG_WITH_SHADOW = 2};
+enum RasterizerMode {
+    RasterizerMode_ZTEST = 0,
+    RasterizerMode_PHONG = 1,
+    RasterizerMode_PHONG_SHADOW = 2
+};
 
 class Rasterizer {
 public:

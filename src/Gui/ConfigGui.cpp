@@ -61,7 +61,7 @@ void ConfigGui::LaunchConfig(Scene &scene) {
         ImGui::Text("场景中的模型个数: %zu", scene.models.size());
 
         if (ImGui::Button("添加新模型")) {
-            scene.models.emplace_back(SPHERE);
+            scene.models.emplace_back(DefaultMesh_SPHERE);
             scene.SetMove();
         }
 
@@ -178,12 +178,12 @@ void ConfigGui::ConfigLight(Light& light) {
     const char* light_types[] = {"点光源", "方向光"};
     int lightType = light.getType();
     if (ImGui::Combo("光源类型", &lightType, light_types, IM_ARRAYSIZE(light_types))) {
-        light.setType(lightType == 0 ? POINT_LIGHT : DIRECTIONAL_LIGHT);
+        light.setType(lightType == 0 ? LightType_POINT : LightType_DIRECTIONAL);
     }
 
     ImGui::Checkbox("启用阴影", &light.m_haveShadow);
 
-    if (lightType == DIRECTIONAL_LIGHT) {
+    if (lightType == LightType_DIRECTIONAL) {
         ImGui::Text("光源位置即为光照方向");
         ImGui::Text("光照方向: (%.1f, %.1f, %.1f)", -light.m_position.x, -light.m_position.y, -light.m_position.z);
     }
@@ -198,7 +198,7 @@ void ConfigGui::ConfigLight(Light& light) {
     if (ImGui::InputFloat("光强", &light_intensity, 10.0f, 100.0f, "%.1f"))
         light.m_intensity = std::max(0.0f, light_intensity);
 
-    if (lightType == DIRECTIONAL_LIGHT) {
+    if (lightType == LightType_DIRECTIONAL) {
         if (ConfigCamera(light.m_dirInfo->LightCamera, false)) {
             light.m_lightMove = true;
         }

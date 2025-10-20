@@ -33,7 +33,7 @@ private:
     void SaveCamera(std::ofstream& file) const;
     void LoadCamera(std::ifstream& file);
     void SaveLight(std::ofstream& file, const Light& light) const;
-    void LoadLight(std::ifstream& file, LIGHT_TYPE type);
+    void LoadLight(std::ifstream& file, LightType type);
 };
 
 #endif //MICRORENDERER_SCENE_H

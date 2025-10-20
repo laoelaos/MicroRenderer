@@ -33,7 +33,7 @@ Mesh::Mesh(const DefaultMesh type) {
     };
 
     switch (type) {
-        case CUBE: {
+        case DefaultMesh_CUBE: {
             // Front (+Z)
             addQuad({-1,-1, 1}, { 1,-1, 1}, { 1, 1, 1}, {-1, 1, 1}, {0,0,1});
             // Back (-Z)
@@ -48,7 +48,7 @@ Mesh::Mesh(const DefaultMesh type) {
             addQuad({-1,-1,-1}, { 1,-1,-1}, { 1,-1, 1}, {-1,-1, 1}, {0,-1,0});
             break;
         }
-        case SPHERE: {
+        case DefaultMesh_SPHERE: {
             const int sectorCount = 36;   // longitude slices
             const int stackCount  = 18;   // latitude stacks
             const double radius   = 1.0;
@@ -96,7 +96,7 @@ Mesh::Mesh(const DefaultMesh type) {
             }
             break;
         }
-        case PLANE: {
+        case DefaultMesh_PLANE: {
             // y = 0 plane spanning x,z in [-1,1]
             addQuad({-1,0, 1}, { 1,0, 1}, { 1,0,-1}, {-1,0,-1}, {0,1,0});
             break;

@@ -47,7 +47,7 @@ void Rasterizer::pass(const Scene& scene, RasterizerMode mode, FrameBuffer& fram
     m_projection = scene.camera.get_projection_matrix();
     m_Viewport = scene.camera.get_viewport_matrix(m_MSAA);
 
-    if (mode == PHONG || mode == PHONG_WITH_SHADOW) {
+    if (mode == RasterizerMode_PHONG || mode == RasterizerMode_PHONG_SHADOW) {
         PhongShader::s_lightPos = {};
         for (const Light& light : scene.lights) {
             PhongShader::s_lightPos.push_back((m_view * light.getPosition().to_vec4(1.0)).to_vec3_point());
@@ -64,14 +64,14 @@ void Rasterizer::pass(const Scene& scene, RasterizerMode mode, FrameBuffer& fram
         m_MV = m_view * m_model;
         m_MVit = (m_view * m_model).invert().transpose();
 
-        if (mode == ZTEST)
+        if (mode == RasterizerMode_ZTEST)
             ZtestPipeline(obj_model);
-        if (mode == PHONG) {
+        if (mode == RasterizerMode_PHONG) {
             PhongShader::s_EnableShadow = false;
             ZtestPipeline(obj_model);
             PhongPipeline(obj_model);
         }
-        if (mode == PHONG_WITH_SHADOW) {
+        if (mode == RasterizerMode_PHONG_SHADOW) {
             PhongShader::s_lightInfo = &scene.lights;
             PhongShader::s_mainCameraM = m_view.invert();
             PhongShader::s_EnableShadow = true;
@@ -127,15 +127,15 @@ void Rasterizer::PhongFragment(const Material &material, Mesh &mesh) {
                 shader.tex_coords = tri.get_interpolated_tex_coords();
                 shader.color = diffuse_mapping ? ImageUtil::RGBAtoVec3(material.texture->Get(shader.tex_coords)) : vec3{0.5, 0.5, 0.5};
 
-                if (normal_type == GLOBAL) {
+                if (normal_type == NormalMapType_GLOBAL) {
                     shader.normal = ImageUtil::RGBAtoVec3(material.normal_map->Get(shader.tex_coords)) * 2 - vec3{1, 1, 1};
-                } else if (shade_frequency == PER_FRAGMENT) {
+                } else if (shade_frequency == ShadeFrequency_PER_FRAGMENT) {
                     shader.normal = tri.get_interpolated_normal();
                 } else {
                     shader.normal = normalize((tri.world_vertices[1] - tri.world_vertices[0]) ^
                                                (tri.world_vertices[2] - tri.world_vertices[1]));
                 }
-                if (normal_type == TANGENT) {
+                if (normal_type == NormalMapType_TANGENT) {
                     vec3 e1 = tri.world_vertices[1] - tri.world_vertices[0];
                     vec3 e2 = tri.world_vertices[2] - tri.world_vertices[0];
                     vec2 delta_uv1 = tri.tex_coords[1] - tri.tex_coords[0];
