@@ -30,13 +30,16 @@ struct RenderContext {
 };
 
 class RenderGui {
-    Scene m_Scene = Scene("../obj/default2.sc");
+    Scene m_Scene;
     bool m_Save = false;
 
     RenderContext m_RenderContext;
 
     uint32_t m_TextureID = 0;
     std::shared_ptr<Buffer<RGBA>> m_TextureBuffer;
+
+    bool m_showSceneLoadPopup = true;
+    std::string m_sceneFilePath = "../obj/default2.sc";
 
     RenderGui();
 public:
@@ -46,6 +49,7 @@ public:
 
     void LaunchRender();
 private:
+    void ShowLoadScenePopup();
     void ConfigBasic();
     void ConfigRenderSetting();
     void ShowFPS();

@@ -10,7 +10,7 @@
 //目前eye与center的关系可能相反
 class Camera {
     vec3 m_eye = {0, 0, 0}; // 观察点位置, 目标位置
-    vec3 m_center = {0, 0, 3}; // 相机位置
+    vec3 m_center = {0, 1, 4}; // 相机位置
     vec3 m_up = {0, 1, 0};
 
     int m_width = 600;
@@ -18,11 +18,11 @@ class Camera {
 
     double m_fov = 55.0;
     double m_aspect = 1.0;
-    double m_near = 2.0;
-    double m_far = 3.0;
+    double m_near = 0.1;
+    double m_far = 1000.0;
 
     double m_yaw = -90.0;
-    double m_pitch = 0.0;
+    double m_pitch = -20.0;
     double m_roll = 0.0;
 public:
     Camera() = default;

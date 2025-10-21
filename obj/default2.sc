@@ -15,7 +15,7 @@ end
 [DIRECTIONAL_LIGHT]
 color 1 1 1
 position 2 2 2
-intensity 40
+intensity 20
 center 2 2 2
 size 600 600
 fov 90
@@ -26,7 +26,7 @@ end
 [DIRECTIONAL_LIGHT]
 color 1 1 1
 position -2 2 0
-intensity 20
+intensity 10
 center -2 2 0
 size 600 600
 fov 90

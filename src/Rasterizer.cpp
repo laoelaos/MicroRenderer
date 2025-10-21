@@ -47,16 +47,16 @@ void Rasterizer::pass(const Scene& scene, RasterizerMode mode, FrameBuffer& fram
     m_projection = scene.camera.get_projection_matrix();
     m_Viewport = scene.camera.get_viewport_matrix(m_MSAA);
 
+    if (mode == RasterizerMode_SKYBOX) {
+        SkyboxPipeline(scene);
+        mode = RasterizerMode_PHONG_SHADOW;
+    }
+
     if (mode == RasterizerMode_PHONG || mode == RasterizerMode_PHONG_SHADOW) {
         PhongShader::s_lightPos = {};
         for (const Light& light : scene.lights) {
             PhongShader::s_lightPos.push_back((m_view * light.getPosition().to_vec4(1.0)).to_vec3_point());
         }
-    }
-
-    if (mode == RasterizerMode_SKYBOX) {
-        SkyboxPipeline(scene);
-        mode = RasterizerMode_PHONG_SHADOW;
     }
 
     for (const Model& obj_model: scene.models) {

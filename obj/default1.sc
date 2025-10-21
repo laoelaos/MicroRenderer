@@ -12,7 +12,7 @@ end
 [POINT_LIGHT]
 color 1 1 1
 position 20 20 20
-intensity 2000
+intensity 200
 end
 
 [Model]

@@ -36,8 +36,8 @@ class Light {
 
     // basic
     vec3 m_color = {1.0, 1.0, 1.0};
-    vec3 m_position = {20.0, 20.0, 20.0};
-    double m_intensity = 2000.0;
+    vec3 m_position = {2.0, 2.0, 2.0};
+    double m_intensity = 20.0;
 
     // model
     std::shared_ptr<Mesh> m_lightMesh;
@@ -61,8 +61,7 @@ public:
     void ProcessShadowMapIfNeeded(Scene& scene);
     [[nodiscard]] float getVisibility(const vec4& world_pos) const;
 
-    /** @brief 计算光源在某点的照明强度，遵循反平方衰减定律 */
-    [[nodiscard]] vec3 get_illumination_at(const vec3& point) const;
+    vec3 GetIllumination() const { return m_color * m_intensity; }
 
     friend class Scene;
     friend class ConfigGui;

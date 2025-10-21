@@ -16,7 +16,7 @@ vec3 PhongShader::shade() {
     for (int i = 0; i < static_cast<int>(s_lightInfo->size()); i++) {
         const Light& light = (*s_lightInfo)[i];
 
-        vec3 light_color = light.get_illumination_at(viewWorldPos);
+        vec3 light_color = light.GetIllumination() / norm2(s_lightPos[i] - viewWorldPos);
         vec3 light_dir = normalize(s_lightPos[i] - viewWorldPos);
         vec3 view_dir = normalize(vec3{0, 0, 0} - viewWorldPos);
         vec3 half_vec = normalize(light_dir + view_dir);

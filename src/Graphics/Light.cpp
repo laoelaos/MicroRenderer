@@ -18,10 +18,6 @@ Light::Light(const vec3 &color_, const vec3 &position_, double intensity_, Camer
     m_dirInfo->LightCamera = lightCamera;
 }
 
-vec3 Light::get_illumination_at(const vec3& point) const {
-    return m_color * m_intensity / norm2(point - m_position);
-}
-
 void Light::setPosition(const vec3 &position_) {
     m_lightMove = true;
     m_lightMesh->translation = position_;

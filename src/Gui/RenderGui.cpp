@@ -17,8 +17,8 @@
 #include "../Rasterizer.h"
 
 RenderGui::RenderGui() {
-    InitTexture();
-    Rasterizer::get().set_msaa(m_RenderContext.msaa_level);
+    // InitTexture is now called after scene is loaded.
+    // Rasterizer::get().set_msaa(m_RenderContext.msaa_level);
 }
 
 RenderGui& RenderGui::Get() {
@@ -27,16 +27,54 @@ RenderGui& RenderGui::Get() {
 }
 
 void RenderGui::LaunchRender() {
-    ConfigGui::Get().LaunchConfig(m_Scene);
-    TextureGui::Get().LaunchTextureGui();
+    if (m_showSceneLoadPopup) {
+        ShowLoadScenePopup();
+    }
 
-    ImGui::Begin("渲染设置");
-    ConfigBasic();
-    ConfigRenderSetting();
-    ShowFPS();
-    ImGui::End();
+    if (!m_showSceneLoadPopup) {
+        ConfigGui::Get().LaunchConfig(m_Scene);
+        TextureGui::Get().LaunchTextureGui();
 
-    RenderResult();
+        ImGui::Begin("渲染设置");
+        ConfigBasic();
+        ConfigRenderSetting();
+        ShowFPS();
+        ImGui::End();
+
+        RenderResult();
+    }
+}
+
+void RenderGui::ShowLoadScenePopup() {
+    ImVec2 center = ImGui::GetMainViewport()->GetCenter();
+    ImGui::SetNextWindowPos(center, ImGuiCond_Appearing, ImVec2(0.5f, 0.5f));
+
+    if (m_showSceneLoadPopup) {
+        ImGui::OpenPopup("加载场景");
+    }
+
+    if (ImGui::BeginPopupModal("加载场景", NULL, ImGuiWindowFlags_AlwaysAutoResize)) {
+        ImGui::Text("请输入要加载的场景文件路径 (.sc)");
+        ImGui::InputText("文件路径", &m_sceneFilePath);
+        ImGui::Separator();
+
+        if (ImGui::Button("加载", ImVec2(120, 0))) {
+            try {
+                m_Scene = Scene(m_sceneFilePath); // Load the scene
+                LOGI("RenderGui::ShowLoadScenePopup: Scene loaded from '{}'", m_sceneFilePath);
+
+                InitTexture();
+                Rasterizer::get().set_msaa(m_RenderContext.msaa_level);
+
+                m_RenderContext.force_render = true;
+                m_showSceneLoadPopup = false;
+                ImGui::CloseCurrentPopup();
+            } catch (const std::exception& e) {
+                LOGE("RenderGui::ShowLoadScenePopup: Failed to load scene '{}': {}", m_sceneFilePath, e.what());
+            }
+        }
+        ImGui::EndPopup();
+    }
 }
 
 void RenderGui::ConfigBasic() {
@@ -122,7 +160,7 @@ void RenderGui::RenderResult() {
         ImGui::SetCursorPos(ImVec2(ImGui::GetCursorPosX() + offsetX, ImGui::GetCursorPosY() + offsetY));
     }
 
-    ImGui::Image(m_TextureID, imageSize);
+    ImGui::Image((void*)(intptr_t)m_TextureID, imageSize);
     ImGui::End();
 }
 
@@ -130,8 +168,12 @@ void RenderGui::PerformRendering() {
     auto start_time = std::chrono::high_resolution_clock::now();
 
     if (m_RenderContext.auto_rotate) {
-        double delta_time = 1.0 / m_RenderContext.target_fps; // 估算的时间间隔
+        double delta_time = 1.0 / (m_RenderContext.target_fps > 0 ? m_RenderContext.target_fps : 60.0); // 估算的时间间隔
         m_Scene.camera.rotate_around_point(vec3{0, 0, 0}, m_RenderContext.rotation_speed * delta_time * 60.0, 0, 0);
+    }
+
+    if (!m_TextureBuffer) { // Do not render if texture is not ready
+        return;
     }
 
     FrameBuffer fb;
@@ -195,6 +237,10 @@ void RenderGui::InitTexture() {
         LOGE("RenderGui::InitTexture: Invalid texture dimensions: {}x{}",
              m_Scene.camera.getWidth(), m_Scene.camera.getHeight());
         return;
+    }
+
+    if (m_TextureID != 0) {
+        glDeleteTextures(1, &m_TextureID);
     }
 
     m_TextureBuffer = std::make_shared<Buffer<RGBA>>(m_Scene.camera.getWidth(), m_Scene.camera.getHeight());
