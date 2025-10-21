@@ -25,8 +25,12 @@ if(MSVC)
 endif()
 
 find_package(OpenMP COMPONENTS CXX)
-find_package(glfw3 CONFIG REQUIRED)
 find_package(OpenGL REQUIRED)
+
+set(GLFW_BUILD_DOCS OFF)
+set(GLFW_BUILD_EXAMPLES OFF)
+set(GLFW_BUILD_TESTS OFF)
+add_subdirectory(extern/glfw)
 
 set(IMGUI_SOURCES
         extern/ImGui/imgui.cpp
