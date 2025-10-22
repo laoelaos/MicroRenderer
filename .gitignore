@@ -27,6 +27,7 @@ ipch
 JSON/
 
 ## Commonly used CMake directories & CMake CPM cache
+bin/
 build*/
 .cache
 

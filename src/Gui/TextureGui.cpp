@@ -41,7 +41,7 @@ void TextureGui::LaunchTextureGui() {
                 LoadTextureFromFile(m_ReadyToLoadPath, static_cast<TextureType>(currentTextureType), true);
             }
         }
-        ImGui::TextColored(ImVec4(0.7f, 0.7f, 0.7f, 1.0f), "示例: ../obj/floor_diffuse.tga");
+        ImGui::TextColored(ImVec4(0.7f, 0.7f, 0.7f, 1.0f), "示例: obj/floor_diffuse.tga");
     }
 
     ImGui::Separator();

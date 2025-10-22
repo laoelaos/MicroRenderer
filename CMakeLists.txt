@@ -16,12 +16,20 @@ if(iwyu)
 endif()
 
 if(CMAKE_CXX_COMPILER_ID MATCHES "Clang|GNU|Intel")
-  add_compile_options(-Wall -O3)
+  add_compile_options(-Wall)
+  if(CMAKE_BUILD_TYPE STREQUAL "Release")
+    add_compile_options(-O3)
+  elseif(CMAKE_BUILD_TYPE STREQUAL "Debug")
+    add_compile_options(-g -O0)
+  endif()
 endif()
 
 if(MSVC)
-  add_compile_options(/O2 /Ot /GL)
-  add_compile_options(/arch:AVX2)
+  if(CMAKE_BUILD_TYPE STREQUAL "Release")
+    add_compile_options(/O2 /Ot /GL /arch:AVX2)
+  elseif(CMAKE_BUILD_TYPE STREQUAL "Debug")
+    add_compile_options(/Zi /Od)
+  endif()
 endif()
 
 find_package(OpenMP COMPONENTS CXX)
@@ -97,6 +105,13 @@ target_link_libraries(${PROJECT_NAME} PRIVATE
         glfw
         OpenGL::GL
         $<$<BOOL:${OpenMP_CXX_FOUND}>:OpenMP::OpenMP_CXX>
+)
+
+set(EXECUTABLE_OUTPUT_PATH ${CMAKE_CURRENT_SOURCE_DIR}/bin)
+add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E make_directory ${CMAKE_SOURCE_DIR}/bin
+    COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:${PROJECT_NAME}> ${CMAKE_SOURCE_DIR}/bin/
+    COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_SOURCE_DIR}/obj ${CMAKE_SOURCE_DIR}/bin/obj
 )
 
 file(GENERATE OUTPUT .gitignore CONTENT "*")
