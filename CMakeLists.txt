@@ -70,6 +70,7 @@ set(UTIL_SOURCES
         src/Util/Logger.cpp
         src/Util/Texture.cpp
         src/Util/ImageUtils.cpp
+        src/Util/Path.cpp
 )
 
 set(SET_SOURCES
@@ -106,6 +107,21 @@ target_link_libraries(${PROJECT_NAME} PRIVATE
         OpenGL::GL
         $<$<BOOL:${OpenMP_CXX_FOUND}>:OpenMP::OpenMP_CXX>
 )
+
+# If building with MinGW, copy needed runtime DLLs to bin so Explorer/PowerShell can run directly
+if(MINGW)
+  get_filename_component(MINGW_BIN_DIR "${CMAKE_CXX_COMPILER}" DIRECTORY)
+  add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
+      COMMAND ${CMAKE_COMMAND} -E copy_if_different "${MINGW_BIN_DIR}/libstdc++-6.dll" "${CMAKE_SOURCE_DIR}/bin/"
+      COMMAND ${CMAKE_COMMAND} -E copy_if_different "${MINGW_BIN_DIR}/libgcc_s_seh-1.dll" "${CMAKE_SOURCE_DIR}/bin/"
+      COMMAND ${CMAKE_COMMAND} -E copy_if_different "${MINGW_BIN_DIR}/libwinpthread-1.dll" "${CMAKE_SOURCE_DIR}/bin/"
+  )
+  if(OpenMP_CXX_FOUND)
+    add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different "${MINGW_BIN_DIR}/libgomp-1.dll" "${CMAKE_SOURCE_DIR}/bin/"
+    )
+  endif()
+endif()
 
 set(EXECUTABLE_OUTPUT_PATH ${CMAKE_CURRENT_SOURCE_DIR}/bin)
 add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD

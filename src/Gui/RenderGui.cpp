@@ -59,18 +59,16 @@ void RenderGui::ShowLoadScenePopup() {
         ImGui::Separator();
 
         if (ImGui::Button("加载", ImVec2(120, 0))) {
-            try {
-                m_Scene = Scene(m_sceneFilePath); // Load the scene
-                LOGI("RenderGui::ShowLoadScenePopup: Scene loaded from '{}'", m_sceneFilePath);
-
+            m_Scene = Scene(m_sceneFilePath);
+            if (m_Scene.is_loaded()) {
+                LOGI("RenderGui::ShowLoadScenePopup: Scene loaded Success from '{}'", m_sceneFilePath);
                 InitTexture();
                 Rasterizer::get().set_msaa(m_RenderContext.msaa_level);
-
                 m_RenderContext.force_render = true;
                 m_showSceneLoadPopup = false;
                 ImGui::CloseCurrentPopup();
-            } catch (const std::exception& e) {
-                LOGE("RenderGui::ShowLoadScenePopup: Failed to load scene '{}': {}", m_sceneFilePath, e.what());
+            } else {
+                LOGE("RenderGui::ShowLoadScenePopup: Failed to load scene '{}', check working directory and path", m_sceneFilePath);
             }
         }
         ImGui::EndPopup();
@@ -241,6 +239,7 @@ void RenderGui::InitTexture() {
 
     if (m_TextureID != 0) {
         glDeleteTextures(1, &m_TextureID);
+        m_TextureID = 0;
     }
 
     m_TextureBuffer = std::make_shared<Buffer<RGBA>>(m_Scene.camera.getWidth(), m_Scene.camera.getHeight());

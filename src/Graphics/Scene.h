@@ -15,6 +15,7 @@
 
 class Scene {
     std::string filename;
+    bool loaded = false;
 public:
     Camera camera;
     std::vector<Light> lights;
@@ -29,6 +30,8 @@ public:
 
     void save_path_file() const;
     void save_path_file(const std::string& filename) const;
+
+    [[nodiscard]] bool is_loaded() const { return loaded; }
 private:
     void SaveModel(std::ofstream& file, const Model& model) const;
     void LoadModel(std::ifstream& file);
@@ -36,6 +39,8 @@ private:
     void LoadCamera(std::ifstream& file);
     void SaveLight(std::ofstream& file, const Light& light) const;
     void LoadLight(std::ifstream& file, LightType type);
+
+    friend class RenderGui;
 };
 
 #endif //MICRORENDERER_SCENE_H

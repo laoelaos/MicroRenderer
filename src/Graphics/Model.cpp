@@ -7,6 +7,7 @@
 
 #include "Model.h"
 #include "ImageUtils.h"
+#include "Path.h"
 
 #include <algorithm>
 #include <vector>
@@ -124,9 +125,10 @@ Mesh::Mesh(const std::string &filename) {
 void Mesh::LoadFromFile(const std::string &filename) {
     triangles = {};
 
-    std::ifstream file(filename);
+    auto resolved = PathUtil::Resolve(filename);
+    std::ifstream file(resolved);
     if (!file.is_open()) {
-        LOGE("Mesh::LoadFromFile: Could not open file: {}", filename);
+        LOGE("Mesh::LoadFromFile: Could not open file: {} (resolved: {})", filename, resolved.string());
         return;
     }
 
@@ -163,7 +165,7 @@ void Mesh::LoadFromFile(const std::string &filename) {
                 cnt++;
             }
             if (cnt != 3) {
-                LOGE("Mesh::LoadFromFile: Only triangular faces are supported. Face has {} vertices in file: {}", cnt, filename);
+                LOGE("Mesh::LoadFromFile: Only triangular faces are supported. Face has {} vertices in file: {}", cnt, resolved.string());
                 return;
             }
             triangles.push_back(tri);
@@ -171,7 +173,7 @@ void Mesh::LoadFromFile(const std::string &filename) {
     }
 
     LOGI("Mesh::LoadFromFile: Successfully loaded mesh from {} (vertices: {}, triangles: {})",
-         filename, vertices.size(), triangles.size());
+         resolved.string(), vertices.size(), triangles.size());
 }
 
 mat4 Mesh::GetTransformMatrix() const {

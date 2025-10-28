@@ -8,16 +8,19 @@
 
 #include "TextureGui.h"
 #include "Logger.h"
+#include "Path.h"
 
 Scene::Scene(const std::string &filename) {
-    std::ifstream file(filename);
+    auto resolved = PathUtil::Resolve(filename);
+    std::ifstream file(resolved);
     if (!file.is_open()) {
-        LOGE("Scene::Scene: Failed to open scene file: {}", filename);
+        LOGE("Scene::Scene: Failed to open scene file: {} (resolved: {})", filename, resolved.string());
         return;
     }
 
-    LOGI("Scene::Scene: Loading scene from file: {}", filename);
-    this->filename = filename;
+    loaded = true;
+    LOGI("Scene::Scene: Loading scene from file: {} (resolved: {})", filename, resolved.string());
+    this->filename = resolved.string();
     std::string line, section;
 
     while (std::getline(file, line)) {
@@ -130,9 +133,9 @@ void Scene::LoadModel(std::ifstream& file) {
 
         if (key == "path") {
             iss >> model_filename;
+            LOGI("Scene::LoadModel: Loading model from path: {}", model_filename);
             models.emplace_back(model_filename);
             models.back().model_path = model_filename;
-            LOGI("Scene::LoadModel: Loading model from path: {}", model_filename);
         }
         else if (key == "name") {
             std::string name;

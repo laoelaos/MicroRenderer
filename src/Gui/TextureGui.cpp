@@ -12,6 +12,7 @@
 #include "imgui_impl_opengl3_loader.h"
 #include "Texture.h"
 #include "Logger.h"
+#include "Path.h"
 
 TextureGui& TextureGui::Get() {
     static TextureGui instance;
@@ -183,7 +184,8 @@ void TextureGui::LaunchTextureGui() {
 }
 
 int TextureGui::LoadTextureFromFile(const std::string& path, TextureType type, bool flipY) {
-    auto buffer = ImageUtil::ReadImageRGBA(path, flipY);
+    auto resolve = PathUtil::Resolve(path);
+    auto buffer = ImageUtil::ReadImageRGBA(resolve.string(), flipY);
     if (!buffer) {
         LOGE("TextureGui::LoadTextureFromFile: Failed to load texture: {}", path);
         return -1;
@@ -197,7 +199,7 @@ int TextureGui::LoadTextureFromFile(const std::string& path, TextureType type, b
             break;
         }
         case TextureType_SIXFACESCUBE: {
-            LOGE("TextureGui::LoadTextureFromFile: SIXFACESCUBE texture loading not implemented yet: {}", path);
+            LOGE("TextureGui::LoadTextureFromFile: SIXFACESCUBE texture loading not implemented yet: {}", resolve.string());
             return -1;
         }
         case TextureType_SINGLECUBE: {
@@ -219,7 +221,7 @@ int TextureGui::LoadTextureFromFile(const std::string& path, TextureType type, b
 
     m_TexturesBuffer.push_back(preview);
 
-    LOGI("TextureGui::LoadTextureFromFile: success-> {} (Index: {}, Size: {}x{})", path, preview.index, preview.width, preview.height);
+    LOGI("TextureGui::LoadTextureFromFile: success-> {} (Index: {}, Size: {}x{})", resolve.string(), preview.index, preview.width, preview.height);
     return preview.index;
 }
 

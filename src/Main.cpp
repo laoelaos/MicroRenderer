@@ -15,6 +15,7 @@
 
 #include "Rasterizer.h"
 #include <chrono>
+#include "Path.h"
 
 #ifdef _WIN32
 #ifndef NOMINMAX
@@ -66,6 +67,7 @@ void MainLoop(GLFWwindow* window) {
     Logger::Get().enableConsole(true);
     Logger::Get().setLevel(LogLevel::Debug);
     LOGI("Start MainLoop");
+    PathUtil::LogEnvSummary();
 
     ImVec4 clear_color = ImVec4(0.15f, 0.15f, 0.15f, 1.00f);
 

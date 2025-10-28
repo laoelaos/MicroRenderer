@@ -39,7 +39,7 @@ class RenderGui {
     std::shared_ptr<Buffer<RGBA>> m_TextureBuffer;
 
     bool m_showSceneLoadPopup = true;
-    std::string m_sceneFilePath = "obj/default2.sc";
+    std::string m_sceneFilePath = R"(obj\default2.sc)";
 
     RenderGui();
 public:
